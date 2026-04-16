@@ -3243,7 +3243,7 @@ wheels = [
 
 [[package]]
 name = "sciplot-academic"
-version = "1.7.0"
+version = "1.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "matplotlib", version = "3.7.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
