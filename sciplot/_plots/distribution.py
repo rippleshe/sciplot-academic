@@ -1,5 +1,6 @@
 """
-分布图表 — 柱状图、分组柱状图、箱线图、小提琴图、直方图、显著性标注
+分布图表 — 柱状图、分组柱状图、堆叠柱状图、水平柱状图、
+          箱线图、小提琴图、直方图、组合图、显著性标注
 """
 
 from __future__ import annotations
@@ -283,6 +284,256 @@ def plot_histogram(
 
 
 # ============================================================================
+# 堆叠柱状图
+# ============================================================================
+
+def plot_stacked_bar(
+    categories: List[str],
+    data: Dict[str, Union[List[float], np.ndarray]],
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    width: float = 0.6,
+    show_values: bool = False,
+    value_fmt: str = ".1f",
+    legend_loc: str = "best",
+    venue: str = "nature",
+    palette: str = DEFAULT_PALETTE,
+    **kwargs: Any,
+) -> Tuple[Figure, Axes]:
+    """
+    绘制堆叠柱状图（展示各部分占总和的比例）
+
+    参数:
+        categories: 横轴分组标签
+        data      : {系列名: 各组数值} 字典
+        width     : 柱宽，默认 0.6
+        show_values: 是否在柱上显示数值
+        value_fmt : 数值格式，默认 ".1f"
+
+    示例:
+        >>> data = {
+        ...     "训练集": [80, 85, 90],
+        ...     "验证集": [10, 8, 5],
+        ...     "测试集": [10, 7, 5],
+        ... }
+        >>> fig, ax = sp.plot_stacked_bar(
+        ...     ["模型A", "模型B", "模型C"],
+        ...     data,
+        ...     ylabel="样本数量",
+        ...     show_values=True
+        ... )
+    """
+    setup_style(venue, palette)
+    fig, ax = new_figure(venue)
+    colors = _get_cycle_colors()
+
+    n_groups = len(categories)
+    n_series = len(data)
+    x = np.arange(n_groups)
+
+    bottom = np.zeros(n_groups)
+    for i, (series_name, values) in enumerate(data.items()):
+        color = colors[i % len(colors)]
+        bars = ax.bar(
+            x, values, width=width,
+            bottom=bottom, color=color, label=series_name, **kwargs
+        )
+        if show_values:
+            for j, (bar, v) in enumerate(zip(bars, values)):
+                if v > 0:  # 只显示正值
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        bottom[j] + v / 2,
+                        f"{v:{value_fmt}}",
+                        ha="center", va="center",
+                        fontsize=plt.rcParams.get("font.size", 9) - 1,
+                        color="white" if _is_dark_color(color) else "black",
+                    )
+        bottom += np.array(values)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(categories)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.legend(loc=legend_loc)
+    ax.tick_params(direction="in")
+    return fig, ax
+
+
+# ============================================================================
+# 水平柱状图
+# ============================================================================
+
+def plot_horizontal_bar(
+    categories: List[str],
+    values: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    height: float = 0.6,
+    show_values: bool = False,
+    value_fmt: str = ".1f",
+    sort: bool = False,
+    venue: str = "nature",
+    palette: str = DEFAULT_PALETTE,
+    **kwargs: Any,
+) -> Tuple[Figure, Axes]:
+    """
+    绘制水平柱状图（适合类别较多的场景）
+
+    参数:
+        height     : 柱高，默认 0.6
+        show_values: 是否在柱尾显示数值
+        sort       : 是否按数值降序排序，默认 False
+
+    示例:
+        >>> fig, ax = sp.plot_horizontal_bar(
+        ...     ["特征A", "特征B", "特征C", "特征D"],
+        ...     [0.85, 0.72, 0.91, 0.68],
+        ...     xlabel="重要性",
+        ...     show_values=True,
+        ...     sort=True
+        ... )
+    """
+    setup_style(venue, palette)
+    fig, ax = new_figure(venue)
+    colors = _get_cycle_colors()
+
+    # 排序处理
+    if sort:
+        sorted_indices = np.argsort(values)[::-1]
+        categories = [categories[i] for i in sorted_indices]
+        values = np.array(values)[sorted_indices]
+
+    y = np.arange(len(categories))
+    bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
+
+    bars = ax.barh(y, values, height=height, color=bar_colors, **kwargs)
+
+    if show_values:
+        for bar, v in zip(bars, values):
+            ax.text(
+                bar.get_width() + 0.01 * max(values),
+                bar.get_y() + bar.get_height() / 2,
+                f"{v:{value_fmt}}",
+                ha="left", va="center",
+                fontsize=plt.rcParams.get("font.size", 9) - 1,
+            )
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(categories)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return fig, ax
+
+
+# ============================================================================
+# 组合图（折线 + 柱状）
+# ============================================================================
+
+def plot_combo(
+    x: np.ndarray,
+    bar_data: Dict[str, Union[List[float], np.ndarray]],
+    line_data: Optional[Dict[str, Union[List[float], np.ndarray]]] = None,
+    xlabel: str = "",
+    ylabel_left: str = "",
+    ylabel_right: str = "",
+    title: str = "",
+    bar_width: float = 0.35,
+    venue: str = "nature",
+    palette: str = DEFAULT_PALETTE,
+    **kwargs: Any,
+) -> Tuple[Figure, Axes, Optional[Axes]]:
+    """
+    绘制组合图（柱状图 + 折线图，常用于双 Y 轴场景）
+
+    参数:
+        bar_data    : 柱状图数据 {系列名: 数值列表}
+        line_data   : 折线图数据 {系列名: 数值列表}，可选
+        ylabel_left : 左 Y 轴标签（对应柱状图）
+        ylabel_right: 右 Y 轴标签（对应折线图）
+        bar_width   : 柱宽，默认 0.35
+
+    返回:
+        (fig, ax_bar, ax_line) 其中 ax_line 仅在 line_data 不为 None 时返回
+
+    示例:
+        >>> # 单 Y 轴：柱状 + 折线
+        >>> fig, ax, _ = sp.plot_combo(
+        ...     ["Q1", "Q2", "Q3", "Q4"],
+        ...     bar_data={"销售额": [100, 120, 140, 160]},
+        ...     line_data={"增长率": [5, 8, 12, 15]},
+        ...     ylabel_left="销售额（万元）",
+        ...     ylabel_right="增长率（%）",
+        ... )
+
+        >>> # 双 Y 轴：柱状 + 折线
+        >>> fig, ax1, ax2 = sp.plot_combo(
+        ...     months,
+        ...     bar_data={"销量": sales},
+        ...     line_data={"均价": prices},
+        ... )
+        >>> ax1.set_ylabel("销量（件）")
+        >>> ax2.set_ylabel("均价（元）")
+    """
+    setup_style(venue, palette)
+    fig, ax_bar = new_figure(venue)
+    colors = _get_cycle_colors()
+
+    n_groups = len(x)
+    n_bars = len(bar_data)
+    indices = np.arange(n_groups)
+
+    # 绘制柱状图
+    bar_width_eff = bar_width / n_bars
+    for i, (name, values) in enumerate(bar_data.items()):
+        offset = (i - (n_bars - 1) / 2) * bar_width_eff
+        color = colors[i % len(colors)]
+        ax_bar.bar(indices + offset, values, bar_width_eff, label=name, color=color, **kwargs)
+
+    ax_bar.set_xticks(indices)
+    ax_bar.set_xticklabels(x)
+    ax_bar.set_xlabel(xlabel)
+    ax_bar.set_ylabel(ylabel_left)
+
+    # 绘制折线图（如果有）
+    ax_line = None
+    if line_data:
+        ax_line = ax_bar.twinx()
+        ax_line.tick_params(direction="in")
+
+        # 折线使用后续颜色
+        line_colors = colors[n_bars:]
+        if len(line_colors) < len(line_data):
+            line_colors = colors  # 循环使用
+
+        for i, (name, values) in enumerate(line_data.items()):
+            color = line_colors[i % len(line_colors)]
+            ax_line.plot(indices, values, "o-", color=color, label=name, markersize=5)
+
+        ax_line.set_ylabel(ylabel_right)
+
+        # 合并图例
+        lines1, labels1 = ax_bar.get_legend_handles_labels()
+        lines2, labels2 = ax_line.get_legend_handles_labels()
+        ax_bar.legend(lines1 + lines2, labels1 + labels2, loc="best")
+    else:
+        ax_bar.legend()
+
+    if title:
+        ax_bar.set_title(title)
+    ax_bar.tick_params(direction="in")
+
+    return fig, ax_bar, ax_line
+
+
+# ============================================================================
 # 显著性标注
 # ============================================================================
 
@@ -358,3 +609,14 @@ def _get_cycle_colors() -> List[str]:
     """从当前 rcParams 的 prop_cycle 中提取颜色列表"""
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     return [c["color"] for c in prop_cycle]
+
+
+def _is_dark_color(hex_color: str) -> bool:
+    """判断颜色是否为深色（用于决定文字用白色还是黑色）"""
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    # 计算亮度（YIQ 公式）
+    brightness = (r * 299 + g * 587 + b * 114) / 1000
+    return brightness < 128

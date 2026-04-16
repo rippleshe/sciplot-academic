@@ -22,7 +22,7 @@ SciPlot Academic — 期刊级科研绘图库
     nature（默认）| ieee | aps | springer | thesis | presentation
 """
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 __author__ = "SciPlot Team"
 
 import warnings as _warnings
@@ -51,7 +51,9 @@ from sciplot._core.style import (
 from sciplot._core.palette import (
     apply_palette as _apply_palette,   # 内部用，不直接暴露
     set_custom_palette,
+    register_color_scheme,
     get_palette,
+    get_color_scheme,
     list_palettes,
     list_all_palettes,
     list_resident_palettes,
@@ -59,6 +61,8 @@ from sciplot._core.palette import (
     list_earth_subsets,
     list_ocean_subsets,
     list_rmb_palettes,
+    list_color_schemes,
+    auto_select_palette,
     DEFAULT_PALETTE,
     RMB_PALETTES,
     RESIDENT_PALETTES,
@@ -87,15 +91,20 @@ from sciplot._plots.basic import (
     plot_multi_line,
     plot_scatter,
     plot_step,
+    plot_area,
+    plot_multi_area,
     LINE_STYLES,
     MARKERS,
 )
 from sciplot._plots.distribution import (
     plot_bar,
     plot_grouped_bar,
+    plot_stacked_bar,
+    plot_horizontal_bar,
     plot_box,
     plot_violin,
     plot_histogram,
+    plot_combo,
     annotate_significance,
 )
 from sciplot._plots.advanced import (
@@ -106,11 +115,19 @@ from sciplot._plots.advanced import (
 
 # ── 工具 ──────────────────────────────────────────────────────
 from sciplot.utils import (
+    # 颜色工具
     hex_to_rgb,
     rgb_to_hex,
     lighten_color,
     darken_color,
     generate_gradient,
+    # 智能辅助
+    auto_rotate_labels,
+    smart_legend,
+    optimize_layout,
+    adjust_subplots,
+    suggest_figsize,
+    check_color_contrast,
 )
 
 
@@ -122,24 +139,27 @@ __all__ = [
     "list_venues", "list_languages",
 
     # ── 配色 ──
-    "set_custom_palette", "get_palette",
+    "set_custom_palette", "register_color_scheme",
+    "get_palette", "get_color_scheme",
     "list_palettes", "list_all_palettes", "list_resident_palettes",
     "list_pastel_subsets", "list_earth_subsets", "list_ocean_subsets",
-    "list_rmb_palettes",
+    "list_rmb_palettes", "list_color_schemes",
+    "auto_select_palette",
 
     # ── 布局 ──
     "new_figure", "save",
     "create_subplots", "paper_subplots", "create_gridspec", "create_twinx",
     "add_panel_labels", "list_paper_layouts",
 
-    # ── 折线 / 散点 ──
+    # ── 折线 / 散点 / 面积 ──
     "plot", "plot_line", "plot_multi", "plot_multi_line",
     "plot_scatter", "plot_step",
+    "plot_area", "plot_multi_area",
 
     # ── 分布 / 统计 ──
-    "plot_bar", "plot_grouped_bar",
+    "plot_bar", "plot_grouped_bar", "plot_stacked_bar", "plot_horizontal_bar",
     "plot_box", "plot_violin", "plot_histogram",
-    "annotate_significance",
+    "plot_combo", "annotate_significance",
 
     # ── 高级 ──
     "plot_errorbar", "plot_confidence", "plot_heatmap",
@@ -147,6 +167,11 @@ __all__ = [
     # ── 颜色工具 ──
     "hex_to_rgb", "rgb_to_hex",
     "lighten_color", "darken_color", "generate_gradient",
+
+    # ── 智能辅助 ──
+    "auto_rotate_labels", "smart_legend",
+    "optimize_layout", "adjust_subplots",
+    "suggest_figsize", "check_color_contrast",
 
     # ── 常量 ──
     "VENUES", "PAPER_LAYOUTS", "LANGUAGES",

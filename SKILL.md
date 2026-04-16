@@ -1,15 +1,16 @@
-# SciPlot Academic — 包使用 Skill (v1.6)
+# SciPlot Academic — 包使用 Skill (v1.7)
 
 ---
 name: sciplot
 description: >
-  科研绘图技能（sciplot-academic 包版 v1.6）。凡涉及学术图表、论文插图、数据可视化、
+  科研绘图技能（sciplot-academic 包版 v1.7）。凡涉及学术图表、论文插图、数据可视化、
   matplotlib 绘图、期刊格式配图、毕设/竞赛图片等需求，必须调用本技能。
   本技能针对已安装 sciplot-academic 包的环境，直接 `import sciplot as sp` 使用，
   无需复制任何文件到项目目录。
   默认中文 + Nature 期刊样式 + pastel 配色，支持 IEEE/APS/Springer/Thesis 学位论文，
-  提供折线、散点、柱状、分组柱状、箱线、小提琴、热力图、阶梯图、误差条、置信区间、
-  多子图、显著性标注等全类型图表。新增 ML 可视化扩展。
+  提供折线、散点、柱状、分组柱状、堆叠柱状、水平柱状、面积图、箱线、小提琴、热力图、
+  阶梯图、误差条、置信区间、组合图、多子图、显著性标注等全类型图表。
+  支持自定义配色方案（单/双/三/四/五色自动选择）、3D可视化扩展、智能辅助功能。
   **本版本彻底移除 rainbow/TOL 等 SciencePlots 依赖配色，所有配色均为内置。**
 ---
 
@@ -114,9 +115,22 @@ sp.save(fig, "fig", dir="outputs")
 ### 自定义配色
 
 ```python
+# 简单自定义配色
 sp.set_custom_palette(["#E74C3C", "#3498DB"], name="brand")
 sp.setup_style(palette="brand")     # 2 色
 sp.setup_style(palette="brand-1")   # 只取第1色
+
+# 注册完整配色方案（支持自动选择）
+my_scheme = {
+    "single":    ["#264653"],
+    "double":    ["#264653", "#2a9d8f"],
+    "triple":    ["#264653", "#2a9d8f", "#e9c46a"],
+    "quadruple": ["#264653", "#2a9d8f", "#e9c46a", "#f4a261"],
+    "quintuple": ["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"],
+}
+sp.register_color_scheme("mytheme", my_scheme)
+sp.setup_style(palette="mytheme-triple")  # 明确使用3色
+sp.plot_multi(x, [y1, y2, y3], palette="mytheme")  # 自动选择3色
 ```
 
 ---
@@ -132,6 +146,10 @@ sp.plot_multi(x, [y1, y2])       # 多线图（自动配色子集）
 sp.plot_multi_line(x, y_list, use_linestyles=False, ...)
 sp.plot_scatter(x, y, s=20, alpha=0.7, ...)
 sp.plot_step(x, y, where="mid")  # 阶梯图（CDF/直方风格）
+
+# 面积图
+sp.plot_area(x, y, alpha=0.3)    # 单组面积图
+sp.plot_multi_area(x, [y1, y2], stacked=True)  # 堆叠面积图
 ```
 
 ### 分布图表
@@ -139,12 +157,21 @@ sp.plot_step(x, y, where="mid")  # 阶梯图（CDF/直方风格）
 ```python
 sp.plot_bar(categories, values)              # 单组柱状图
 sp.plot_grouped_bar(groups, data)           # 分组柱状图（论文最常见）
+sp.plot_stacked_bar(categories, data)       # 堆叠柱状图
+sp.plot_horizontal_bar(categories, values, sort=True)  # 水平柱状图
 sp.plot_box(data_list, labels=..., showfliers=True)   # 箱线图
 sp.plot_violin(data_list, labels=..., showmedians=True)  # 小提琴图
 sp.plot_histogram(data, bins=30, density=False)  # 直方图
 sp.plot_errorbar(x, y, yerr, fmt="o", capsize=4)  # 误差条
 sp.plot_confidence(x, mean, std, alpha=0.25)  # 置信区间
 sp.plot_heatmap(data, cmap="Blues", show_values=False)  # 热力图
+
+# 组合图（柱状 + 折线，双 Y 轴）
+sp.plot_combo(
+    x=["Q1", "Q2", "Q3", "Q4"],
+    bar_data={"销售额": [100, 120, 140, 160]},
+    line_data={"增长率": [5, 8, 12, 15]},
+)
 ```
 
 ### 显著性标注
@@ -175,6 +202,21 @@ fig, ax = plot_feature_importance(features, importance, top_n=15)
 
 # 学习曲线
 fig, ax = plot_learning_curve(train_scores, val_scores, sizes)
+```
+
+### 3D 可视化（扩展）
+
+```python
+from sciplot._ext.plot3d import plot_surface, plot_contour, plot_3d_scatter
+
+# 3D 曲面
+fig, ax = plot_surface(X, Y, Z, xlabel="X", ylabel="Y", zlabel="Z")
+
+# 等高线图
+fig, ax = plot_contour(X, Y, Z, levels=15, filled=True)
+
+# 3D 散点
+fig, ax = plot_3d_scatter(x, y, z, c=colors, cmap="plasma")
 ```
 
 ---
@@ -238,6 +280,13 @@ sp.reset_style()                # 重置 matplotlib
 # 颜色工具
 from sciplot.utils import hex_to_rgb, rgb_to_hex, lighten_color, darken_color, generate_gradient
 sp.generate_gradient("#cdb4db", "#264653", 5)  # 渐变色
+
+# 智能辅助
+sp.auto_rotate_labels(ax)           # 自动旋转标签避免重叠
+sp.smart_legend(ax, outside=True)   # 智能图例位置
+sp.optimize_layout(fig)             # 自动优化布局
+sp.suggest_figsize(n_items=20)      # 根据数据量建议尺寸
+sp.check_color_contrast("#FFF", "#000")  # 检查颜色对比度
 ```
 
 ---
@@ -322,8 +371,18 @@ print("✓ 已保存")
 ## 12. 版本信息
 
 - 包名：`sciplot-academic`（PyPI）
-- 版本：**1.6.0**
+- 版本：**1.7.0**
 - 默认：Nature + pastel + 中文
+
+### v1.7 更新
+
+- 🆕 **配色方案系统** `register_color_scheme()`，支持单/双/三/四/五色自动选择
+- 🆕 **面积图** `plot_area()` / `plot_multi_area()`，支持堆叠模式
+- 🆕 **堆叠柱状图** `plot_stacked_bar()`，展示比例构成
+- 🆕 **水平柱状图** `plot_horizontal_bar()`，适合类别较多场景
+- 🆕 **组合图** `plot_combo()`，柱状+折线双Y轴
+- 🆕 **3D可视化扩展** `_ext/plot3d.py`，曲面/等高线/3D散点
+- 🆕 **智能辅助工具** `utils/smart.py`，自动标签旋转/智能图例/布局优化
 
 ### v1.6 更新
 

@@ -1,5 +1,5 @@
 """
-基础图表 — 折线图、散点图、阶梯图
+基础图表 — 折线图、散点图、阶梯图、面积图
 """
 
 from __future__ import annotations
@@ -224,5 +224,126 @@ def plot_step(
         ax.set_title(title)
     if label:
         ax.legend()
+    ax.tick_params(direction="in")
+    return fig, ax
+
+
+def plot_area(
+    x: np.ndarray,
+    y: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    label: str = "",
+    alpha: float = 0.3,
+    fill: bool = True,
+    venue: str = "nature",
+    palette: str = DEFAULT_PALETTE,
+    **kwargs: Any,
+) -> Tuple[Figure, Axes]:
+    """
+    绘制面积图（折线下方填充）
+
+    参数:
+        alpha: 填充区域透明度，默认 0.3
+        fill : 是否填充面积，默认 True；False 则只画线
+
+    示例:
+        >>> # 简单面积图
+        >>> fig, ax = sp.plot_area(x, y, xlabel="时间", ylabel="数值",
+        ...                        label="指标A", alpha=0.4)
+        >>> sp.save(fig, "area_chart")
+
+        >>> # 多组面积图（堆叠效果）
+        >>> fig, ax = sp.plot_area(x, y1, label="A", alpha=0.3)
+        >>> ax.fill_between(x, y1, y1+y2, alpha=0.3, label="B")
+        >>> ax.legend()
+        >>> sp.save(fig, "stacked_area")
+    """
+    setup_style(venue, palette)
+    fig, ax = new_figure(venue)
+
+    (line,) = ax.plot(x, y, label=label, **kwargs)
+    color = line.get_color()
+
+    if fill:
+        ax.fill_between(x, y, alpha=alpha, color=color)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    if label:
+        ax.legend()
+    ax.tick_params(direction="in")
+    return fig, ax
+
+
+def plot_multi_area(
+    x: np.ndarray,
+    y_list: List[np.ndarray],
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    stacked: bool = False,
+    alpha: float = 0.3,
+    venue: str = "nature",
+    palette: str = DEFAULT_PALETTE,
+    **kwargs: Any,
+) -> Tuple[Figure, Axes]:
+    """
+    绘制多组面积图（支持堆叠模式）
+
+    参数:
+        stacked: True 则绘制堆叠面积图，False 则各组独立
+        alpha  : 填充透明度，默认 0.3
+
+    示例:
+        >>> # 独立面积图
+        >>> fig, ax = sp.plot_multi_area(x, [y1, y2, y3],
+        ...     labels=["A", "B", "C"], xlabel="时间", ylabel="数值")
+
+        >>> # 堆叠面积图
+        >>> fig, ax = sp.plot_multi_area(x, [y1, y2, y3],
+        ...     labels=["A", "B", "C"], stacked=True, alpha=0.5)
+        >>> sp.save(fig, "stacked_area")
+    """
+    import matplotlib.pyplot as plt
+
+    n = len(y_list)
+    effective_palette = palette
+    if n <= 4 and palette in ("pastel", "earth", "ocean"):
+        effective_palette = f"{palette}-{n}"
+
+    setup_style(venue, effective_palette)
+    fig, ax = new_figure(venue)
+
+    if labels is None:
+        labels = [f"Series {i + 1}" for i in range(n)]
+
+    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+
+    if stacked:
+        # 堆叠面积图
+        y_stack = np.zeros_like(x)
+        for i, (y, lbl) in enumerate(zip(y_list, labels)):
+            color = colors[i % len(colors)]
+            ax.fill_between(x, y_stack, y_stack + y, alpha=alpha,
+                           color=color, label=lbl, **kwargs)
+            y_stack += y
+    else:
+        # 独立面积图
+        for i, (y, lbl) in enumerate(zip(y_list, labels)):
+            color = colors[i % len(colors)]
+            ax.plot(x, y, color=color, **kwargs)
+            ax.fill_between(x, y, alpha=alpha, color=color)
+            ax.plot([], [], color=color, label=lbl)  # 用于图例
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.legend()
     ax.tick_params(direction="in")
     return fig, ax

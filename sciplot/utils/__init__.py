@@ -111,10 +111,28 @@ def generate_gradient(
     return result
 
 
+# 从 smart 模块导入智能辅助功能
+from sciplot.utils.smart import (
+    auto_rotate_labels,
+    smart_legend,
+    optimize_layout,
+    adjust_subplots,
+    suggest_figsize,
+    check_color_contrast,
+)
+
 __all__ = [
+    # 颜色工具
     "hex_to_rgb",
     "rgb_to_hex",
     "lighten_color",
     "darken_color",
     "generate_gradient",
+    # 智能辅助
+    "auto_rotate_labels",
+    "smart_legend",
+    "optimize_layout",
+    "adjust_subplots",
+    "suggest_figsize",
+    "check_color_contrast",
 ]

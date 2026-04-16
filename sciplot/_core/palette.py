@@ -3,7 +3,7 @@
 
 配色体系说明
 ============
-SciPlot 有三类内置配色，均不依赖 SciencePlots：
+SciPlot 有四类内置配色，均不依赖 SciencePlots：
 
   三大常驻系列（各含 1-4 色子集，推荐优先使用）
     pastel  — 柔和粉彩，默认，适合大多数论文场景
@@ -14,7 +14,11 @@ SciPlot 有三类内置配色，均不依赖 SciencePlots：
     100yuan / 50yuan / 20yuan / 10yuan / 5yuan / 1yuan
 
   自定义（用户运行时注册）
-    set_custom_palette(colors, name)
+    set_custom_palette(colors, name)  — 注册单色组
+    register_color_scheme(name, scheme)  — 注册完整配色方案
+
+  扩展配色系（用户自定义完整方案）
+    通过 register_color_scheme() 注册后可使用 scheme-name 调用
 
 注意：本版本已移除 rainbow-N 和 Paul Tol 配色，
 后续如需增加新配色系，直接向 RESIDENT_PALETTES 添加即可。
@@ -36,6 +40,7 @@ import warnings
 class _UserPaletteStore:
     """用户自定义配色存储器（单例模式）"""
     _palettes: Dict[str, List[str]] = {}
+    _schemes: Dict[str, Dict[str, List[str]]] = {}  # 完整配色方案存储
 
     @classmethod
     def set(cls, name: str, colors: List[str]) -> None:
@@ -55,6 +60,68 @@ class _UserPaletteStore:
     @classmethod
     def has(cls, name: str) -> bool:
         return name in cls._palettes
+
+    @classmethod
+    def register_scheme(cls, name: str, scheme: Dict[str, List[str]]) -> None:
+        """注册完整的配色方案"""
+        cls._schemes[name] = scheme
+        # 同时注册到 palettes 以便直接使用
+        for key, colors in scheme.items():
+            cls._palettes[f"{name}-{key}"] = colors
+        # 注册默认完整版
+        if "quintuple" in scheme:
+            cls._palettes[name] = scheme["quintuple"]
+        elif "quadruple" in scheme:
+            cls._palettes[name] = scheme["quadruple"]
+        elif "triple" in scheme:
+            cls._palettes[name] = scheme["triple"]
+
+    @classmethod
+    def get_scheme(cls, name: str) -> Optional[Dict[str, List[str]]]:
+        """获取完整的配色方案"""
+        return cls._schemes.get(name)
+
+    @classmethod
+    def has_scheme(cls, name: str) -> bool:
+        """检查是否存在配色方案"""
+        return name in cls._schemes
+
+    @classmethod
+    def list_schemes(cls) -> List[str]:
+        """列出所有注册的配色方案"""
+        return list(cls._schemes.keys())
+
+    @classmethod
+    def auto_select(cls, name: str, n: int) -> Optional[List[str]]:
+        """根据数据量自动选择合适的配色
+
+        优先级：
+        1. 精确匹配 name-n
+        2. 从配色方案中选择最接近的
+        3. 返回默认配色
+        """
+        # 尝试精确匹配
+        exact = cls._palettes.get(f"{name}-{n}")
+        if exact:
+            return exact
+
+        # 从配色方案中选择
+        scheme = cls._schemes.get(name)
+        if scheme:
+            key_map = {1: "single", 2: "double", 3: "triple",
+                       4: "quadruple", 5: "quintuple", 6: "sextuple"}
+            key = key_map.get(n, "quintuple")
+            if key in scheme:
+                return scheme[key]
+            # 回退到最大可用
+            for k in ["quintuple", "quadruple", "triple", "double", "single"]:
+                if k in scheme:
+                    colors = scheme[k]
+                    if len(colors) >= n:
+                        return colors[:n]
+                    return colors
+
+        return None
 
 
 # ============================================================================
@@ -123,7 +190,7 @@ DEFAULT_PALETTE = "pastel"
 # 配色应用
 # ============================================================================
 
-def apply_palette(palette: str) -> None:
+def apply_palette(palette: str, n_colors: Optional[int] = None) -> None:
     """
     将指定配色应用到 matplotlib rcParams（内部函数）
 
@@ -131,19 +198,35 @@ def apply_palette(palette: str) -> None:
       1. 三大常驻配色系（pastel / earth / ocean 及其子集）
       2. 人民币配色
       3. 用户自定义配色
+      4. 用户自定义配色方案（自动选择）
+
+    参数:
+        palette: 配色名称
+        n_colors: 如果指定，尝试自动选择合适数量的颜色（用于配色方案）
     """
+    colors = None
+
+    # 1. 三大常驻配色系
     if palette in RESIDENT_PALETTES:
-        plt.rcParams["axes.prop_cycle"] = cycler(color=RESIDENT_PALETTES[palette])
+        colors = RESIDENT_PALETTES[palette]
+    # 2. 人民币配色
     elif palette in RMB_PALETTES:
-        plt.rcParams["axes.prop_cycle"] = cycler(color=RMB_PALETTES[palette])
+        colors = RMB_PALETTES[palette]
+    # 3. 用户自定义配色
     elif _UserPaletteStore.has(palette):
-        plt.rcParams["axes.prop_cycle"] = cycler(color=_UserPaletteStore.get(palette))
-    else:
+        colors = _UserPaletteStore.get(palette)
+    # 4. 尝试自动选择（配色方案）
+    elif n_colors is not None and _UserPaletteStore.has_scheme(palette):
+        colors = _UserPaletteStore.auto_select(palette, n_colors)
+
+    if colors is None:
         raise ValueError(
             f"未知配色方案 '{palette}'。\n"
             f"内置配色：{ALL_BUILTIN_PALETTES}\n"
             f"调用 sp.list_palettes() 查看所有可用选项（含自定义）。"
         )
+
+    plt.rcParams["axes.prop_cycle"] = cycler(color=colors)
 
 
 # ============================================================================
@@ -239,3 +322,97 @@ def list_ocean_subsets() -> List[str]:
 def list_rmb_palettes() -> List[str]:
     """列出人民币配色方案名称"""
     return list(RMB_PALETTES.keys())
+
+
+def register_color_scheme(
+    name: str,
+    scheme: Dict[str, List[str]],
+) -> None:
+    """
+    注册完整的配色方案（支持单/双/三/四/五色自动选择）
+
+    配色方案格式：
+        {
+            "single":    ["#264653"],           # 1色
+            "double":    ["#264653", "#2a9d8f"], # 2色
+            "triple":    [...],                  # 3色
+            "quadruple": [...],                  # 4色
+            "quintuple": [...],                  # 5色
+            "sextuple":  [...],                  # 6色（可选）
+        }
+
+    注册后可通过以下方式使用：
+        - sp.setup_style(palette="myscheme")           # 使用完整版
+        - sp.setup_style(palette="myscheme-triple")    # 明确指定3色
+        - sp.plot_multi(x, [y1, y2, y3], palette="myscheme")  # 自动选择3色
+
+    参数:
+        name: 配色方案名称，如 "mytheme"
+        scheme: 配色方案字典，包含 single/double/triple/quadruple/quintuple
+
+    示例:
+        >>> my_scheme = {
+        ...     "single": ["#264653"],
+        ...     "double": ["#264653", "#2a9d8f"],
+        ...     "triple": ["#264653", "#2a9d8f", "#e9c46a"],
+        ...     "quadruple": ["#264653", "#2a9d8f", "#e9c46a", "#f4a261"],
+        ...     "quintuple": ["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"],
+        ... }
+        >>> sp.register_color_scheme("earth_pro", my_scheme)
+        >>> sp.setup_style(palette="earth_pro-triple")  # 使用3色版
+    """
+    # 验证 scheme 格式
+    required_keys = ["single", "double", "triple"]
+    for key in required_keys:
+        if key not in scheme:
+            raise ValueError(f"配色方案必须包含 '{key}' 键")
+
+    # 验证颜色格式
+    for key, colors in scheme.items():
+        if not isinstance(colors, list):
+            raise ValueError(f"'{key}' 必须是颜色列表")
+        for c in colors:
+            if not (isinstance(c, str) and c.startswith("#") and len(c) in (4, 7)):
+                raise ValueError(f"颜色格式错误：'{c}'，请使用 HEX 格式（如 '#FF0000'）")
+
+    _UserPaletteStore.register_scheme(name, scheme)
+
+
+def get_color_scheme(name: str) -> Dict[str, List[str]]:
+    """
+    获取已注册的配色方案
+
+    示例:
+        >>> scheme = sp.get_color_scheme("mytheme")
+        >>> scheme["triple"]
+        ['#264653', '#2a9d8f', '#e9c46a']
+    """
+    scheme = _UserPaletteStore.get_scheme(name)
+    if scheme is None:
+        raise ValueError(f"未找到配色方案 '{name}'。可用方案: {list_color_schemes()}")
+    return scheme
+
+
+def list_color_schemes() -> List[str]:
+    """列出所有已注册的配色方案名称"""
+    return _UserPaletteStore.list_schemes()
+
+
+def auto_select_palette(name: str, n: int) -> List[str]:
+    """
+    根据数据量自动选择合适的配色
+
+    参数:
+        name: 配色方案名称
+        n: 需要的颜色数量
+
+    返回:
+        最适合的配色列表
+
+    示例:
+        >>> colors = sp.auto_select_palette("mytheme", 3)  # 返回3色配色
+    """
+    colors = _UserPaletteStore.auto_select(name, n)
+    if colors is None:
+        raise ValueError(f"无法为 '{name}' 选择 {n} 色配色")
+    return colors
