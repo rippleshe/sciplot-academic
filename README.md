@@ -1,6 +1,6 @@
 # SciPlot Academic
 
-**中文科研绘图库** — 基于 Matplotlib + SciencePlots，专为中文科研场景优化
+**中文科研绘图库** — 基于 Matplotlib，专为中文论文场景优化
 
 [![PyPI version](https://badge.fury.io/py/sciplot-academic.svg)](https://badge.fury.io/py/sciplot-academic)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -8,13 +8,15 @@
 
 ---
 
-## 特性
+## 为什么选择 SciPlot？
 
-- 🌈 **期刊样式** — Nature/IEEE/APS/Springer/Thesis 一键切换
-- 🎨 **智能配色** — pastel/earth/ocean 三大常驻色系 + 自定义配色
-- 📊 **丰富图表** — 折线/散点/柱状/箱线/小提琴/热力图等
-- 🤖 **ML 可视化** — PCA/混淆矩阵/特征重要性（需 scikit-learn）
-- 📐 **论文布局** — 预置 Word/LaTeX 子图尺寸
+| 特性 | 说明 |
+|------|------|
+| **零依赖配色** | 所有配色（pastel/earth/ocean/人民币）均为内置，无需 SciencePlots |
+| **中文优化** | 默认宋体中文环境，IEEE 中文字号自动调优 |
+| **论文级输出** | 预置 Nature/IEEE/Thesis 版心尺寸，Word/LaTeX 分辨率一键切换 |
+| **智能配色** | ≤4 条线自动选 pastel-N 子集，无需手动指定 |
+| **完整工作流** | 从单图到多子图，从绘图到显著性标注，全链路覆盖 |
 
 ---
 
@@ -27,7 +29,7 @@ pip install sciplot-academic
 # uv（推荐）
 uv pip install sciplot-academic
 
-# ML 扩展依赖（可选）
+# ML 扩展（可选）
 uv pip install sciplot-academic[ml]
 ```
 
@@ -41,71 +43,102 @@ import numpy as np
 
 x = np.linspace(0, 10, 200)
 
-# 单线图
+# 单线图 → 自动保存 PDF + PNG
 fig, ax = sp.plot(x, np.sin(x), xlabel="时间 (s)", ylabel="电压 (V)")
-sp.save(fig, "结果图")  # → 结果图.pdf + 结果图.png
+sp.save(fig, "结果图")
 
-# 多线对比（自动 pastel-2 配色）
-fig, ax = sp.plot_multi(x, [np.sin(x), np.cos(x)], labels=["方法 A", "方法 B"])
+# 多线对比 → 自动选 pastel-2
+fig, ax = sp.plot_multi(x, [np.sin(x), np.cos(x)],
+                       labels=["方法 A", "方法 B"])
 sp.save(fig, "对比")
 ```
 
 ---
 
-## 图表类型
+## 核心功能
+
+### 📊 图表类型
+
+| 函数 | 用途 |
+|------|------|
+| `plot()` / `plot_line()` | 折线图 |
+| `plot_multi()` | 多线对比（自动配色） |
+| `plot_scatter()` | 散点图 |
+| `plot_step()` | 阶梯图（CDF/直方） |
+| `plot_bar()` | 柱状图 |
+| `plot_grouped_bar()` | **分组柱状图**（论文最常用） |
+| `plot_box()` | 箱线图 |
+| `plot_violin()` | 小提琴图 |
+| `plot_histogram()` | 直方图 |
+| `plot_errorbar()` | 误差条 |
+| `plot_confidence()` | 置信区间 |
+| `plot_heatmap()` | 热力图 |
+
+### 🎨 配色方案
+
+```
+三大常驻色系（推荐）：
+  pastel    → 柔和粉彩（默认）
+  earth     → 大地色系
+  ocean     → 海洋蓝绿
+
+人民币系列：100yuan / 50yuan / 20yuan / 10yuan / 5yuan / 1yuan
+
+自定义：sp.set_custom_palette(["#E74C3C", "#3498DB"])
+```
+
+### 📐 期刊样式
+
+| venue | 尺寸 (英寸) | 适用场景 |
+|-------|-------------|----------|
+| `nature` | 7.0 × 5.0 | Nature/Science 双栏 |
+| `ieee` | 3.5 × 3.0 | IEEE 单栏 |
+| `thesis` | 6.1 × 4.3 | 学位论文 |
+
+### 🔬 高级功能
 
 ```python
-sp.plot(x, y)                    # 折线图
-sp.plot_multi(x, [y1, y2])       # 多线图（自动配色）
-sp.plot_scatter(x, y)            # 散点图
-sp.plot_bar(categories, values)  # 柱状图
-sp.plot_box(data_list)           # 箱线图
-sp.plot_violin(data_list)         # 小提琴图
-sp.plot_errorbar(x, y, yerr)     # 误差条
-sp.plot_confidence(x, mean, std)  # 置信区间
-sp.plot_heatmap(data)             # 热力图
-sp.plot_histogram(data)           # 直方图
+# 分组柱状图（论文最常见）
+sp.plot_grouped_bar(groups=["A", "B", "C"],
+                   data=[[1,2,3], [2,3,4], [3,4,5]],
+                   labels=["方法1", "方法2"])
 
-# 机器学习（需安装 ml 扩展）
-sp.plot_pca(data, labels)        # PCA 可视化
-sp.plot_confusion_matrix(y_true, y_pred)  # 混淆矩阵
-sp.plot_feature_importance(features, importance)  # 特征重要性
+# 显著性标注
+sp.annotate_significance(ax, x1=1, x2=2, y=8.5, p_value=0.03)  # *
+
+# 面板标签
+sp.add_panel_labels(axes)  # (a) (b) (c)
 ```
 
 ---
 
-## 期刊样式
+## AI Agent 使用
 
-| venue | 尺寸 | 场景 |
-|-------|------|------|
-| `nature` | 7.0 × 5.0 | Nature/Science |
-| `ieee` | 3.5 × 3.0 | IEEE 单栏 |
-| `thesis` | 6.1 × 4.3 | 学位论文 |
+本项目附带 **SKILL.md** 文件，AI Agent（如 Claude、Cursor）可直接调用：
 
----
-
-## 配色方案
-
-**三大常驻色系**（各有 1-4 色调子集）：
-- `pastel` — 柔和粉彩
-- `earth` — 大地色系
-- `ocean` — 海洋蓝绿
-
-**其他**：`rainbow-N`（1-23色）、`bright`、`vibrant`、`muted`、`100yuan`
+> 使用 SciPlot 技能时，请参考项目根目录的 `SKILL.md` 文件。该文件包含完整的函数签名、场景选型速查、最佳实践规范。
 
 ```python
-sp.set_custom_palette(["#E74C3C", "#3498DB", "#2ECC71"], name="mycolors")
-sp.setup_style(palette="mycolors-2")
+# AI 生成脚本的标准结构
+import sciplot as sp
+import numpy as np
+
+# 按 SKILL.md 规范生成代码
 ```
 
 ---
 
 ## 依赖
 
-- `matplotlib >= 3.5.0`
-- `numpy >= 1.20.0`
-- `SciencePlots >= 2.0.0`
+```
+matplotlib >= 3.5.0
+numpy >= 1.20.0
+```
+
+> v1.6 起，所有配色均为内置，**不再依赖 SciencePlots**。
 
 ---
 
-**License**: MIT
+## License
+
+MIT © SciPlot Team

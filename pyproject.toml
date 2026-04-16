@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sciplot-academic"
 version = "1.6.0"
-description = "期刊级科研绘图库 — 基于 Matplotlib + SciencePlots，专为中文科研场景优化"
+description = "中文科研绘图库 — 基于 Matplotlib，专为中文论文场景优化"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -32,7 +32,6 @@ requires-python = ">=3.8"
 dependencies = [
     "matplotlib>=3.5.0",
     "numpy>=1.20.0",
-    "SciencePlots>=2.0.0",
 ]
 
 [project.optional-dependencies]
