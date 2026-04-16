@@ -17,6 +17,22 @@ from sciplot._core.palette import DEFAULT_PALETTE
 from sciplot._core.layout import new_figure
 
 
+def _resolve_style_venue(
+    venue: Optional[str],
+    palette: Optional[str],
+) -> Optional[str]:
+    """解析并应用样式，必要时复用 style_context 的当前 rcParams。"""
+    if venue is None and palette is None:
+        from sciplot._core.context import StyleContext
+        if StyleContext.is_in_context():
+            return None
+
+    effective_venue = venue or "nature"
+    effective_palette = palette or DEFAULT_PALETTE
+    setup_style(effective_venue, effective_palette)
+    return effective_venue
+
+
 # ============================================================================
 # 柱状图（单组）
 # ============================================================================
@@ -28,8 +44,8 @@ def plot_bar(
     ylabel: str = "",
     title: str = "",
     width: float = 0.6,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -44,8 +60,8 @@ def plot_bar(
         ... )
         >>> sp.save(fig, "accuracy_bar")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
     bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
     ax.bar(categories, values, width=width, color=bar_colors, **kwargs)
@@ -72,8 +88,8 @@ def plot_grouped_bar(
     show_values: bool = False,
     value_fmt: str = ".1f",
     legend_loc: str = "best",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -101,8 +117,8 @@ def plot_grouped_bar(
         ... )
         >>> sp.save(fig, "compare_bar")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
     n_groups = len(groups)
@@ -149,8 +165,8 @@ def plot_box(
     ylabel: str = "",
     title: str = "",
     showfliers: bool = True,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -168,8 +184,8 @@ def plot_box(
         ... )
         >>> sp.save(fig, "boxplot")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
     bp = ax.boxplot(
@@ -200,8 +216,8 @@ def plot_violin(
     title: str = "",
     showmeans: bool = False,
     showmedians: bool = True,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -218,8 +234,8 @@ def plot_violin(
         ...     ylabel="Accuracy (%)", showmedians=True
         ... )
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
     parts = ax.violinplot(
@@ -253,8 +269,8 @@ def plot_histogram(
     title: str = "",
     density: bool = False,
     alpha: float = 0.75,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -270,8 +286,8 @@ def plot_histogram(
         ...     xlabel="残差", ylabel="概率密度"
         ... )
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
     ax.hist(data, bins=bins, density=density, alpha=alpha,
             color=colors[0], **kwargs)
@@ -297,8 +313,8 @@ def plot_stacked_bar(
     show_values: bool = False,
     value_fmt: str = ".1f",
     legend_loc: str = "best",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -324,8 +340,8 @@ def plot_stacked_bar(
         ...     show_values=True
         ... )
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
     n_groups = len(categories)
@@ -377,8 +393,8 @@ def plot_horizontal_bar(
     show_values: bool = False,
     value_fmt: str = ".1f",
     sort: bool = False,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -398,8 +414,8 @@ def plot_horizontal_bar(
         ...     sort=True
         ... )
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
     # 排序处理
@@ -446,8 +462,8 @@ def plot_combo(
     ylabel_right: str = "",
     title: str = "",
     bar_width: float = 0.35,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes, Optional[Axes]]:
     """
@@ -482,8 +498,11 @@ def plot_combo(
         >>> ax1.set_ylabel("销量（件）")
         >>> ax2.set_ylabel("均价（元）")
     """
-    setup_style(venue, palette)
-    fig, ax_bar = new_figure(venue)
+    if not bar_data:
+        raise ValueError("bar_data 不能为空，至少需要一个柱状图系列")
+
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax_bar = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
     n_groups = len(x)

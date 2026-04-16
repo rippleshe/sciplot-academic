@@ -86,10 +86,21 @@ def setup_style(
         else:
             cjk_font = main_font
 
-    # ── 重置并应用 SciencePlots 样式 ──
+    # ── 重置并应用样式（优先 SciencePlots，缺失时自动降级） ──
     plt.rcdefaults()
     active_styles = styles + ([lang_style] if lang_style else [])
-    plt.style.use(active_styles)
+    try:
+        # 若已安装则确保样式注册到 matplotlib
+        import scienceplots  # noqa: F401
+    except ImportError:
+        pass
+
+    available_styles = set(plt.style.available)
+    resolved_styles = [s for s in active_styles if s in available_styles]
+    if resolved_styles:
+        plt.style.use(resolved_styles)
+    else:
+        plt.style.use("default")
 
     # ── 配色 ──
     from sciplot._core.palette import apply_palette

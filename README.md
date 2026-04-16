@@ -167,7 +167,8 @@ matplotlib >= 3.5.0
 numpy >= 1.20.0
 ```
 
-> v1.6 起，所有配色均为内置，**不再依赖 SciencePlots**。
+> v1.6 起，所有配色均为内置，**配色系统不依赖 SciencePlots**。
+> 注：期刊样式渲染仍使用 SciencePlots（已随安装自动解决依赖）。
 
 ## 更新日志
 

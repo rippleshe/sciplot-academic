@@ -84,15 +84,17 @@ class StyleContext:
         StyleContext._context_stack.append(self._saved_state)
         
         # 应用新样式
-        if self.venue or self.palette or self.lang:
-            setup_style(
-                venue=self.venue or "nature",
-                palette=self.palette or "pastel",
-                lang=self.lang,
-            )
-        elif self.palette:
-            # 只指定了配色
-            apply_palette(self.palette)
+        has_explicit_style = any(v is not None for v in (self.venue, self.palette, self.lang))
+        if has_explicit_style:
+            # 仅指定了 palette：不重置 venue/lang，只覆盖颜色循环
+            if self.venue is None and self.lang is None and self.palette is not None:
+                apply_palette(self.palette)
+            else:
+                setup_style(
+                    venue=self.venue or "nature",
+                    palette=self.palette or "pastel",
+                    lang=self.lang if self.lang is not None else "zh",
+                )
         
         # 应用额外的 rcParams
         if self.rc_params:

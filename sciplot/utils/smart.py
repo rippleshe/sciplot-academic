@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
@@ -41,7 +42,7 @@ def auto_rotate_labels(
         )
 
         if should_rotate:
-            ax.set_xticklabels(labels, rotation=rotation, ha="right")
+            plt.setp(ax.get_xticklabels(), rotation=rotation, ha="right")
     else:
         labels = ax.get_yticklabels()
         tick_labels = [t.get_text() for t in labels]
@@ -52,7 +53,7 @@ def auto_rotate_labels(
         )
 
         if should_rotate:
-            ax.set_yticklabels(labels, rotation=rotation, ha="right")
+            plt.setp(ax.get_yticklabels(), rotation=rotation, ha="right")
 
 
 def smart_legend(

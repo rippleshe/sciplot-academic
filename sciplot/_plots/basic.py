@@ -19,6 +19,28 @@ LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
 MARKERS: List[str] = ["o", "s", "^", "D", "v", "<", ">", "p", "*", "h"]
 
 
+def _resolve_style_venue(
+    venue: Optional[str],
+    palette: Optional[str],
+) -> Optional[str]:
+    """
+    解析并应用样式。
+
+    返回:
+        - str: 已应用样式时使用的 venue
+        - None: 在 style_context 中复用现有 rcParams
+    """
+    if venue is None and palette is None:
+        from sciplot._core.context import StyleContext
+        if StyleContext.is_in_context():
+            return None
+
+    effective_venue = venue or "nature"
+    effective_palette = palette or DEFAULT_PALETTE
+    setup_style(effective_venue, effective_palette)
+    return effective_venue
+
+
 def plot_line(
     x: np.ndarray,
     y: np.ndarray,
@@ -26,8 +48,8 @@ def plot_line(
     ylabel: str = "",
     title: str = "",
     label: str = "",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -38,8 +60,8 @@ def plot_line(
         >>> fig, ax = sp.plot(x, np.sin(x), xlabel="时间 (s)", ylabel="幅度", label="sin(x)")
         >>> sp.save(fig, "result")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     ax.plot(x, y, label=label, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -62,8 +84,8 @@ def plot_multi(
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -109,8 +131,8 @@ def plot_multi_line(
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     use_linestyles: bool = False,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
@@ -128,11 +150,15 @@ def plot_multi_line(
         ...     palette="ocean-3", use_linestyles=True
         ... )
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     if labels is None:
         labels = [f"Series {i + 1}" for i in range(len(y_list))]
+    if len(labels) != len(y_list):
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与 y_list 长度 ({len(y_list)}) 不一致"
+        )
 
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
         xi = x if isinstance(x, np.ndarray) else x[i]
@@ -157,8 +183,8 @@ def plot_scatter(
     label: str = "",
     s: float = 20,
     alpha: float = 0.7,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -173,8 +199,8 @@ def plot_scatter(
         ...                           label="样本", s=30, alpha=0.6)
         >>> sp.save(fig, "scatter")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     sc = ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -194,8 +220,8 @@ def plot_step(
     title: str = "",
     label: str = "",
     where: str = "mid",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -215,8 +241,8 @@ def plot_step(
         ...     xlabel="值", ylabel="累积概率", label="CDF")
         >>> sp.save(fig, "cdf")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     ax.step(x, y, where=where, label=label, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -237,8 +263,8 @@ def plot_area(
     label: str = "",
     alpha: float = 0.3,
     fill: bool = True,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -260,8 +286,8 @@ def plot_area(
         >>> ax.legend()
         >>> sp.save(fig, "stacked_area")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     (line,) = ax.plot(x, y, label=label, **kwargs)
     color = line.get_color()
@@ -288,8 +314,8 @@ def plot_multi_area(
     title: str = "",
     stacked: bool = False,
     alpha: float = 0.3,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -316,11 +342,15 @@ def plot_multi_area(
     if n <= 4 and palette in ("pastel", "earth", "ocean"):
         effective_palette = f"{palette}-{n}"
 
-    setup_style(venue, effective_palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, effective_palette)
+    fig, ax = new_figure(effective_venue)
 
     if labels is None:
         labels = [f"Series {i + 1}" for i in range(n)]
+    if len(labels) != len(y_list):
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与 y_list 长度 ({len(y_list)}) 不一致"
+        )
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 

@@ -77,7 +77,7 @@ PAPER_LAYOUTS: Dict[str, Dict[str, Tuple[float, float]]] = {
 # ============================================================================
 
 def new_figure(
-    venue: str = "nature",
+    venue: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
@@ -85,7 +85,8 @@ def new_figure(
     创建新图形，自动套用 venue 默认尺寸
 
     参数:
-        venue  : 期刊预设（'nature' | 'ieee' | 'aps' | 'springer' | 'thesis' | 'presentation'）
+        venue  : 期刊预设（'nature' | 'ieee' | 'aps' | 'springer' | 'thesis' | 'presentation'）；
+                 为 None 时复用当前 rcParams.figure.figsize
         figsize: 自定义 (宽, 高) 英寸，传入则覆盖 venue 默认值
         **kwargs: 传递给 plt.subplots()
 
@@ -97,6 +98,11 @@ def new_figure(
         >>> fig, ax = sp.new_figure(figsize=(5.0, 3.5))
         >>> fig, axes = sp.new_figure("thesis", nrows=1, ncols=2, sharex=True)
     """
+    if venue is None:
+        if figsize is None:
+            return plt.subplots(**kwargs)
+        return plt.subplots(figsize=figsize, **kwargs)
+
     if venue not in VENUES:
         raise ValueError(f"未知 venue '{venue}'，可用选项: {list(VENUES.keys())}")
     _, default_figsize, _ = VENUES[venue]
@@ -275,9 +281,33 @@ def add_panel_labels(
         >>> sp.add_panel_labels(axes, labels=["实验组", "对照组", "空白组"],
         ...                     x=-0.18, y=1.08)
     """
-    _ROMAN = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
-              "xi", "xii", "xiii", "xiv", "xv", "xvi"]
-    _LETTER = list("abcdefghijklmnopqrstuvwxyz")
+    def _int_to_roman(num: int) -> str:
+        if num <= 0:
+            raise ValueError("roman 序号必须为正整数")
+        vals = [
+            (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
+            (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+            (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I"),
+        ]
+        result = []
+        left = num
+        for value, symbol in vals:
+            while left >= value:
+                result.append(symbol)
+                left -= value
+        return "".join(result).lower()
+
+    def _int_to_letters(num: int, upper: bool = False) -> str:
+        if num <= 0:
+            raise ValueError("letter 序号必须为正整数")
+        chars: List[str] = []
+        idx = num
+        while idx > 0:
+            idx -= 1
+            chars.append(chr(ord("a") + (idx % 26)))
+            idx //= 26
+        text = "".join(reversed(chars))
+        return text.upper() if upper else text
 
     # 展开 axes
     if isinstance(axes, np.ndarray):
@@ -297,13 +327,13 @@ def add_panel_labels(
         final_labels = labels
     else:
         if style == "letter":
-            final_labels = [f"({_LETTER[i]})" for i in range(n)]
+            final_labels = [f"({_int_to_letters(i + 1)})" for i in range(n)]
         elif style == "LETTER":
-            final_labels = [f"({_LETTER[i].upper()})" for i in range(n)]
+            final_labels = [f"({_int_to_letters(i + 1, upper=True)})" for i in range(n)]
         elif style == "number":
             final_labels = [f"({i + 1})" for i in range(n)]
         elif style == "roman":
-            final_labels = [f"({_ROMAN[i]})" for i in range(n)]
+            final_labels = [f"({_int_to_roman(i + 1)})" for i in range(n)]
         else:
             raise ValueError(
                 f"未知 style '{style}'，可选: 'letter' | 'LETTER' | 'number' | 'roman'"

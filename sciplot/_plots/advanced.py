@@ -16,6 +16,22 @@ from sciplot._core.palette import DEFAULT_PALETTE
 from sciplot._core.layout import new_figure
 
 
+def _resolve_style_venue(
+    venue: Optional[str],
+    palette: Optional[str],
+) -> Optional[str]:
+    """解析并应用样式，必要时复用 style_context 的当前 rcParams。"""
+    if venue is None and palette is None:
+        from sciplot._core.context import StyleContext
+        if StyleContext.is_in_context():
+            return None
+
+    effective_venue = venue or "nature"
+    effective_palette = palette or DEFAULT_PALETTE
+    setup_style(effective_venue, effective_palette)
+    return effective_venue
+
+
 def plot_errorbar(
     x: np.ndarray,
     y: np.ndarray,
@@ -27,8 +43,8 @@ def plot_errorbar(
     fmt: str = "o",
     capsize: float = 4,
     markersize: float = 5,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
@@ -47,8 +63,8 @@ def plot_errorbar(
         ... )
         >>> sp.save(fig, "errorbar")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
     ax.errorbar(
         x, y, yerr=yerr, fmt=fmt,
         capsize=capsize, markersize=markersize,
@@ -75,8 +91,9 @@ def plot_confidence(
     label_std: str = "±1σ",
     n_std: float = 1.0,
     alpha: float = 0.25,
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
     绘制带置信区间（阴影带）的折线图
@@ -99,9 +116,9 @@ def plot_confidence(
         >>> fig, ax = sp.plot_confidence(x, mean, se, n_std=1.96,
         ...     label_std="95% CI")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
-    (line,) = ax.plot(x, y_mean, label=label_mean)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
+    (line,) = ax.plot(x, y_mean, label=label_mean, **kwargs)
     color = line.get_color()
     ax.fill_between(
         x,
@@ -129,8 +146,9 @@ def plot_heatmap(
     show_values: bool = False,
     fmt: str = ".2f",
     colorbar_label: str = "",
-    venue: str = "nature",
-    palette: str = DEFAULT_PALETTE,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
     """
     绘制热力图（相关矩阵、混淆矩阵、参数扫描结果等）
@@ -153,10 +171,10 @@ def plot_heatmap(
         ... )
         >>> sp.save(fig, "correlation")
     """
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = _resolve_style_venue(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
-    im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=None, vmax=None)
+    im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=None, vmax=None, **kwargs)
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     if colorbar_label:
         cbar.set_label(colorbar_label)

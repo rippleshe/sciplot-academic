@@ -34,7 +34,7 @@ SciPlot Academic — 期刊级科研绘图库
     nature（默认）| ieee | aps | springer | thesis | presentation
 """
 
-__version__ = "1.8.0"
+__version__ = "1.7.1"
 __author__ = "SciPlot Team"
 
 import warnings as _warnings
