@@ -11,8 +11,16 @@ from sciplot._core.registry import (
 )
 from sciplot._core.style import setup_style, reset_style
 from sciplot._core.palette import (
+    apply_palette,
     set_custom_palette,
     get_palette,
+    list_palettes,
+    list_resident_palettes,
+    list_pastel_subsets,
+    list_earth_subsets,
+    list_ocean_subsets,
+    list_rmb_palettes,
+    list_all_palettes,
 )
 from sciplot._core.layout import (
     new_figure,
@@ -20,27 +28,33 @@ from sciplot._core.layout import (
     paper_subplots,
     create_gridspec,
     create_twinx,
+    add_panel_labels,
     save,
 )
 
 __all__ = [
-    # 注册机制
     "PlotterMetadata",
     "PLOTTER_REGISTRY",
     "register_plotter",
     "get_plotter",
     "list_plotters",
-    # 样式
     "setup_style",
     "reset_style",
-    # 配色
+    "apply_palette",
     "set_custom_palette",
     "get_palette",
-    # 布局
+    "list_palettes",
+    "list_resident_palettes",
+    "list_pastel_subsets",
+    "list_earth_subsets",
+    "list_ocean_subsets",
+    "list_rmb_palettes",
+    "list_all_palettes",
     "new_figure",
     "create_subplots",
     "paper_subplots",
     "create_gridspec",
     "create_twinx",
+    "add_panel_labels",
     "save",
 ]

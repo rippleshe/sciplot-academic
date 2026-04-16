@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sciplot-academic"
-version = "1.5.0"
+version = "1.6.0"
 description = "期刊级科研绘图库 — 基于 Matplotlib + SciencePlots，专为中文科研场景优化"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -54,7 +54,7 @@ Issues = "https://github.com/rippleshe/sciplot-academic/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["sciplot*"]
-exclude = ["tests*", "examples*"]
+exclude = ["tests*", "examples*", "dist*"]
 
 [tool.setuptools.package-data]
 sciplot = ["py.typed"]

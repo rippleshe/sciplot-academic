@@ -1,5 +1,5 @@
 """
-基础图表 - 折线图、散点图
+基础图表 — 折线图、散点图、阶梯图
 """
 
 from __future__ import annotations
@@ -30,7 +30,14 @@ def plot_line(
     palette: str = DEFAULT_PALETTE,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
-    """绘制单条折线图"""
+    """
+    绘制单条折线图
+
+    示例:
+        >>> x = np.linspace(0, 10, 200)
+        >>> fig, ax = sp.plot(x, np.sin(x), xlabel="时间 (s)", ylabel="幅度", label="sin(x)")
+        >>> sp.save(fig, "result")
+    """
     setup_style(venue, palette)
     fig, ax = new_figure(venue)
     ax.plot(x, y, label=label, **kwargs)
@@ -44,6 +51,7 @@ def plot_line(
     return fig, ax
 
 
+# 简化别名
 plot = plot_line
 
 
@@ -58,16 +66,39 @@ def plot_multi(
     palette: str = DEFAULT_PALETTE,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
-    """绘制多条折线图，自动智能选择配色子集"""
-    n_lines = len(y_list)
-    if n_lines <= 4 and palette in ("pastel", "earth", "ocean"):
-        palette = f"{palette}-{n_lines}"
+    """
+    绘制多条折线图（智能选配色子集）
+
+    智能配色规则（pastel / earth / ocean）：
+        N ≤ 4 → 自动选 palette-N 子集（如 pastel-2）
+        N = 5 → 使用完整 5 色
+        N ≥ 6 → 直接循环完整配色（建议手动指定如 ocean）
+
+    参数:
+        x      : X 轴数据（共享一个数组）或 X 数据列表（每条线各自的 X）
+        y_list : Y 轴数据列表 [y1, y2, ...]
+        labels : 图例标签列表；为 None 则自动生成 "Series 1, 2, …"
+        palette: 默认 pastel；也可用 earth / ocean / 人民币系列
+
+    示例:
+        >>> # 2 条线 → 自动用 pastel-2
+        >>> fig, ax = sp.plot_multi(x, [y1, y2], labels=["方法A", "方法B"],
+        ...                         xlabel="时间 (s)", ylabel="准确率 (%)")
+
+        >>> # 3 条线用 earth 系列
+        >>> fig, ax = sp.plot_multi(x, [y1, y2, y3], palette="earth",
+        ...                         labels=["A", "B", "C"])
+    """
+    n = len(y_list)
+    effective_palette = palette
+    if n <= 4 and palette in ("pastel", "earth", "ocean"):
+        effective_palette = f"{palette}-{n}"
 
     return plot_multi_line(
-        x, y_list, labels=labels,
-        xlabel=xlabel, ylabel=ylabel, title=title,
-        venue=venue, palette=palette,
-        use_linestyles=False, **kwargs
+        x, y_list,
+        labels=labels, xlabel=xlabel, ylabel=ylabel, title=title,
+        venue=venue, palette=effective_palette,
+        use_linestyles=False, **kwargs,
     )
 
 
@@ -83,15 +114,31 @@ def plot_multi_line(
     use_linestyles: bool = False,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
-    """绘制多线折线图"""
+    """
+    绘制多线折线图（完整参数版）
+
+    参数:
+        use_linestyles: True 时在不同颜色外叠加线型循环（- -- -. :），
+                        提升黑白打印/色盲可读性
+
+    示例:
+        >>> fig, ax = sp.plot_multi_line(
+        ...     x, [y1, y2, y3],
+        ...     labels=["Train", "Val", "Test"],
+        ...     palette="ocean-3", use_linestyles=True
+        ... )
+    """
     setup_style(venue, palette)
     fig, ax = new_figure(venue)
+
     if labels is None:
         labels = [f"Series {i + 1}" for i in range(len(y_list))]
+
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
         xi = x if isinstance(x, np.ndarray) else x[i]
         ls = LINE_STYLES[i % len(LINE_STYLES)] if use_linestyles else "-"
         ax.plot(xi, y, label=lbl, linestyle=ls, **kwargs)
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -107,19 +154,75 @@ def plot_scatter(
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
+    label: str = "",
     s: float = 20,
     alpha: float = 0.7,
     venue: str = "nature",
     palette: str = DEFAULT_PALETTE,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
-    """绘制散点图"""
+    """
+    绘制散点图
+
+    参数:
+        s    : 点大小，默认 20
+        alpha: 透明度，默认 0.7
+
+    示例:
+        >>> fig, ax = sp.plot_scatter(x, y, xlabel="X", ylabel="Y",
+        ...                           label="样本", s=30, alpha=0.6)
+        >>> sp.save(fig, "scatter")
+    """
     setup_style(venue, palette)
     fig, ax = new_figure(venue)
-    ax.scatter(x, y, s=s, alpha=alpha, **kwargs)
+    sc = ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
+    if label:
+        ax.legend()
+    ax.tick_params(direction="in")
+    return fig, ax
+
+
+def plot_step(
+    x: np.ndarray,
+    y: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    label: str = "",
+    where: str = "mid",
+    venue: str = "nature",
+    palette: str = DEFAULT_PALETTE,
+    **kwargs: Any,
+) -> Tuple[Figure, Axes]:
+    """
+    绘制阶梯图（累积分布函数 CDF、直方型折线等常见于物理/统计论文）
+
+    参数:
+        where: 台阶位置
+               'mid'  → 台阶在 x 中点（默认，直方图风格）
+               'pre'  → 台阶在左端
+               'post' → 台阶在右端
+
+    示例:
+        >>> # 绘制 CDF
+        >>> sorted_data = np.sort(data)
+        >>> cdf = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+        >>> fig, ax = sp.plot_step(sorted_data, cdf,
+        ...     xlabel="值", ylabel="累积概率", label="CDF")
+        >>> sp.save(fig, "cdf")
+    """
+    setup_style(venue, palette)
+    fig, ax = new_figure(venue)
+    ax.step(x, y, where=where, label=label, **kwargs)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    if label:
+        ax.legend()
     ax.tick_params(direction="in")
     return fig, ax
