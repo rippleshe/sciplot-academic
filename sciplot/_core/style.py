@@ -95,8 +95,21 @@ def setup_style(
     from sciplot._core.palette import apply_palette
     apply_palette(palette)
 
-    # ── 禁用 LaTeX（确保中文/特殊字符正常渲染）──
-    plt.rcParams["text.usetex"] = False
+    # ── LaTeX 设置 ──
+    # 中文模式下禁用 LaTeX（LaTeX 不支持中文）
+    # 英文模式下可启用 LaTeX 以获得更好的数学公式渲染
+    if lang == "en":
+        # 英文模式：启用 LaTeX（如果系统已安装）
+        plt.rcParams["text.usetex"] = True
+    else:
+        # 中文模式：禁用 LaTeX，确保中文正常渲染
+        plt.rcParams["text.usetex"] = False
+
+    # ── 修复负号显示问题 ──
+    # 必须在字体设置之前，确保使用 ASCII 减号而不是 Unicode 减号
+    plt.rcParams["axes.unicode_minus"] = False
+    # 禁用 mathtext 用于刻度标签，避免 scienceplots 的 no-latex 样式设置 use_mathtext=True
+    plt.rcParams["axes.formatter.use_mathtext"] = False
 
     # ── 字体 ──
     plt.rcParams["font.family"] = "serif"
@@ -114,7 +127,13 @@ def setup_style(
             "DejaVu Serif",
             "serif",
         ]
-    plt.rcParams["axes.unicode_minus"] = False  # 修复负号显示
+
+    # ── 数学文本字体设置 ──
+    # 使用与正文字体一致的设置，避免字体缺失导致的负号问题
+    plt.rcParams["mathtext.fontset"] = "custom"
+    plt.rcParams["mathtext.rm"] = "Times New Roman"
+    plt.rcParams["mathtext.it"] = "Times New Roman:italic"
+    plt.rcParams["mathtext.bf"] = "Times New Roman:bold"
 
     # ── 字号 ──
     effective_fontsize = fontsize

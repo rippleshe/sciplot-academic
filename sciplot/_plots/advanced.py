@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure

@@ -12,6 +12,18 @@ SciPlot Academic — 期刊级科研绘图库
     >>> fig, ax = sp.plot(x, np.sin(x), xlabel="时间 (s)", ylabel="电压 (V)")
     >>> sp.save(fig, "结果图")
 
+链式调用（新功能）:
+    >>> fig = sp.style("nature").palette("pastel").plot(x, y).save("output")
+
+上下文管理器（新功能）:
+    >>> with sp.style_context("ieee", palette="earth"):
+    ...     fig, ax = sp.plot(x, y)
+
+简洁别名（新功能）:
+    >>> fig, ax = sp.line(x, y)      # 同 plot_line
+    >>> fig, ax = sp.scatter(x, y)   # 同 plot_scatter
+    >>> fig, ax = sp.bar(x, y)       # 同 plot_bar
+
 配色体系（三大常驻系列 + 人民币系列）:
     pastel / pastel-1/2/3/4  — 柔和粉彩（默认）
     earth  / earth-1/2/3/4   — 大地色系
@@ -22,7 +34,7 @@ SciPlot Academic — 期刊级科研绘图库
     nature（默认）| ieee | aps | springer | thesis | presentation
 """
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 __author__ = "SciPlot Team"
 
 import warnings as _warnings
@@ -83,6 +95,25 @@ from sciplot._core.layout import (
     PAPER_LAYOUTS,
 )
 
+# ── 链式调用 (Fluent Interface) ────────────────────────────────
+from sciplot._core.fluent import (
+    PlotChain,
+    FigureWrapper,
+    style as _style_chain,
+    palette as _palette_chain,
+    chain,
+)
+
+# ── 上下文管理器 (Context Manager) ─────────────────────────────
+from sciplot._core.context import (
+    StyleContext,
+    style_context,
+    context,
+    ieee_context,
+    nature_context,
+    thesis_context,
+)
+
 # ── 图表 ──────────────────────────────────────────────────────
 from sciplot._plots.basic import (
     plot_line,
@@ -113,6 +144,32 @@ from sciplot._plots.advanced import (
     plot_heatmap,
 )
 
+# ── 简洁别名 (Aliases) ────────────────────────────────────────
+from sciplot._plots.aliases import (
+    # 基础图表
+    line,
+    scatter,
+    step,
+    area,
+    # 多系列图表
+    multi,
+    multi_line,
+    multi_area,
+    # 分布统计图表
+    bar,
+    grouped_bar,
+    stacked_bar,
+    hbar,
+    hist,
+    box,
+    violin,
+    # 高级图表
+    errorbar,
+    confidence,
+    heatmap,
+    combo,
+)
+
 # ── 工具 ──────────────────────────────────────────────────────
 from sciplot.utils import (
     # 颜色工具
@@ -129,6 +186,43 @@ from sciplot.utils import (
     suggest_figsize,
     check_color_contrast,
 )
+
+
+# ═══════════════════════════════════════════════════════════════
+# 便捷入口函数
+# ═══════════════════════════════════════════════════════════════
+
+def style(venue: str) -> PlotChain:
+    """
+    链式调用入口 - 设置期刊样式
+    
+    参数:
+        venue: 期刊样式，如 "nature", "ieee", "thesis" 等
+        
+    返回:
+        PlotChain 对象支持链式调用
+        
+    示例:
+        >>> import sciplot as sp
+        >>> fig = sp.style("nature").palette("pastel").plot(x, y).save("output")
+    """
+    return _style_chain(venue)
+
+
+def palette(palette: str) -> PlotChain:
+    """
+    链式调用入口 - 设置配色方案
+    
+    参数:
+        palette: 配色名称，如 "pastel", "earth", "100yuan" 等
+        
+    返回:
+        PlotChain 对象支持链式调用
+        
+    示例:
+        >>> fig = sp.palette("earth").plot(x, y).save("output")
+    """
+    return _palette_chain(palette)
 
 
 __all__ = [
@@ -151,18 +245,39 @@ __all__ = [
     "create_subplots", "paper_subplots", "create_gridspec", "create_twinx",
     "add_panel_labels", "list_paper_layouts",
 
-    # ── 折线 / 散点 / 面积 ──
+    # ── 链式调用 ──
+    "style", "palette", "chain",
+    "PlotChain", "FigureWrapper",
+
+    # ── 上下文管理器 ──
+    "style_context", "context",
+    "ieee_context", "nature_context", "thesis_context",
+    "StyleContext",
+
+    # ── 折线 / 散点 / 面积（完整名称）──
     "plot", "plot_line", "plot_multi", "plot_multi_line",
     "plot_scatter", "plot_step",
     "plot_area", "plot_multi_area",
 
-    # ── 分布 / 统计 ──
+    # ── 折线 / 散点 / 面积（简洁别名）──
+    "line", "scatter", "step", "area",
+    "multi", "multi_line", "multi_area",
+
+    # ── 分布 / 统计（完整名称）──
     "plot_bar", "plot_grouped_bar", "plot_stacked_bar", "plot_horizontal_bar",
     "plot_box", "plot_violin", "plot_histogram",
     "plot_combo", "annotate_significance",
 
-    # ── 高级 ──
+    # ── 分布 / 统计（简洁别名）──
+    "bar", "grouped_bar", "stacked_bar", "hbar",
+    "hist", "box", "violin",
+    "combo",
+
+    # ── 高级（完整名称）──
     "plot_errorbar", "plot_confidence", "plot_heatmap",
+
+    # ── 高级（简洁别名）──
+    "errorbar", "confidence", "heatmap",
 
     # ── 颜色工具 ──
     "hex_to_rgb", "rgb_to_hex",
