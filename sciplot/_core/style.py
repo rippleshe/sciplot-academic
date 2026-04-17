@@ -15,13 +15,13 @@ import matplotlib.pyplot as plt
 # ============================================================================
 
 VENUES: Dict[str, tuple] = {
-    "nature":       (["science", "nature",   "no-latex"], (7.0, 5.0), 10),
-    "ieee":         (["science", "ieee",     "no-latex"], (3.5, 3.0),  8),
-    "aps":          (["science",             "no-latex"], (3.4, 2.8),  8),
-    "springer":     (["science",             "no-latex"], (6.0, 4.5), 10),
-    "thesis":       (["science",             "no-latex"], (6.1, 4.3), 10),
-    "presentation": (["science", "notebook", "no-latex"], (8.0, 5.5), 14),
-    "default":      (["science", "nature",   "no-latex"], (7.0, 5.0), 10),
+    "nature":       (["science", "nature",   "no-latex"], (7.0, 5.0),  8),  # 10→8
+    "ieee":         (["science", "ieee",     "no-latex"], (3.5, 3.0),  6),  # 8→6
+    "aps":          (["science",             "no-latex"], (3.4, 2.8),  6),  # 8→6
+    "springer":     (["science",             "no-latex"], (6.0, 4.5),  8),  # 10→8
+    "thesis":       (["science",             "no-latex"], (6.1, 4.3),  8),  # 10→8 (Word论文)
+    "presentation": (["science", "notebook", "no-latex"], (8.0, 5.5), 12),  # 14→12
+    "default":      (["science", "nature",   "no-latex"], (7.0, 5.0),  8),  # 10→8
 }
 
 # ============================================================================
