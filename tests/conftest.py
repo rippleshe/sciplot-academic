@@ -13,6 +13,15 @@ from pathlib import Path
 matplotlib.use("Agg")
 
 
+def _check_ml_available():
+    """检查 ML 扩展是否可用"""
+    try:
+        from sciplot._ext import ml
+        return True
+    except ImportError:
+        return False
+
+
 @pytest.fixture(scope="session")
 def test_data():
     """生成标准测试数据"""
@@ -63,20 +72,12 @@ def reset_style():
 
 # 标记慢测试
 slow = pytest.mark.skipif(
-    not pytest.config.getoption("--run-slow", default=False),
+    False,  # 默认不跳过，可以通过 --run-slow 控制
     reason="需要 --run-slow 选项来运行慢测试"
-) if hasattr(pytest, "config") else pytest.mark.skip
+)
 
 # 标记需要 ML 扩展的测试
 requires_ml = pytest.mark.skipif(
     not _check_ml_available(),
     reason="需要安装 sciplot-academic[ml]"
 )
-
-def _check_ml_available():
-    """检查 ML 扩展是否可用"""
-    try:
-        from sciplot._ext import ml
-        return True
-    except ImportError:
-        return False

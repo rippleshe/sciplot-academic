@@ -4,6 +4,7 @@
 
 import pytest
 import numpy as np
+import matplotlib.pyplot as plt
 import sciplot as sp
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes

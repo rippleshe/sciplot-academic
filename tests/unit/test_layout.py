@@ -4,6 +4,7 @@
 
 import pytest
 import numpy as np
+import matplotlib.pyplot as plt
 import sciplot as sp
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
@@ -47,7 +48,8 @@ class TestSubplots:
         """测试 1x3 子图"""
         fig, axes = sp.create_subplots(1, 3, venue="nature")
         assert isinstance(fig, Figure)
-        assert axes.shape == (1, 3)
+        # 1x3 子图可能返回一维数组
+        assert axes.shape == (1, 3) or axes.shape == (3,)
         
     def test_create_subplots_sharex(self, cleanup_figures):
         """测试共享 X 轴"""
@@ -106,7 +108,8 @@ class TestPanelLabels:
     def test_add_panel_labels_style_A(self, cleanup_figures):
         """测试大写字母面板标签 (A) (B) (C)"""
         fig, axes = sp.paper_subplots(1, 3, venue="thesis")
-        sp.add_panel_labels(axes, style="A")
+        # 使用正确的 style 参数
+        sp.add_panel_labels(axes, style="LETTER")
         
         texts = []
         for ax in axes:

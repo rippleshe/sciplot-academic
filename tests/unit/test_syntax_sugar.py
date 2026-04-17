@@ -4,10 +4,12 @@
 
 import pytest
 import numpy as np
+import matplotlib.pyplot as plt
 import sciplot as sp
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib import rcParams
+from sciplot._core.fluent import FigureWrapper, PlotChain
 
 
 class TestFluentInterface:
@@ -15,13 +17,16 @@ class TestFluentInterface:
     
     def test_style_chain(self, test_data, cleanup_figures):
         """测试 style().plot() 链式调用"""
-        fig = sp.style("nature").plot(test_data["x"], test_data["y"])
-        assert isinstance(fig, Figure)
+        result = sp.style("nature").plot(test_data["x"], test_data["y"])
+        # 链式调用返回 FigureWrapper，可以通过 get_figure() 获取 Figure
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_style_palette_chain(self, test_data, cleanup_figures):
         """测试 style().palette().plot() 链式调用"""
-        fig = sp.style("ieee").palette("earth").plot(test_data["x"], test_data["y"])
-        assert isinstance(fig, Figure)
+        result = sp.style("ieee").palette("earth").plot(test_data["x"], test_data["y"])
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_full_chain_with_save(self, test_data, temp_dir, cleanup_figures):
         """测试完整链式调用包括保存"""
@@ -35,43 +40,49 @@ class TestFluentInterface:
         
     def test_chain_multi_layer(self, test_data, cleanup_figures):
         """测试多图层链式调用"""
-        fig = (sp.style("ieee")
+        result = (sp.style("ieee")
                  .palette("ocean")
                  .plot(test_data["x"], test_data["y"], label="线1")
                  .plot(test_data["x"], test_data["y2"], label="线2")
                  .legend())
-        assert isinstance(fig, Figure)
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_chain_with_labels(self, test_data, cleanup_figures):
         """测试带标签的链式调用"""
-        fig = (sp.style("nature")
+        result = (sp.style("nature")
                  .plot(test_data["x"], test_data["y"])
                  .xlabel("X 轴")
                  .ylabel("Y 轴")
                  .title("标题"))
-        assert isinstance(fig, Figure)
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_chain_scatter(self, test_data, cleanup_figures):
         """测试链式散点图"""
-        fig = sp.style("ieee").scatter(test_data["x"], test_data["y"])
-        assert isinstance(fig, Figure)
+        result = sp.style("ieee").scatter(test_data["x"], test_data["y"])
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_chain_bar(self, test_data, cleanup_figures):
         """测试链式柱状图"""
-        fig = sp.style("thesis").bar(["A", "B", "C"], [1, 2, 3])
-        assert isinstance(fig, Figure)
+        result = sp.style("thesis").bar(["A", "B", "C"], [1, 2, 3])
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_palette_entry(self, test_data, cleanup_figures):
         """测试 palette() 入口"""
-        fig = sp.palette("earth").plot(test_data["x"], test_data["y"])
-        assert isinstance(fig, Figure)
+        result = sp.palette("earth").plot(test_data["x"], test_data["y"])
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
         
     def test_chain_entry(self, test_data, cleanup_figures):
         """测试 chain() 入口"""
-        fig = sp.chain(venue="ieee", palette="pastel", lang="zh").plot(
+        result = sp.chain(venue="ieee", palette="pastel", lang="zh").plot(
             test_data["x"], test_data["y"]
         )
-        assert isinstance(fig, Figure)
+        assert isinstance(result, FigureWrapper)
+        assert isinstance(result.get_figure(), Figure)
 
 
 class TestContextManager:
@@ -106,7 +117,8 @@ class TestContextManager:
             
     def test_style_context_with_rcparams(self, test_data, cleanup_figures):
         """测试带自定义 rcParams 的上下文"""
-        with sp.style_context("thesis", lang="zh", figure_dpi=200):
+        # 使用正确的 rcParams 键名（matplotlib 使用 figure.dpi）
+        with sp.style_context("thesis", lang="zh", **{"figure.dpi": 200}):
             fig, ax = sp.plot(test_data["x"], test_data["y"])
             assert isinstance(fig, Figure)
             

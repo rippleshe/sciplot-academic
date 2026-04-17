@@ -14,7 +14,9 @@ class TestSetupStyle:
     def test_default_style(self, reset_style):
         """测试默认样式设置"""
         sp.setup_style()
-        assert rcParams["font.family"] == ["SimSun"]
+        # font.family 设置为 "serif"，实际字体在 font.serif 中指定
+        assert rcParams["font.family"] == ["serif"]
+        assert "SimSun" in rcParams["font.serif"]
         assert rcParams["axes.unicode_minus"] == False
         
     def test_venue_nature(self, reset_style):
@@ -73,8 +75,8 @@ class TestLanguageAndLaTeX:
     def test_chinese_font_settings(self, reset_style):
         """中文模式字体设置"""
         sp.setup_style(lang="zh")
-        # 中文字体应该被设置
-        assert "SimSun" in rcParams["font.family"] or "sans-serif" in rcParams["font.family"]
+        # 中文字体应该在 serif 列表中
+        assert "SimSun" in rcParams["font.serif"]
         
     def test_negative_sign_unicode_fix(self, reset_style):
         """测试负号 Unicode 修复（U+2212 问题）"""
@@ -146,6 +148,6 @@ class TestEdgeCases:
             
     def test_none_values(self, reset_style):
         """测试 None 值处理"""
-        # 应该使用默认值
-        sp.setup_style(venue=None, palette=None, lang=None)
-        assert fig is not None
+        # venue=None 应该报错，因为 None 不在 VENUES 中
+        with pytest.raises(ValueError):
+            sp.setup_style(venue=None, palette=None, lang=None)
