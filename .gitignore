@@ -48,3 +48,8 @@ htmlcov/
 
 # Local
 *.log
+
+# Local planning/review folders (do not push)
+/.trae/
+/.github/
+/docs/
