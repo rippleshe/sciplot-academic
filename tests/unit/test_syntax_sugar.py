@@ -24,7 +24,7 @@ class TestFluentInterface:
         
     def test_style_palette_chain(self, test_data, cleanup_figures):
         """测试 style().palette().plot() 链式调用"""
-        result = sp.style("ieee").palette("earth").plot(test_data["x"], test_data["y"])
+        result = sp.style("ieee").palette("forest").plot(test_data["x"], test_data["y"])
         assert isinstance(result, FigureWrapper)
         assert isinstance(result.get_figure(), Figure)
         
@@ -72,7 +72,7 @@ class TestFluentInterface:
         
     def test_palette_entry(self, test_data, cleanup_figures):
         """测试 palette() 入口"""
-        result = sp.palette("earth").plot(test_data["x"], test_data["y"])
+        result = sp.palette("forest").plot(test_data["x"], test_data["y"])
         assert isinstance(result, FigureWrapper)
         assert isinstance(result.get_figure(), Figure)
         
@@ -93,7 +93,7 @@ class TestContextManager:
         # 记录原始设置
         original_family = rcParams["font.family"]
         
-        with sp.style_context("ieee", palette="earth"):
+        with sp.style_context("ieee", palette="forest"):
             fig, ax = sp.plot(test_data["x"], test_data["y"])
             assert isinstance(fig, Figure)
             # 在上下文中，样式应该改变
@@ -128,7 +128,7 @@ class TestContextManager:
         sp.setup_style("nature", "pastel", lang="zh")
         
         # 使用上下文临时改变
-        with sp.style_context("ieee", "earth"):
+        with sp.style_context("ieee", "forest"):
             fig, ax = sp.plot(test_data["x"], test_data["y"])
             
         # 全局样式应该还是 nature

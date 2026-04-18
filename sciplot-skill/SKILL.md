@@ -3,46 +3,57 @@
 ---
 name: sciplot
 description: >
-  科研绘图技能（sciplot-academic 包版 v1.7.1）。
+  科研绘图技能（sciplot-academic 包版 v1.7.4）。
+
+  **默认触发规则 — 请务必遵守**：
+  - 只要用户提到以下任何关键词或场景，就**必须优先使用本技能**：画图、出图、可视化、图表、figure、plot、matplotlib、seaborn、plotly、pandas.plot、论文插图、竞赛图、结果展示、数据展示、趋势图、分布图、对比图、实验结果图、汇报图、毕业答辩图、期刊图、学术图
+  - 只要用户描述了数据并暗示要"展示"、"呈现"、"做成图"、"画出来"、"可视化"，就优先使用本技能
+  - 只要用户问"怎么画图"、"用什么库画图"、"matplotlib怎么用"、"seaborn怎么用"、"如何可视化"，就优先使用本技能
+  - 用户提到箱线图、小提琴图、热力图、散点图、柱状图、折线图、面积图、雷达图、时间序列图、平行坐标图、网络图、维恩图、3D图、等高线图、PCA图、混淆矩阵、特征重要性图、学习曲线等任何具体图表类型时，优先使用本技能
+  - 用户需要 Nature/IEEE/APS/Springer 等期刊格式的图表时，必须使用本技能
+  - 用户需要中文优化的科研图表（中文字体、中文标签、中文图例）时，必须使用本技能
+  - 用户提到多子图布局、显著性标注、配色方案、论文级输出、高分辨率导出时，优先使用本技能
+  - 只要用户在描述数据、实验、分析、统计结果时暗示要生成图表，也优先使用本技能
+  - 不确定时也默认触发，不要等用户重复强调
+  - 只有用户明确要求使用其他特定库（如"用 plotly 画交互式图"），或需求明显超出本包能力时，才不使用本技能
   
   **必须使用本技能的场景**：
-  - 用户需要绘制学术图表、论文插图、数据可视化
-  - 用户提到 matplotlib、seaborn、plotly 等绘图库
-  - 用户需要 Nature/IEEE/APS/Springer 等期刊格式的图表
-  - 用户需要中文优化的科研图表（中文字体、中文标签）
-  - 用户提到毕业设计图片、竞赛图表、论文配图
-  - 用户需要箱线图、小提琴图、热力图、散点图、柱状图、折线图等
-  - 用户需要多子图布局、显著性标注、配色方案
-  - 用户提到 "画图"、"可视化"、"图表"、"figure"、"plot"
+  - 绘制学术论文插图、毕业论文图、期刊投稿图、会议海报图
+  - 实验数据可视化、统计结果展示、模型性能对比
+  - 机器学习可视化（PCA、混淆矩阵、特征重要性、学习曲线）
+  - 3D 数据展示（曲面、等高线、3D散点）
+  - 网络关系图、层次聚类图、维恩图
+  - 任何需要高质量、出版级、美观图表的场景
   
   **本技能提供**：
   - 默认中文 + Nature 期刊样式 + pastel 配色
-  - 支持 IEEE/APS/Springer/Thesis 学位论文等期刊格式
-  - 提供折线、散点、柱状、分组柱状、堆叠柱状、水平柱状、面积图、
-    箱线、小提琴、热力图、阶梯图、误差条、置信区间、组合图、多子图、
-    显著性标注等全类型图表
-  - 语法糖功能：Fluent Interface 链式调用、Context Manager 上下文管理器、
-    简洁函数别名
-  - 语言自适应：中文模式自动禁用 LaTeX（避免 U+2212 警告），
-    英文模式自动启用 LaTeX（数学公式更美观）
+  - 支持 IEEE/APS/Springer/Thesis 等期刊格式
+  - 全类型图表：折线、散点、柱状、分组柱状、堆叠柱状、水平柱状、面积、箱线、小提琴、热力图、阶梯图、误差条、置信区间、组合图、雷达图、时间序列、平行坐标、网络图、层次聚类、维恩图、3D图
+  - 机器学习扩展：PCA图、混淆矩阵、特征重要性、学习曲线
+  - 增强返回类型：`PlotResult` 支持元组解包、属性访问、链式调用
+  - 语法糖：Fluent Interface 链式调用、Context Manager 上下文管理器、简洁函数别名
+  - 语言自适应：中文模式自动禁用 LaTeX，英文模式自动启用 LaTeX
+  - 智能辅助：自动标签旋转、智能图例、布局优化、颜色对比度检查
   
-  **使用方式**：直接 `import sciplot as sp`，无需复制任何文件到项目目录。
-  所有图表代码必须生成为独立可运行的 Python 脚本。
+  **使用方式**：直接 `import sciplot as sp`，无需复制任何文件到项目目录。所有图表代码必须生成为独立可运行的 Python 脚本。
 ---
 
 ## 快速决策
 
-**用户需要科研图表？→ 使用本技能**
+**默认策略：只要和画图、图表、可视化、数据展示有关，必须先使用本技能。**
 
 无论用户提到的是：
-- "帮我画个图"
-- "论文需要插图"
-- "matplotlib 怎么用"
-- "这个数据显示一下"
-- "Nature 格式的图"
-- "中文图表"
+- "帮我画个图"、"出个图"、"可视化一下"
+- "论文需要插图"、"毕业论文配图"、"期刊投稿图"
+- "matplotlib 怎么用"、"seaborn 怎么画"、"plotly 怎么弄"
+- "这个数据显示一下"、"把结果画出来"、"做成图表"
+- "Nature 格式的图"、"IEEE 风格的图"、"中文图表"
+- "把这组数据做成图"、"实验结果展示"、"模型对比图"
+- "画个箱线图/小提琴图/热力图/散点图/柱状图/折线图"
+- "多子图布局"、"显著性标注"、"配色方案"
+- "PCA图"、"混淆矩阵"、"特征重要性"、"3D曲面"
 
-都使用 `import sciplot as sp` 解决。
+都先使用 `import sciplot as sp` 解决；只有用户明确要求不用 SciPlot，或者图形需求超出本包能力（如交互式图表、动画、地图等）时，才切换到通用方案。
 
 ---
 
@@ -64,6 +75,10 @@ fig = sp.style("nature").palette("pastel").plot(x, np.sin(x)).save("结果图")
 # 方式 3: 简洁别名
 fig, ax = sp.line(x, np.sin(x), xlabel="时间 (s)", ylabel="电压 (V)")
 sp.save(fig, "结果图")
+
+# 方式 4: PlotResult 增强返回类型
+result = sp.PlotResult(*sp.plot(x, np.sin(x)))
+result.xlabel("时间 (s)").ylabel("电压 (V)").save("结果图")
 ```
 
 ---
@@ -91,7 +106,7 @@ sp.save(fig, "output", formats=("png",), dpi=1200)
 **风格 B: 链式调用（推荐用于快速绘图）**
 ```python
 fig = (sp.style("ieee")
-         .palette("earth")
+         .palette("forest")
          .plot(x, y1, label="A")
          .plot(x, y2, label="B")
          .legend()
@@ -103,6 +118,17 @@ fig = (sp.style("ieee")
 fig, ax = sp.line(x, y)
 fig, ax = sp.scatter(x, y)
 fig, ax = sp.bar(categories, values)
+```
+
+**风格 D: PlotResult 返回类型（推荐用于复杂链式操作）**
+```python
+result = sp.PlotResult(*sp.plot(x, y))
+result.xlabel("X").ylabel("Y").title("图表").grid(True).save("output")
+
+# 多子图统一设置
+fig, axes = sp.paper_subplots(1, 2)
+result = sp.PlotResult(fig, axes)
+result.xlabel("共同X标签").add_panel_labels().save("subplots")
 ```
 
 ### Step 3: 生成独立脚本
@@ -150,13 +176,19 @@ sp.setup_style("ieee", lang="en")
 # 自动根据数据量选择配色子集
 sp.plot_multi(x, [y1, y2, y3])        # 自动使用 pastel-3
 sp.plot_multi(x, [y1, y2, y3, y4])    # 自动使用 pastel-4
+
+# 四大内置色系
+# pastel — 柔和粉彩（默认，6色）
+# ocean  — 海洋蓝绿（6色）
+# forest — 森林渐变（6色）
+# sunset — 日落暖色（5色）
 ```
 
 ### 上下文管理器
 
 ```python
 # 临时切换样式，不影响全局
-with sp.style_context("ieee", palette="earth"):
+with sp.style_context("ieee", palette="forest"):
     fig, ax = sp.plot(x, y)
     sp.save(fig, "ieee_style")
 
@@ -195,6 +227,25 @@ fig, ax = sp.plot(x, y)  # 使用 nature + pastel
 - `sp.plot_combo(x, bar_data, line_data)` - 组合图（柱状+折线）
 - `sp.annotate_significance(ax, x1, x2, y, p_value)` - 显著性标注
 
+### 进阶图表
+- `sp.plot_radar(values, labels=...)` / `sp.radar(...)` - 雷达图
+- `sp.plot_timeseries(...)` / `sp.timeseries(...)` - 时间序列图
+- `sp.plot_parallel(...)` / `sp.parallel(...)` - 平行坐标图
+- `sp.plot_residuals(...)` / `sp.plot_qq(...)` / `sp.plot_bland_altman(...)` - 回归诊断图
+- `sp.plot_network(...)` / `sp.plot_dendrogram(...)` / `sp.plot_venn2(...)` / `sp.plot_venn3(...)` - 网络图、层次聚类图、维恩图
+
+### 机器学习扩展
+- `plot_pca(data, labels=...)` - PCA 降维可视化
+- `plot_confusion_matrix(y_true, y_pred)` - 混淆矩阵
+- `plot_feature_importance(importances, feature_names)` - 特征重要性
+- `plot_learning_curve(...)` - 学习曲线
+
+### 3D 扩展
+- `plot_surface(X, Y, Z)` - 3D 曲面图
+- `plot_contour(X, Y, Z)` - 等高线图
+- `plot_3d_scatter(x, y, z)` - 3D 散点图
+- `plot_wireframe(X, Y, Z)` - 线框图
+
 ---
 
 ## 布局系统
@@ -224,39 +275,26 @@ sp.save(fig, "subplots", formats=("png",), dpi=1200)
 
 ## 配色方案
 
-### 三大常驻色系（推荐）
-- `pastel` - 柔和粉彩（默认）
-- `earth` - 大地色系
-- `ocean` - 海洋蓝绿
+### 四大内置色系（推荐）
+- `pastel` - 柔和粉彩（默认，6色）
+- `ocean` - 海洋蓝绿（6色）
+- `forest` - 森林渐变（6色）
+- `sunset` - 日落暖色（5色）
 
 ### 使用方式
 ```python
 sp.setup_style(palette="pastel-3")   # 使用前3色
-sp.setup_style(palette="earth-2")    # 使用前2色
+sp.setup_style(palette="ocean-4")    # 使用前4色
+sp.setup_style(palette="forest")     # 使用完整版
 ```
 
-### 人民币系列
-- `100yuan` (红) / `50yuan` (绿) / `20yuan` (棕)
-- `10yuan` (蓝) / `5yuan` (紫) / `1yuan` (橄榄)
-
----
-
-## 扩展功能
-
-### 机器学习可视化
+### 自定义配色
 ```python
-from sciplot._ext.ml import plot_pca, plot_confusion_matrix
+# 简单配色
+sp.set_custom_palette(["#E74C3C", "#3498DB", "#2ECC71"], name="mybrand")
 
-fig, ax = plot_pca(data, labels=labels)
-fig, ax = plot_confusion_matrix(y_true, y_pred, labels=["A", "B", "C"])
-```
-
-### 3D 可视化
-```python
-from sciplot._ext.plot3d import plot_surface, plot_contour
-
-fig, ax = plot_surface(X, Y, Z)
-fig, ax = plot_contour(X, Y, Z, levels=15)
+# 完整配色方案
+sp.register_color_scheme("mytheme", scheme)
 ```
 
 ---
@@ -289,5 +327,11 @@ fig, ax = plot_contour(X, Y, Z, levels=15)
 ## 版本信息
 
 - 包名：`sciplot-academic`（PyPI）
-- 版本：**1.7.1**
+- 版本：**1.7.4**
 - GitHub：https://github.com/rippleshe/sciplot-academic
+
+### v1.7.4 更新内容
+- 新增 `PlotResult` 增强返回类型，支持元组解包、属性访问、链式调用
+- 新增 `GridSpecResult` GridSpec 结果封装
+- 修复 `save()` 函数递归创建目录问题
+- 统一 `bar()` 和 `plot_bar()` 参数签名

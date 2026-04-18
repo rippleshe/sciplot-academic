@@ -2,16 +2,21 @@
 3D 可视化扩展
 
 用于绘制 3D 曲面、等高线图、3D 散点等。
-需要额外安装：pip install sciplot-academic[3d]
+需要额外安装：uv add sciplot-academic[3d] 或 pip install sciplot-academic[3d]
 """
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+
+from sciplot._core.result import PlotResult
+from sciplot._core.utils import apply_resolved_style
+from sciplot._core.layout import new_figure
 
 
 def plot_surface(
@@ -26,19 +31,29 @@ def plot_surface(
     alpha: float = 1.0,
     elev: float = 30,
     azim: float = -60,
-    venue: str = "nature",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制 3D 曲面图
 
     参数:
-        X, Y    : 网格坐标（由 np.meshgrid 生成）
-        Z       : 高度值矩阵
-        cmap    : 颜色映射，默认 "viridis"
-        alpha   : 透明度，默认 1.0
-        elev    : 仰角（垂直视角），默认 30
-        azim    : 方位角（水平旋转），默认 -60
+        X, Y   : 网格坐标（由 np.meshgrid 生成）
+        Z      : 高度值矩阵
+        xlabel : X 轴标签
+        ylabel : Y 轴标签
+        zlabel : Z 轴标签
+        title  : 图表标题
+        cmap   : 颜色映射，默认 "viridis"
+        alpha  : 透明度，默认 1.0
+        elev   : 仰角（垂直视角），默认 30
+        azim   : 方位角（水平旋转），默认 -60
+        venue  : 期刊样式
+        palette: 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
 
     示例:
         >>> import numpy as np
@@ -46,14 +61,12 @@ def plot_surface(
         >>> y = np.linspace(-5, 5, 50)
         >>> X, Y = np.meshgrid(x, y)
         >>> Z = np.sin(np.sqrt(X**2 + Y**2))
-        >>> fig, ax = sp.plot_surface(X, Y, Z, xlabel="X", ylabel="Y", zlabel="Z")
-        >>> sp.save(fig, "surface3d")
+        >>> result = sp.plot_surface(X, Y, Z, xlabel="X", ylabel="Y", zlabel="Z")
+        >>> result.save("surface3d")
     """
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-    from sciplot._core.style import setup_style
-    from sciplot._core.layout import new_figure
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
 
-    setup_style(venue)
+    effective_venue = apply_resolved_style(venue, palette)
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111, projection="3d")
 
@@ -67,7 +80,7 @@ def plot_surface(
         ax.set_title(title)
 
     ax.view_init(elev=elev, azim=azim)
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_contour(
@@ -81,29 +94,38 @@ def plot_contour(
     cmap: str = "viridis",
     filled: bool = False,
     show_labels: bool = True,
-    venue: str = "nature",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制等高线图
 
     参数:
+        X, Y       : 网格坐标
+        Z          : 高度值矩阵
+        xlabel     : X 轴标签
+        ylabel     : Y 轴标签
+        title      : 图表标题
         levels     : 等高线层级数，默认 10
+        cmap       : 颜色映射
         filled     : True 则填充等高线区域，False 只画线
         show_labels: 是否显示等高线数值标签
+        venue      : 期刊样式
+        palette    : 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
 
     示例:
-        >>> fig, ax = sp.plot_contour(X, Y, Z, levels=15, cmap="RdBu_r")
-        >>> sp.save(fig, "contour")
+        >>> result = sp.plot_contour(X, Y, Z, levels=15, cmap="RdBu_r")
+        >>> result.save("contour")
 
         >>> # 填充等高线
-        >>> fig, ax = sp.plot_contour(X, Y, Z, filled=True, cmap="terrain")
+        >>> result = sp.plot_contour(X, Y, Z, filled=True, cmap="terrain")
     """
-    from sciplot._core.style import setup_style
-    from sciplot._core.layout import new_figure
-
-    setup_style(venue)
-    fig, ax = new_figure(venue)
+    effective_venue = apply_resolved_style(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     if filled:
         cs = ax.contourf(X, Y, Z, levels=levels, cmap=cmap, **kwargs)
@@ -120,7 +142,7 @@ def plot_contour(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_3d_scatter(
@@ -132,34 +154,46 @@ def plot_3d_scatter(
     ylabel: str = "",
     zlabel: str = "",
     title: str = "",
-    s: float = 20,
+    s: Union[float, np.ndarray] = 20,
     alpha: float = 0.7,
     cmap: str = "viridis",
     elev: float = 30,
     azim: float = -60,
-    venue: str = "nature",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制 3D 散点图
 
     参数:
-        c     : 颜色映射值，None 则所有点同色
-        s     : 点大小，默认 20
-        alpha : 透明度，默认 0.7
-        cmap  : 颜色映射（当 c 不为 None 时有效）
+        x, y, z: 坐标数组
+        c      : 颜色映射值，None 则所有点同色
+        xlabel : X 轴标签
+        ylabel : Y 轴标签
+        zlabel : Z 轴标签
+        title  : 图表标题
+        s      : 点大小，默认 20（可以是标量或数组）
+        alpha  : 透明度，默认 0.7
+        cmap   : 颜色映射（当 c 不为 None 时有效）
+        elev   : 仰角
+        azim   : 方位角
+        venue  : 期刊样式
+        palette: 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
 
     示例:
         >>> # 简单 3D 散点
-        >>> fig, ax = sp.plot_3d_scatter(x, y, z, xlabel="X", ylabel="Y", zlabel="Z")
+        >>> result = sp.plot_3d_scatter(x, y, z, xlabel="X", ylabel="Y", zlabel="Z")
 
         >>> # 按第四维度着色
-        >>> fig, ax = sp.plot_3d_scatter(x, y, z, c=values, cmap="plasma")
+        >>> result = sp.plot_3d_scatter(x, y, z, c=values, cmap="plasma")
     """
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-    from sciplot._core.style import setup_style
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
 
-    setup_style(venue)
+    effective_venue = apply_resolved_style(venue, palette)
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111, projection="3d")
 
@@ -175,7 +209,7 @@ def plot_3d_scatter(
         ax.set_title(title)
 
     ax.view_init(elev=elev, azim=azim)
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_wireframe(
@@ -192,23 +226,39 @@ def plot_wireframe(
     cstride: int = 1,
     elev: float = 30,
     azim: float = -60,
-    venue: str = "nature",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制 3D 线框图
 
     参数:
-        rstride, cstride: 行/列步长，控制网格密度，默认 1（最密）
-        color           : 线框颜色
+        X, Y       : 网格坐标
+        Z          : 高度值矩阵
+        xlabel     : X 轴标签
+        ylabel     : Y 轴标签
+        zlabel     : Z 轴标签
+        title      : 图表标题
+        color      : 线框颜色
+        alpha      : 透明度
+        rstride    : 行步长，控制网格密度
+        cstride    : 列步长，控制网格密度
+        elev       : 仰角
+        azim       : 方位角
+        venue      : 期刊样式
+        palette    : 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
 
     示例:
-        >>> fig, ax = sp.plot_wireframe(X, Y, Z, rstride=2, cstride=2)
+        >>> result = sp.plot_wireframe(X, Y, Z, rstride=2, cstride=2)
+        >>> result.save("wireframe")
     """
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-    from sciplot._core.style import setup_style
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
 
-    setup_style(venue)
+    effective_venue = apply_resolved_style(venue, palette)
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111, projection="3d")
 
@@ -224,8 +274,12 @@ def plot_wireframe(
         ax.set_title(title)
 
     ax.view_init(elev=elev, azim=azim)
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-# 导入 matplotlib 用于类型检查
-import matplotlib.pyplot as plt
+__all__ = [
+    "plot_surface",
+    "plot_contour",
+    "plot_3d_scatter",
+    "plot_wireframe",
+]

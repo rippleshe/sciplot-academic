@@ -93,7 +93,7 @@ class TestNaturePaperWorkflow:
     
     def test_nature_full_width(self, temp_dir, cleanup_figures):
         """测试 Nature 全宽图"""
-        sp.setup_style("nature", "earth-3", lang="en")
+        sp.setup_style("nature", "forest-3", lang="en")
         
         x = np.linspace(0, 10, 200)
         
@@ -187,7 +187,7 @@ class TestSyntaxSugarWorkflow:
         
         output_path = temp_dir / "fluent_output"
         paths = (sp.style("ieee")
-                   .palette("earth")
+                   .palette("forest")
                    .plot(x, np.sin(x), label="Sin")
                    .plot(x, np.cos(x), label="Cos")
                    .legend()

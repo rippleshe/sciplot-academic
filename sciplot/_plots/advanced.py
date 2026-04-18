@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,22 +14,8 @@ from matplotlib.figure import Figure
 from sciplot._core.style import setup_style
 from sciplot._core.palette import DEFAULT_PALETTE
 from sciplot._core.layout import new_figure
-
-
-def _resolve_style_venue(
-    venue: Optional[str],
-    palette: Optional[str],
-) -> Optional[str]:
-    """解析并应用样式，必要时复用 style_context 的当前 rcParams。"""
-    if venue is None and palette is None:
-        from sciplot._core.context import StyleContext
-        if StyleContext.is_in_context():
-            return None
-
-    effective_venue = venue or "nature"
-    effective_palette = palette or DEFAULT_PALETTE
-    setup_style(effective_venue, effective_palette)
-    return effective_venue
+from sciplot._core.utils import apply_resolved_style
+from sciplot._core.result import PlotResult
 
 
 def plot_errorbar(
@@ -46,7 +32,7 @@ def plot_errorbar(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制误差条图（点 + 误差棒）
 
@@ -63,7 +49,7 @@ def plot_errorbar(
         ... )
         >>> sp.save(fig, "errorbar")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     ax.errorbar(
         x, y, yerr=yerr, fmt=fmt,
@@ -77,7 +63,7 @@ def plot_errorbar(
     if label:
         ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_confidence(
@@ -94,7 +80,7 @@ def plot_confidence(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制带置信区间（阴影带）的折线图
 
@@ -116,7 +102,7 @@ def plot_confidence(
         >>> fig, ax = sp.plot_confidence(x, mean, se, n_std=1.96,
         ...     label_std="95% CI")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     (line,) = ax.plot(x, y_mean, label=label_mean, **kwargs)
     color = line.get_color()
@@ -132,7 +118,7 @@ def plot_confidence(
         ax.set_title(title)
     ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_heatmap(
@@ -149,7 +135,7 @@ def plot_heatmap(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制热力图（相关矩阵、混淆矩阵、参数扫描结果等）
 
@@ -171,7 +157,7 @@ def plot_heatmap(
         ... )
         >>> sp.save(fig, "correlation")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 
     im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=None, vmax=None, **kwargs)
@@ -202,4 +188,4 @@ def plot_heatmap(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

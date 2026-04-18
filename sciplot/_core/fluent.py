@@ -299,13 +299,13 @@ class FigureWrapper:
     # 最终操作（返回结果，结束链式调用）
     # ═══════════════════════════════════════════════════════════════
 
-    def save(self, name: str, *, dpi: int = 300, **kwargs):
+    def save(self, name: str, *, dpi: int = 1200, **kwargs):
         """
         保存图形
 
         参数:
             name: 文件名（不含扩展名）
-            dpi: 分辨率，默认 300
+            dpi: 分辨率，默认 1200（印刷级）
             **kwargs: 传递给 savefig 的其他参数
 
         返回:

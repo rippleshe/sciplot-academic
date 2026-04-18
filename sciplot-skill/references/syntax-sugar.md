@@ -1,6 +1,6 @@
-# 语法糖功能（v1.7.1 新增）
+# 语法糖功能
 
-SciPlot 提供三种语法糖，让绘图代码更简洁、更流畅。
+SciPlot 提供四种语法糖，让绘图代码更简洁、更流畅。
 
 ---
 
@@ -27,7 +27,7 @@ fig = sp.chain(venue="thesis", palette="ocean", lang="zh").plot(x, y).save("fig"
 
 ```python
 fig = (sp.style("ieee")
-         .palette("earth")
+         .palette("forest")
          .plot(x, np.sin(x), label="sin")
          .scatter(x, np.cos(x), label="cos")
          .legend()
@@ -69,7 +69,7 @@ import numpy as np
 x = np.linspace(0, 10, 100)
 
 # 临时切换样式
-with sp.style_context("ieee", palette="earth"):
+with sp.style_context("ieee", palette="forest"):
     fig, ax = sp.plot(x, np.sin(x))
     sp.save(fig, "ieee_style")
 
@@ -142,7 +142,96 @@ fig, ax = sp.errorbar(x, y, yerr)
 
 ---
 
-## 三种风格对比
+## 4. PlotResult 增强返回类型（v1.7.4 新增）
+
+统一封装绘图结果，支持元组解包、属性访问和链式调用。
+
+### 基础用法
+
+```python
+import sciplot as sp
+import numpy as np
+
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+
+# 包装为 PlotResult
+fig, ax = sp.plot(x, y)
+result = sp.PlotResult(fig, ax)
+
+# 链式调用设置标签
+result.xlabel("时间 (s)").ylabel("电压 (V)").title("正弦波").save("output")
+```
+
+### 多子图统一设置
+
+```python
+# 创建多子图
+fig, axes = sp.paper_subplots(1, 2, venue="thesis")
+result = sp.PlotResult(fig, axes)
+
+# 统一设置所有子图的标签
+result.xlabel("共同X标签").ylabel("共同Y标签")
+
+# 添加面板标签 (a) (b)
+result.add_panel_labels()
+
+# 保存
+result.save("subplots", formats=("png",), dpi=1200)
+```
+
+### 属性访问
+
+```python
+fig, ax = sp.plot(x, y)
+result = sp.PlotResult(fig, ax)
+
+# 访问属性
+result.fig        # Figure 对象
+result.figure     # Figure 对象（别名）
+result.ax         # Axes 对象（单个子图）
+result.axes       # Axes 对象或数组
+result.ax_array   # Axes 数组（多子图时）
+```
+
+### 元组解包
+
+```python
+result = sp.PlotResult(fig, ax)
+
+# 支持解包
+f, a = result           # f 是 fig, a 是 ax
+fig = result[0]         # 通过索引访问
+ax = result[1]
+```
+
+### 链式方法速查
+
+| 方法 | 说明 | 适用场景 |
+|------|------|----------|
+| `xlabel(label)` | 设置 X 轴标签 | 单图/多图 |
+| `ylabel(label)` | 设置 Y 轴标签 | 单图/多图 |
+| `title(title)` | 设置标题 | 单图 |
+| `suptitle(title)` | 设置总标题 | 多图 |
+| `xlim(left, right)` | 设置 X 轴范围 | 单图/多图 |
+| `ylim(bottom, top)` | 设置 Y 轴范围 | 单图/多图 |
+| `legend()` | 显示图例 | 单图/多图 |
+| `grid(visible)` | 设置网格 | 单图/多图 |
+| `tight_layout()` | 自动调整布局 | 单图/多图 |
+| `plot(x, y)` | 添加折线 | 单图 |
+| `scatter(x, y)` | 添加散点 | 单图 |
+| `axhline(y)` | 添加水平线 | 单图/多图 |
+| `axvline(x)` | 添加垂直线 | 单图/多图 |
+| `annotate(text, xy)` | 添加标注 | 单图 |
+| `save(name, **kwargs)` | 保存图形 | 单图/多图 |
+| `show()` | 显示图形 | 单图/多图 |
+| `close()` | 关闭图形 | 单图/多图 |
+| `set_labels(**kwargs)` | 一次性设置标签 | 单图/多图 |
+| `add_panel_labels()` | 添加 (a) (b) 标签 | 多图 |
+
+---
+
+## 四种风格对比
 
 ```python
 import sciplot as sp
@@ -163,6 +252,10 @@ sp.style("nature").palette("pastel").plot(x, y).xlabel("X").ylabel("Y").save("ou
 sp.setup_style("nature", "pastel")
 fig, ax = sp.line(x, y, xlabel="X", ylabel="Y")
 sp.save(fig, "output")
+
+# 风格 4: PlotResult 增强返回类型
+fig, ax = sp.plot(x, y)
+sp.PlotResult(fig, ax).xlabel("X").ylabel("Y").save("output")
 ```
 
 选择最适合你代码风格的写法！

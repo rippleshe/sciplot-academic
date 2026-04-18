@@ -17,24 +17,19 @@ class TestPaletteBasics:
         palettes = sp.list_palettes()
         assert isinstance(palettes, list)
         assert len(palettes) > 0
-        # 应该包含三大常驻色系
+        # 应该包含四大内置色系
         assert any("pastel" in p for p in palettes)
-        assert any("earth" in p for p in palettes)
         assert any("ocean" in p for p in palettes)
+        assert any("forest" in p for p in palettes)
+        assert any("sunset" in p for p in palettes)
         
     def test_list_resident_palettes(self):
-        """测试列出常驻色系"""
+        """测试列出内置色系"""
         residents = sp.list_resident_palettes()
         assert "pastel" in residents
-        assert "earth" in residents
         assert "ocean" in residents
-        
-    def test_list_rmb_palettes(self):
-        """测试列出人民币配色"""
-        rmb = sp.list_rmb_palettes()
-        assert "100yuan" in rmb
-        assert "50yuan" in rmb
-        assert "10yuan" in rmb
+        assert "forest" in residents
+        assert "sunset" in residents
 
 
 class TestPaletteApplication:
@@ -43,21 +38,11 @@ class TestPaletteApplication:
     def test_apply_pastel(self, reset_style):
         """测试应用 pastel 配色"""
         sp.setup_style(palette="pastel")
-        # 获取当前颜色循环
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        # 验证颜色循环被设置（不同 matplotlib 版本属性名可能不同）
         lines_obj = ax._get_lines
-        # 检查是否有颜色循环相关属性
         has_cycler = hasattr(lines_obj, 'prop_cycler') or hasattr(lines_obj, '_prop_cycle')
         assert has_cycler or lines_obj is not None
-        plt.close(fig)
-        
-    def test_apply_earth(self, reset_style):
-        """测试应用 earth 配色"""
-        sp.setup_style(palette="earth")
-        fig, ax = sp.plot([1, 2], [1, 2])
-        assert fig is not None
         plt.close(fig)
         
     def test_apply_ocean(self, reset_style):
@@ -66,24 +51,56 @@ class TestPaletteApplication:
         fig, ax = sp.plot([1, 2], [1, 2])
         assert fig is not None
         plt.close(fig)
+        
+    def test_apply_forest(self, reset_style):
+        """测试应用 forest 配色"""
+        sp.setup_style(palette="forest")
+        fig, ax = sp.plot([1, 2], [1, 2])
+        assert fig is not None
+        plt.close(fig)
+        
+    def test_apply_sunset(self, reset_style):
+        """测试应用 sunset 配色"""
+        sp.setup_style(palette="sunset")
+        fig, ax = sp.plot([1, 2], [1, 2])
+        assert fig is not None
+        plt.close(fig)
 
 
 class TestPaletteSubsets:
-    """测试配色子集（-1, -2, -3, -4）"""
+    """测试配色子集（-1 到 -N）"""
     
     def test_pastel_subsets(self, reset_style):
-        """测试 pastel 子集"""
-        for i in range(1, 5):
+        """测试 pastel 子集（1-6）"""
+        for i in range(1, 7):
             sp.setup_style(palette=f"pastel-{i}")
             fig, ax = sp.plot([1, 2], [1, 2])
             assert fig is not None
             plt.close(fig)
             sp.reset_style()
             
-    def test_earth_subsets(self, reset_style):
-        """测试 earth 子集"""
-        for i in range(1, 5):
-            sp.setup_style(palette=f"earth-{i}")
+    def test_ocean_subsets(self, reset_style):
+        """测试 ocean 子集（1-6）"""
+        for i in range(1, 7):
+            sp.setup_style(palette=f"ocean-{i}")
+            fig, ax = sp.plot([1, 2], [1, 2])
+            assert fig is not None
+            plt.close(fig)
+            sp.reset_style()
+            
+    def test_forest_subsets(self, reset_style):
+        """测试 forest 子集（1-6）"""
+        for i in range(1, 7):
+            sp.setup_style(palette=f"forest-{i}")
+            fig, ax = sp.plot([1, 2], [1, 2])
+            assert fig is not None
+            plt.close(fig)
+            sp.reset_style()
+            
+    def test_sunset_subsets(self, reset_style):
+        """测试 sunset 子集（1-5）"""
+        for i in range(1, 6):
+            sp.setup_style(palette=f"sunset-{i}")
             fig, ax = sp.plot([1, 2], [1, 2])
             assert fig is not None
             plt.close(fig)
@@ -178,16 +195,85 @@ class TestGetPalette:
         """测试获取配色返回列表"""
         palette = sp.get_palette("pastel")
         assert isinstance(palette, list)
-        assert len(palette) >= 4
+        assert len(palette) >= 5
         # 验证是有效的颜色代码
         for color in palette:
             assert color.startswith("#")
             assert len(color) == 7
             
+    def test_get_palette_pastel_colors(self):
+        """测试获取 pastel 配色颜色正确"""
+        palette = sp.get_palette("pastel")
+        expected = ["#845EC2", "#D65DB1", "#FF6F91", "#FF9671", "#FFC75F", "#F9F871"]
+        assert palette == expected
+            
+    def test_get_palette_ocean_colors(self):
+        """测试获取 ocean 配色颜色正确"""
+        palette = sp.get_palette("ocean")
+        expected = ["#5E98C2", "#26B3D1", "#00CCCB", "#56E2B0", "#A6F18C", "#F9F871"]
+        assert palette == expected
+        
+    def test_get_palette_forest_colors(self):
+        """测试获取 forest 配色颜色正确"""
+        palette = sp.get_palette("forest")
+        expected = ["#5EC299", "#00B3A2", "#00A2AD", "#0090B8", "#007DBD", "#0067B9"]
+        assert palette == expected
+        
+    def test_get_palette_sunset_colors(self):
+        """测试获取 sunset 配色颜色正确"""
+        palette = sp.get_palette("sunset")
+        expected = ["#D44132", "#F45E4A", "#FF7A62", "#FF967C", "#FFB296"]
+        assert palette == expected
+        
     def test_get_palette_invalid_name(self):
         """测试获取无效配色"""
         with pytest.raises((KeyError, ValueError)):
             sp.get_palette("nonexistent_palette_xyz")
+
+
+class TestPaletteConstants:
+    """测试配色常量"""
+    
+    def test_pastel_palette_constant(self):
+        """测试 PASTEL_PALETTE 常量"""
+        assert hasattr(sp, "PASTEL_PALETTE")
+        assert "pastel" in sp.PASTEL_PALETTE
+        assert len(sp.PASTEL_PALETTE["pastel"]) == 6
+        
+    def test_ocean_palette_constant(self):
+        """测试 OCEAN_PALETTE 常量"""
+        assert hasattr(sp, "OCEAN_PALETTE")
+        assert "ocean" in sp.OCEAN_PALETTE
+        assert len(sp.OCEAN_PALETTE["ocean"]) == 6
+        
+    def test_forest_palette_constant(self):
+        """测试 FOREST_PALETTE 常量"""
+        assert hasattr(sp, "FOREST_PALETTE")
+        assert "forest" in sp.FOREST_PALETTE
+        assert len(sp.FOREST_PALETTE["forest"]) == 6
+        
+    def test_sunset_palette_constant(self):
+        """测试 SUNSET_PALETTE 常量"""
+        assert hasattr(sp, "SUNSET_PALETTE")
+        assert "sunset" in sp.SUNSET_PALETTE
+        assert len(sp.SUNSET_PALETTE["sunset"]) == 5
+        
+    def test_default_palette(self):
+        """测试默认配色是 pastel"""
+        assert sp.DEFAULT_PALETTE == "pastel"
+
+
+class TestRemovedPalettes:
+    """测试已移除的配色"""
+    
+    def test_rmb_palettes_removed(self):
+        """测试人民币配色已移除"""
+        with pytest.raises((KeyError, ValueError, AttributeError)):
+            sp.get_palette("100yuan")
+            
+    def test_rmb_list_function_removed(self):
+        """测试 list_rmb_palettes 函数已移除"""
+        assert not hasattr(sp, "list_rmb_palettes")
 
 
 class TestColorBlindFriendly:
@@ -196,7 +282,7 @@ class TestColorBlindFriendly:
     def test_pastel_is_colorblind_friendly(self):
         """测试 pastel 配色是否色盲友好"""
         palette = sp.get_palette("pastel")
-        # pastel 应该至少有 4 个不同的颜色
-        assert len(palette) >= 4
+        # pastel 应该至少有 5 个不同的颜色
+        assert len(palette) >= 5
         # 颜色应该足够区分
         assert len(set(palette)) == len(palette)

@@ -121,7 +121,7 @@ class TestResetStyle:
     def test_reset_restores_defaults(self):
         """测试重置恢复 matplotlib 默认设置"""
         # 先修改一些设置
-        sp.setup_style("ieee", "earth")
+        sp.setup_style("ieee", "forest")
         original_family = rcParams["font.family"]
         
         # 重置

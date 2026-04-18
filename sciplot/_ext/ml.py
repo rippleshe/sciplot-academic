@@ -2,7 +2,7 @@
 机器学习可视化扩展
 
 用于绘制 PCA、混淆矩阵、特征重要性、学习曲线等。
-需要额外安装：pip install sciplot-academic[ml]
+需要额外安装：uv add sciplot-academic[ml] 或 pip install sciplot-academic[ml]
 """
 
 from __future__ import annotations
@@ -13,34 +13,70 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from typing import Any, List, Optional, Tuple
 
+from sciplot._core.result import PlotResult
+from sciplot._core.utils import apply_resolved_style
+from sciplot._core.layout import new_figure
+
+
+def _check_sklearn() -> Tuple[Any, Any]:
+    """
+    检查 sklearn 是否可用
+    
+    返回:
+        (PCA, confusion_matrix) 模块对象
+    
+    抛出:
+        ImportError: 未安装 scikit-learn 时
+    """
+    try:
+        from sklearn.decomposition import PCA
+        from sklearn.metrics import confusion_matrix
+        return PCA, confusion_matrix
+    except ImportError as e:
+        raise ImportError(
+            "机器学习功能需要安装 scikit-learn。\n"
+            "请运行: uv add scikit-learn 或 pip install scikit-learn\n"
+            "或安装完整扩展: uv add sciplot-academic[ml]"
+        ) from e
+
 
 def plot_pca(
     data: np.ndarray,
     labels: Optional[np.ndarray] = None,
     n_components: int = 2,
-    venue: str = "nature",
-    palette: str = "pastel",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     PCA 降维可视化（2D）
 
     参数:
         data        : 原始特征矩阵 (n_samples, n_features)
         labels      : 类别标签数组，有则按类着色
-        n_components: 降维维度，目前支持 2
+        n_components: 降维维度，目前仅支持 2
+        venue       : 期刊样式，如 "nature", "ieee"
+        palette     : 配色方案，如 "pastel", "earth"
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
+
+    抛出:
+        ImportError: 未安装 scikit-learn 时
+        ValueError: n_components 不为 2 时
 
     示例:
         >>> from sciplot._ext.ml import plot_pca
-        >>> fig, ax = plot_pca(X, labels=y, venue="nature")
-        >>> sp.save(fig, "pca")
+        >>> result = plot_pca(X, labels=y, venue="nature")
+        >>> result.save("pca")
     """
-    from sklearn.decomposition import PCA
-    from sciplot._core.style import setup_style
-    from sciplot._core.layout import new_figure
+    if n_components != 2:
+        raise ValueError(f"n_components 目前仅支持 2，实际值: {n_components}")
 
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    PCA, _ = _check_sklearn()
+
+    effective_venue = apply_resolved_style(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     pca = PCA(n_components=n_components)
     proj = pca.fit_transform(data)
@@ -58,7 +94,7 @@ def plot_pca(
     ax.set_xlabel(f"PC1 ({var[0]*100:.1f}%)")
     ax.set_ylabel(f"PC2 ({var[1]*100:.1f}%)")
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_confusion_matrix(
@@ -67,32 +103,45 @@ def plot_confusion_matrix(
     labels: Optional[List[str]] = None,
     normalize: bool = False,
     cmap: str = "Blues",
-    venue: str = "nature",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     混淆矩阵可视化
 
     参数:
+        y_true   : 真实标签
+        y_pred   : 预测标签
+        labels   : 类别名称列表
         normalize: True 则按真实类别归一化（显示比例而非计数）
+        cmap     : 颜色映射
+        venue    : 期刊样式
+        palette  : 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
+
+    抛出:
+        ImportError: 未安装 scikit-learn 时
 
     示例:
         >>> from sciplot._ext.ml import plot_confusion_matrix
-        >>> fig, ax = plot_confusion_matrix(y_test, y_pred,
+        >>> result = plot_confusion_matrix(y_test, y_pred,
         ...     labels=class_names, normalize=True, venue="ieee")
-        >>> sp.save(fig, "confusion_matrix", formats=("pdf",))
+        >>> result.save("confusion_matrix", formats=("pdf",))
     """
     import itertools
-    from sklearn.metrics import confusion_matrix
-    from sciplot._core.style import setup_style
-    from sciplot._core.layout import new_figure
+    _, confusion_matrix = _check_sklearn()
 
-    setup_style(venue)
-    fig, ax = new_figure(venue)
+    effective_venue = apply_resolved_style(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     cm = confusion_matrix(y_true, y_pred)
     if normalize:
-        cm = cm.astype("float") / cm.sum(axis=1, keepdims=True)
+        row_sums = cm.sum(axis=1, keepdims=True)
+        row_sums = np.where(row_sums == 0, 1, row_sums)
+        cm = cm.astype("float") / row_sums
 
     im = ax.imshow(cm, interpolation="nearest", cmap=cmap)
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -114,7 +163,7 @@ def plot_confusion_matrix(
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_feature_importance(
@@ -122,35 +171,36 @@ def plot_feature_importance(
     importance: np.ndarray,
     title: str = "Feature Importance",
     top_n: Optional[int] = None,
-    venue: str = "nature",
-    palette: str = "pastel",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     特征重要性可视化（水平条形图，按重要性降序排列）
 
     参数:
         features  : 特征名列表
         importance: 对应的重要性分数数组
+        title     : 图表标题
         top_n     : 只显示前 N 个最重要特征；None 则显示全部
+        venue     : 期刊样式
+        palette   : 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
 
     示例:
         >>> from sciplot._ext.ml import plot_feature_importance
         >>> importances = model.feature_importances_
-        >>> fig, ax = plot_feature_importance(feat_names, importances, top_n=15)
-        >>> sp.save(fig, "feature_importance", formats=("pdf",))
+        >>> result = plot_feature_importance(feat_names, importances, top_n=15)
+        >>> result.save("feature_importance", formats=("pdf",))
     """
-    from sciplot._core.style import setup_style
-    from sciplot._core.layout import new_figure
+    effective_venue = apply_resolved_style(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
-
-    # 排序
     indices = np.argsort(importance)[::-1]
     if top_n is not None:
         indices = indices[:top_n]
-    # 倒转使最重要的在上方
     indices = indices[::-1]
 
     sorted_features = [features[i] for i in indices]
@@ -163,7 +213,7 @@ def plot_feature_importance(
     ax.set_xlabel("Importance")
     ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_learning_curve(
@@ -174,25 +224,36 @@ def plot_learning_curve(
     ylabel: str = "Score",
     label_train: str = "Training",
     label_val: str = "Validation",
-    venue: str = "nature",
-    palette: str = "pastel-2",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     学习曲线可视化（训练集 vs 验证集得分随样本量变化）
+
+    参数:
+        train_scores: 训练集得分数组
+        val_scores  : 验证集得分数组
+        train_sizes : 训练样本数量数组
+        xlabel      : X 轴标签
+        ylabel      : Y 轴标签
+        label_train : 训练集图例标签
+        label_val   : 验证集图例标签
+        venue       : 期刊样式
+        palette     : 配色方案
+
+    返回:
+        PlotResult: 包含 fig 和 ax 的绘图结果对象
 
     示例:
         >>> from sciplot._ext.ml import plot_learning_curve
         >>> from sklearn.model_selection import learning_curve
         >>> sizes, tr, va = learning_curve(clf, X, y, cv=5)
-        >>> fig, ax = plot_learning_curve(tr.mean(1), va.mean(1), sizes)
-        >>> sp.save(fig, "learning_curve")
+        >>> result = plot_learning_curve(tr.mean(1), va.mean(1), sizes)
+        >>> result.save("learning_curve")
     """
-    from sciplot._core.style import setup_style
-    from sciplot._core.layout import new_figure
-
-    setup_style(venue, palette)
-    fig, ax = new_figure(venue)
+    effective_venue = apply_resolved_style(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     if train_sizes is None:
         train_sizes = np.arange(1, len(train_scores) + 1)
@@ -204,4 +265,12 @@ def plot_learning_curve(
     ax.set_ylabel(ylabel)
     ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = [
+    "plot_pca",
+    "plot_confusion_matrix",
+    "plot_feature_importance",
+    "plot_learning_curve",
+]

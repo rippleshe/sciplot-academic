@@ -285,11 +285,11 @@ class TestColorPaletteDesign:
             # 至少一个通道应该较亮 (>128)
             assert max(r, g, b) > 128, f"{color} 不是 pastel 颜色"
             
-    def test_earth_colors_are_muted(self):
-        """Earth 颜色应该是大地色系"""
-        earth = sp.get_palette("earth")
-        # 大地色通常偏棕色/绿色
-        assert len(earth) >= 4
+    def test_forest_colors_are_muted(self):
+        """Forest 颜色应该是森林蓝绿系"""
+        forest = sp.get_palette("forest")
+        # 森林色通常偏蓝/绿
+        assert len(forest) >= 4
         
     def test_ocean_colors_are_blue_green(self):
         """Ocean 颜色应该是蓝绿色系"""

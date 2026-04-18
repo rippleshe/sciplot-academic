@@ -25,6 +25,21 @@ from sciplot._plots.advanced import (
     plot_confidence,
     plot_heatmap,
 )
+from sciplot._plots.polar import (
+    plot_radar,
+)
+from sciplot._plots.timeseries import (
+    plot_timeseries,
+    plot_multi_timeseries,
+)
+from sciplot._plots.multivariate import (
+    plot_parallel,
+)
+from sciplot._plots.statistical import (
+    plot_residuals,
+    plot_qq,
+    plot_bland_altman,
+)
 
 __all__ = [
     # 折线 / 散点
@@ -45,6 +60,17 @@ __all__ = [
     "plot_errorbar",
     "plot_confidence",
     "plot_heatmap",
+    # 极坐标
+    "plot_radar",
+    # 时序
+    "plot_timeseries",
+    "plot_multi_timeseries",
+    # 多维
+    "plot_parallel",
+    # 统计
+    "plot_residuals",
+    "plot_qq",
+    "plot_bland_altman",
     # 常量
     "LINE_STYLES",
     "MARKERS",

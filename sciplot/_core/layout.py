@@ -369,7 +369,7 @@ def save(
 
     参数:
         fig        : Matplotlib 图形对象
-        name       : 文件名（不含扩展名）
+        name       : 文件名（不含扩展名），可包含子目录路径
         dpi        : 位图分辨率，默认 1200（印刷级）
         formats    : 输出格式元组，默认 ("pdf", "png")
                      支持："pdf" | "png" | "svg" | "eps"
@@ -384,14 +384,28 @@ def save(
         >>> sp.save(fig, "word稿", formats=("png",), dpi=1200) # 仅 PNG
         >>> sp.save(fig, "投稿", formats=("pdf",))             # 仅 PDF
         >>> sp.save(fig, "fig", dir="outputs/figures")        # 保存到指定目录
+        >>> sp.save(fig, "nested/dir/fig")                    # 自动创建嵌套目录
     """
     VECTOR_FORMATS = {"pdf", "svg", "eps"}
-    save_dir = Path(dir) if dir else Path.cwd()
+
+    # 处理 name 可能包含路径的情况
+    name_path = Path(name)
+    if dir:
+        save_dir = Path(dir) / name_path.parent
+    else:
+        save_dir = name_path.parent if name_path.parent != Path(".") else Path.cwd()
+        if not save_dir.is_absolute():
+            save_dir = Path.cwd() / save_dir
+
+    # 确保目录存在（递归创建）
     save_dir.mkdir(parents=True, exist_ok=True)
+
+    # 纯文件名（不含路径）
+    filename = name_path.name
 
     saved_paths: List[Path] = []
     for fmt in formats:
-        path = save_dir / f"{name}.{fmt}"
+        path = save_dir / f"{filename}.{fmt}"
         extra = {} if fmt in VECTOR_FORMATS else {"dpi": dpi}
         fig.savefig(path, bbox_inches=bbox_inches, format=fmt, **extra, **kwargs)
         saved_paths.append(path)
@@ -424,10 +438,14 @@ def list_paper_layouts(
 # 内部工具
 # ============================================================================
 
-def _set_ticks_inward(axes: Union[Axes, np.ndarray]) -> None:
+def _set_ticks_inward(axes: Union[Axes, np.ndarray, Sequence[Axes]]) -> None:
     """将所有子图的刻度设为朝内"""
     if isinstance(axes, np.ndarray):
         for ax in axes.flat:
             ax.tick_params(direction="in")
     elif isinstance(axes, Axes):
         axes.tick_params(direction="in")
+    elif hasattr(axes, "__iter__"):
+        for ax in axes:
+            if isinstance(ax, Axes):
+                ax.tick_params(direction="in")

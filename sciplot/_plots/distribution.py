@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,22 +15,13 @@ from matplotlib.figure import Figure
 from sciplot._core.style import setup_style
 from sciplot._core.palette import DEFAULT_PALETTE
 from sciplot._core.layout import new_figure
-
-
-def _resolve_style_venue(
-    venue: Optional[str],
-    palette: Optional[str],
-) -> Optional[str]:
-    """解析并应用样式，必要时复用 style_context 的当前 rcParams。"""
-    if venue is None and palette is None:
-        from sciplot._core.context import StyleContext
-        if StyleContext.is_in_context():
-            return None
-
-    effective_venue = venue or "nature"
-    effective_palette = palette or DEFAULT_PALETTE
-    setup_style(effective_venue, effective_palette)
-    return effective_venue
+from sciplot._core.utils import (
+    apply_resolved_style,
+    validate_dict_not_empty,
+    validate_array_like,
+    validate_positive_number,
+)
+from sciplot._core.result import PlotResult
 
 
 # ============================================================================
@@ -47,7 +38,7 @@ def plot_bar(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制单组柱状图（每个柱子自动赋不同颜色）
 
@@ -60,7 +51,17 @@ def plot_bar(
         ... )
         >>> sp.save(fig, "accuracy_bar")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    # 输入验证
+    if not categories:
+        raise ValueError("参数 'categories' 不能为空列表")
+    values = validate_array_like(values, "values")
+    if len(categories) != len(values):
+        raise ValueError(
+            f"categories 长度 ({len(categories)}) 与 values 长度 ({len(values)}) 不一致"
+        )
+    width = validate_positive_number(width, "width", allow_zero=False)
+
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
     bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
@@ -70,7 +71,7 @@ def plot_bar(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -91,7 +92,7 @@ def plot_grouped_bar(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制分组柱状图（多方法/多指标对比，论文最常见）
 
@@ -117,11 +118,24 @@ def plot_grouped_bar(
         ... )
         >>> sp.save(fig, "compare_bar")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    # 输入验证
+    if not groups:
+        raise ValueError("参数 'groups' 不能为空列表")
+    data = validate_dict_not_empty(data, "data")
+    n_groups = len(groups)
+    for series_name, values in data.items():
+        if len(values) != n_groups:
+            raise ValueError(
+                f"数据系列 '{series_name}' 的长度 ({len(values)}) "
+                f"与 groups 长度 ({n_groups}) 不一致"
+            )
+    width = validate_positive_number(width, "width", allow_zero=False)
+    gap = validate_positive_number(gap, "gap", allow_zero=True)
+
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
-    n_groups = len(groups)
     n_series = len(data)
     bar_w = (width - gap * (n_series - 1)) / n_series
     group_centers = np.arange(n_groups)
@@ -151,7 +165,7 @@ def plot_grouped_bar(
         ax.set_title(title)
     ax.legend(loc=legend_loc)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -168,7 +182,7 @@ def plot_box(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制箱线图（展示中位数、四分位距和离群值）
 
@@ -184,7 +198,7 @@ def plot_box(
         ... )
         >>> sp.save(fig, "boxplot")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
@@ -201,7 +215,7 @@ def plot_box(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -219,7 +233,7 @@ def plot_violin(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制小提琴图（比箱线图更直观地展示数据分布形状）
 
@@ -234,7 +248,7 @@ def plot_violin(
         ...     ylabel="Accuracy (%)", showmedians=True
         ... )
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
@@ -254,7 +268,7 @@ def plot_violin(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -272,7 +286,7 @@ def plot_histogram(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制直方图
 
@@ -286,7 +300,7 @@ def plot_histogram(
         ...     xlabel="残差", ylabel="概率密度"
         ... )
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
     ax.hist(data, bins=bins, density=density, alpha=alpha,
@@ -296,7 +310,7 @@ def plot_histogram(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -316,7 +330,7 @@ def plot_stacked_bar(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制堆叠柱状图（展示各部分占总和的比例）
 
@@ -340,7 +354,7 @@ def plot_stacked_bar(
         ...     show_values=True
         ... )
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
@@ -376,7 +390,7 @@ def plot_stacked_bar(
         ax.set_title(title)
     ax.legend(loc=legend_loc)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -396,7 +410,7 @@ def plot_horizontal_bar(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制水平柱状图（适合类别较多的场景）
 
@@ -414,7 +428,7 @@ def plot_horizontal_bar(
         ...     sort=True
         ... )
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
@@ -446,7 +460,7 @@ def plot_horizontal_bar(
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -465,43 +479,45 @@ def plot_combo(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes, Optional[Axes]]:
+) -> PlotResult:
     """
     绘制组合图（柱状图 + 折线图，常用于双 Y 轴场景）
 
     参数:
+        x           : 横轴标签数组
         bar_data    : 柱状图数据 {系列名: 数值列表}
         line_data   : 折线图数据 {系列名: 数值列表}，可选
+        xlabel      : X 轴标签
         ylabel_left : 左 Y 轴标签（对应柱状图）
         ylabel_right: 右 Y 轴标签（对应折线图）
         bar_width   : 柱宽，默认 0.35
+        venue       : 期刊样式
+        palette     : 配色方案
 
     返回:
-        (fig, ax_bar, ax_line) 其中 ax_line 仅在 line_data 不为 None 时返回
+        PlotResult: 包含 fig 和 axes 的结果对象
+            - 单 Y 轴时: result.ax 为主坐标轴
+            - 双 Y 轴时: result.ax_array[0] 为柱状图轴, result.ax_array[1] 为折线图轴
 
     示例:
         >>> # 单 Y 轴：柱状 + 折线
-        >>> fig, ax, _ = sp.plot_combo(
+        >>> result = sp.plot_combo(
         ...     ["Q1", "Q2", "Q3", "Q4"],
         ...     bar_data={"销售额": [100, 120, 140, 160]},
         ...     line_data={"增长率": [5, 8, 12, 15]},
         ...     ylabel_left="销售额（万元）",
         ...     ylabel_right="增长率（%）",
         ... )
+        >>> result.save("combo_chart")
 
-        >>> # 双 Y 轴：柱状 + 折线
-        >>> fig, ax1, ax2 = sp.plot_combo(
-        ...     months,
-        ...     bar_data={"销量": sales},
-        ...     line_data={"均价": prices},
-        ... )
-        >>> ax1.set_ylabel("销量（件）")
-        >>> ax2.set_ylabel("均价（元）")
+        >>> # 双 Y 轴访问
+        >>> result = sp.plot_combo(months, bar_data={"销量": sales}, line_data={"均价": prices})
+        >>> ax_bar, ax_line = result.ax_array
     """
     if not bar_data:
         raise ValueError("bar_data 不能为空，至少需要一个柱状图系列")
 
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax_bar = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
@@ -509,7 +525,6 @@ def plot_combo(
     n_bars = len(bar_data)
     indices = np.arange(n_groups)
 
-    # 绘制柱状图
     bar_width_eff = bar_width / n_bars
     for i, (name, values) in enumerate(bar_data.items()):
         offset = (i - (n_bars - 1) / 2) * bar_width_eff
@@ -521,16 +536,14 @@ def plot_combo(
     ax_bar.set_xlabel(xlabel)
     ax_bar.set_ylabel(ylabel_left)
 
-    # 绘制折线图（如果有）
     ax_line = None
     if line_data:
         ax_line = ax_bar.twinx()
         ax_line.tick_params(direction="in")
 
-        # 折线使用后续颜色
         line_colors = colors[n_bars:]
         if len(line_colors) < len(line_data):
-            line_colors = colors  # 循环使用
+            line_colors = colors
 
         for i, (name, values) in enumerate(line_data.items()):
             color = line_colors[i % len(line_colors)]
@@ -538,7 +551,6 @@ def plot_combo(
 
         ax_line.set_ylabel(ylabel_right)
 
-        # 合并图例
         lines1, labels1 = ax_bar.get_legend_handles_labels()
         lines2, labels2 = ax_line.get_legend_handles_labels()
         ax_bar.legend(lines1 + lines2, labels1 + labels2, loc="best")
@@ -549,7 +561,9 @@ def plot_combo(
         ax_bar.set_title(title)
     ax_bar.tick_params(direction="in")
 
-    return fig, ax_bar, ax_line
+    axes_array = np.array([ax_bar, ax_line]) if ax_line is not None else ax_bar
+
+    return PlotResult(fig, axes_array, metadata={"venue": venue, "palette": palette})
 
 
 # ============================================================================
@@ -627,7 +641,14 @@ def annotate_significance(
 def _get_cycle_colors() -> List[str]:
     """从当前 rcParams 的 prop_cycle 中提取颜色列表"""
     prop_cycle = plt.rcParams["axes.prop_cycle"]
-    return [c["color"] for c in prop_cycle]
+    colors = []
+    for c in prop_cycle:
+        if "color" in c:
+            colors.append(c["color"])
+    # 如果没有找到颜色，使用默认颜色
+    if not colors:
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+    return colors
 
 
 def _is_dark_color(hex_color: str) -> bool:

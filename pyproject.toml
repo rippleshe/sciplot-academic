@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sciplot-academic"
-version = "1.7.1"
+version = "1.7.4"
 description = "中文科研绘图库 — 基于 Matplotlib，专为中文论文场景优化"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -33,6 +33,7 @@ dependencies = [
     "matplotlib>=3.5.0",
     "numpy>=1.20.0",
     "scienceplots>=2.1.0",
+    "scipy>=1.7.0",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +45,17 @@ dev = [
 ]
 ml = [
     "scikit-learn>=1.0.0",
+]
+network = [
+    "networkx>=2.6.0",
+]
+venn = [
+    "matplotlib-venn>=0.11.0",
+]
+all = [
+    "scikit-learn>=1.0.0",
+    "networkx>=2.6.0",
+    "matplotlib-venn>=0.11.0",
 ]
 
 [project.urls]

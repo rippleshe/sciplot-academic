@@ -19,7 +19,8 @@ from sciplot._core.palette import (
     list_pastel_subsets,
     list_earth_subsets,
     list_ocean_subsets,
-    list_rmb_palettes,
+    list_forest_subsets,
+    list_sunset_subsets,
     list_all_palettes,
 )
 from sciplot._core.layout import (
@@ -30,6 +31,13 @@ from sciplot._core.layout import (
     create_twinx,
     add_panel_labels,
     save,
+)
+from sciplot._core.config import (
+    SciPlotConfig,
+    set_defaults,
+    get_config,
+    load_config,
+    reset_config,
 )
 
 __all__ = [
@@ -48,7 +56,8 @@ __all__ = [
     "list_pastel_subsets",
     "list_earth_subsets",
     "list_ocean_subsets",
-    "list_rmb_palettes",
+    "list_forest_subsets",
+    "list_sunset_subsets",
     "list_all_palettes",
     "new_figure",
     "create_subplots",
@@ -57,4 +66,9 @@ __all__ = [
     "create_twinx",
     "add_panel_labels",
     "save",
+    "SciPlotConfig",
+    "set_defaults",
+    "get_config",
+    "load_config",
+    "reset_config",
 ]

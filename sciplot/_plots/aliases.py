@@ -232,8 +232,8 @@ def multi_area(
 
 
 def bar(
-    x,
-    height,
+    categories,
+    values,
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
@@ -244,8 +244,8 @@ def bar(
 ) -> Tuple[Figure, Axes]:
     """绘制柱状图（plot_bar 的别名）"""
     return plot_bar(
-        x,
-        height,
+        categories,
+        values,
         xlabel=xlabel,
         ylabel=ylabel,
         title=title,
@@ -353,7 +353,7 @@ def hbar(
 
 def hist(
     x,
-    bins: Optional[int] = None,
+    bins: int = 30,
     xlabel: str = "",
     ylabel: str = "频率",
     title: str = "",
@@ -364,10 +364,9 @@ def hist(
     **kwargs,
 ) -> Tuple[Figure, Axes]:
     """绘制直方图（plot_histogram 的别名）"""
-    effective_bins = 30 if bins is None else bins
     return plot_histogram(
         x,
-        bins=effective_bins,
+        bins=bins,
         xlabel=xlabel,
         ylabel=ylabel,
         title=title,

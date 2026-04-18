@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 from matplotlib.axes import Axes
@@ -13,32 +13,12 @@ from matplotlib.figure import Figure
 from sciplot._core.style import setup_style
 from sciplot._core.palette import DEFAULT_PALETTE
 from sciplot._core.layout import new_figure
+from sciplot._core.utils import apply_resolved_style, validate_labels_match_data
+from sciplot._core.result import PlotResult
 
 
 LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
 MARKERS: List[str] = ["o", "s", "^", "D", "v", "<", ">", "p", "*", "h"]
-
-
-def _resolve_style_venue(
-    venue: Optional[str],
-    palette: Optional[str],
-) -> Optional[str]:
-    """
-    解析并应用样式。
-
-    返回:
-        - str: 已应用样式时使用的 venue
-        - None: 在 style_context 中复用现有 rcParams
-    """
-    if venue is None and palette is None:
-        from sciplot._core.context import StyleContext
-        if StyleContext.is_in_context():
-            return None
-
-    effective_venue = venue or "nature"
-    effective_palette = palette or DEFAULT_PALETTE
-    setup_style(effective_venue, effective_palette)
-    return effective_venue
 
 
 def plot_line(
@@ -51,7 +31,7 @@ def plot_line(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制单条折线图
 
@@ -60,7 +40,7 @@ def plot_line(
         >>> fig, ax = sp.plot(x, np.sin(x), xlabel="时间 (s)", ylabel="幅度", label="sin(x)")
         >>> sp.save(fig, "result")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     ax.plot(x, y, label=label, **kwargs)
     ax.set_xlabel(xlabel)
@@ -70,7 +50,7 @@ def plot_line(
     if label:
         ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 # 简化别名
@@ -87,7 +67,7 @@ def plot_multi(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制多条折线图（智能选配色子集）
 
@@ -135,7 +115,7 @@ def plot_multi_line(
     palette: Optional[str] = None,
     use_linestyles: bool = False,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制多线折线图（完整参数版）
 
@@ -150,15 +130,10 @@ def plot_multi_line(
         ...     palette="ocean-3", use_linestyles=True
         ... )
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 
-    if labels is None:
-        labels = [f"Series {i + 1}" for i in range(len(y_list))]
-    if len(labels) != len(y_list):
-        raise ValueError(
-            f"labels 长度 ({len(labels)}) 与 y_list 长度 ({len(y_list)}) 不一致"
-        )
+    labels = validate_labels_match_data(labels, y_list)
 
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
         xi = x if isinstance(x, np.ndarray) else x[i]
@@ -171,7 +146,7 @@ def plot_multi_line(
         ax.set_title(title)
     ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_scatter(
@@ -186,7 +161,7 @@ def plot_scatter(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制散点图
 
@@ -199,7 +174,7 @@ def plot_scatter(
         ...                           label="样本", s=30, alpha=0.6)
         >>> sp.save(fig, "scatter")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     sc = ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
     ax.set_xlabel(xlabel)
@@ -209,7 +184,7 @@ def plot_scatter(
     if label:
         ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_step(
@@ -223,7 +198,7 @@ def plot_step(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制阶梯图（累积分布函数 CDF、直方型折线等常见于物理/统计论文）
 
@@ -241,7 +216,7 @@ def plot_step(
         ...     xlabel="值", ylabel="累积概率", label="CDF")
         >>> sp.save(fig, "cdf")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     ax.step(x, y, where=where, label=label, **kwargs)
     ax.set_xlabel(xlabel)
@@ -251,7 +226,7 @@ def plot_step(
     if label:
         ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_area(
@@ -266,7 +241,7 @@ def plot_area(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制面积图（折线下方填充）
 
@@ -286,7 +261,7 @@ def plot_area(
         >>> ax.legend()
         >>> sp.save(fig, "stacked_area")
     """
-    effective_venue = _resolve_style_venue(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 
     (line,) = ax.plot(x, y, label=label, **kwargs)
@@ -302,7 +277,7 @@ def plot_area(
     if label:
         ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_multi_area(
@@ -317,7 +292,7 @@ def plot_multi_area(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[Figure, Axes]:
+) -> PlotResult:
     """
     绘制多组面积图（支持堆叠模式）
 
@@ -342,26 +317,29 @@ def plot_multi_area(
     if n <= 4 and palette in ("pastel", "earth", "ocean"):
         effective_palette = f"{palette}-{n}"
 
-    effective_venue = _resolve_style_venue(venue, effective_palette)
+    effective_venue = apply_resolved_style(venue, effective_palette)
     fig, ax = new_figure(effective_venue)
 
-    if labels is None:
-        labels = [f"Series {i + 1}" for i in range(n)]
-    if len(labels) != len(y_list):
-        raise ValueError(
-            f"labels 长度 ({len(labels)}) 与 y_list 长度 ({len(y_list)}) 不一致"
-        )
+    labels = validate_labels_match_data(labels, y_list)
+
+    # 验证数组长度一致性
+    x_len = len(x)
+    for i, y in enumerate(y_list):
+        if len(y) != x_len:
+            raise ValueError(
+                f"y_list[{i}] 长度 ({len(y)}) 与 x 长度 ({x_len}) 不一致"
+            )
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
     if stacked:
         # 堆叠面积图
-        y_stack = np.zeros_like(x)
+        y_stack = np.zeros(len(x))
         for i, (y, lbl) in enumerate(zip(y_list, labels)):
             color = colors[i % len(colors)]
             ax.fill_between(x, y_stack, y_stack + y, alpha=alpha,
                            color=color, label=lbl, **kwargs)
-            y_stack += y
+            y_stack = y_stack + y
     else:
         # 独立面积图
         for i, (y, lbl) in enumerate(zip(y_list, labels)):
@@ -376,4 +354,4 @@ def plot_multi_area(
         ax.set_title(title)
     ax.legend()
     ax.tick_params(direction="in")
-    return fig, ax
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

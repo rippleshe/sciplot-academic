@@ -66,7 +66,66 @@ sp.save(fig, "fig1")                          # PDF + PNG 1200 DPI
 sp.save(fig, "word稿", formats=("png",), dpi=1200)
 sp.save(fig, "投稿", formats=("pdf",))
 sp.save(fig, "fig", dir="outputs")
+sp.save(fig, "nested/dir/fig")                # 自动创建嵌套目录
 ```
+
+---
+
+## PlotResult — 增强返回类型
+
+```python
+result = sp.PlotResult(fig, ax)
+```
+
+### 特性
+
+- **元组解包**: `fig, ax = result`
+- **属性访问**: `result.fig`, `result.ax`, `result.axes`
+- **链式调用**: `result.xlabel("X").ylabel("Y").save("fig")`
+- **多子图支持**: `result.ax_array` 访问子图数组
+
+### 示例
+
+```python
+# 基础用法
+fig, ax = sp.plot(x, y)
+result = sp.PlotResult(fig, ax)
+result.xlabel("时间 (s)").ylabel("电压 (V)").save("结果图")
+
+# 多子图统一设置
+fig, axes = sp.paper_subplots(1, 2)
+result = sp.PlotResult(fig, axes)
+result.xlabel("共同X标签").ylabel("共同Y标签").add_panel_labels().save("subplots")
+
+# 属性访问
+print(result.fig)      # Figure 对象
+print(result.ax)       # Axes 对象（单个子图）
+print(result.ax_array) # Axes 数组（多子图）
+```
+
+### 链式方法
+
+| 方法 | 说明 |
+|------|------|
+| `xlabel(label)` | 设置 X 轴标签 |
+| `ylabel(label)` | 设置 Y 轴标签 |
+| `title(title)` | 设置标题 |
+| `suptitle(title)` | 设置图形总标题 |
+| `xlim(left, right)` | 设置 X 轴范围 |
+| `ylim(bottom, top)` | 设置 Y 轴范围 |
+| `legend()` | 添加图例 |
+| `grid(visible)` | 设置网格 |
+| `tight_layout()` | 自动调整布局 |
+| `plot(x, y)` | 添加折线（单图）|
+| `scatter(x, y)` | 添加散点（单图）|
+| `axhline(y)` | 添加水平线 |
+| `axvline(x)` | 添加垂直线 |
+| `annotate(text, xy)` | 添加标注 |
+| `save(name, **kwargs)` | 保存图形 |
+| `show()` | 显示图形 |
+| `close()` | 关闭图形 |
+| `set_labels(**kwargs)` | 一次性设置标签 |
+| `add_panel_labels()` | 添加 (a) (b) 面板标签 |
 
 ---
 
@@ -75,9 +134,11 @@ sp.save(fig, "fig", dir="outputs")
 ```python
 sp.list_venues()                # 所有 venue
 sp.list_palettes()              # 所有配色
-sp.list_resident_palettes()     # 三大常驻色系
+sp.list_resident_palettes()     # 四大内置色系
 sp.list_pastel_subsets()        # pastel 子集
-sp.list_rmb_palettes()          # 人民币配色
+sp.list_ocean_subsets()         # ocean 子集
+sp.list_forest_subsets()        # forest 子集
+sp.list_sunset_subsets()        # sunset 子集
 sp.list_paper_layouts()         # 论文子图尺寸
 sp.get_venue_info("ieee")       # venue 详情
 sp.get_palette("pastel")        # 获取 HEX 列表

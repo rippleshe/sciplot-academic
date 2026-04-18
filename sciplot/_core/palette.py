@@ -3,15 +3,14 @@
 
 配色体系说明
 ============
-SciPlot 有四类内置配色，均不依赖 SciencePlots：
+SciPlot 内置 4 套精选配色方案，均不依赖 SciencePlots：
 
-  三大常驻系列（各含 1-4 色子集，推荐优先使用）
-    pastel  — 柔和粉彩，默认，适合大多数论文场景
-    earth   — 大地色系，适合土木/环境/材料类图表
-    ocean   — 海洋蓝绿，适合水文/海洋/气象类图表
+  pastel  — 柔和粉彩（6 色），适合大多数论文场景
+  ocean   — 海洋蓝绿（6 色），适合水文/海洋/气象类图表
+  forest  — 森林渐变（6 色），适合生态/环保/农业类图表
+  sunset  — 日落暖色（5 色），适合能量/热力/温度类图表
 
-  人民币系列（各 5 色，灵感来自人民币纸币）
-    100yuan / 50yuan / 20yuan / 10yuan / 5yuan / 1yuan
+每套配色均自动生成 1-N 色子集（如 pastel-1 ~ pastel-6）。
 
   自定义（用户运行时注册）
     set_custom_palette(colors, name)  — 注册单色组
@@ -19,18 +18,31 @@ SciPlot 有四类内置配色，均不依赖 SciencePlots：
 
   扩展配色系（用户自定义完整方案）
     通过 register_color_scheme() 注册后可使用 scheme-name 调用
-
-注意：本版本已移除 rainbow-N 和 Paul Tol 配色，
-后续如需增加新配色系，直接向 RESIDENT_PALETTES 添加即可。
 """
 
 from __future__ import annotations
 
+import re
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
 from matplotlib import cycler
 import warnings
+
+_HEX_COLOR_PATTERN = re.compile(r'^#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?$')
+
+
+def _validate_hex_color(color: str) -> bool:
+    """
+    验证 HEX 颜色格式是否有效
+    
+    参数:
+        color: 颜色字符串
+    
+    返回:
+        是否为有效的 HEX 颜色
+    """
+    return bool(_HEX_COLOR_PATTERN.match(color))
 
 
 # ============================================================================
@@ -125,29 +137,18 @@ class _UserPaletteStore:
 
 
 # ============================================================================
-# 人民币配色 — 灵感来源于人民币纸币主色调
-# ============================================================================
-
-RMB_PALETTES: Dict[str, List[str]] = {
-    "100yuan": ["#780018", "#AA0033", "#DD0022", "#CC0044", "#FA8095"],  # 红色系
-    "50yuan":  ["#25362B", "#276E3D", "#56B76A", "#3C4061", "#8E8E99"],  # 绿色系
-    "20yuan":  ["#532F1A", "#6B4E25", "#7F5643", "#796A5D", "#BE9A62"],  # 棕色系
-    "10yuan":  ["#242F4D", "#465A66", "#6382AA", "#828E99", "#7F606D"],  # 蓝色系
-    "5yuan":   ["#413A4C", "#63576F", "#56B76A", "#6F8DB1", "#B3A479"],  # 紫色系
-    "1yuan":   ["#3C3F27", "#5A5745", "#9DA780", "#937539", "#C5AB71"],  # 橄榄绿系
-}
-
-# ============================================================================
-# 三大常驻配色系（每种都有 1-4 色子集）
+# 四大内置配色系（每种都有 1-N 色子集）
 # ============================================================================
 
 # 1. Pastel 柔和粉彩（默认首选）
 PASTEL_PALETTE: Dict[str, List[str]] = {
-    "pastel":   ["#cdb4db", "#ffc8dd", "#ffafcc", "#bde0fe", "#a2d2ff"],
-    "pastel-1": ["#cdb4db"],
-    "pastel-2": ["#cdb4db", "#ffc8dd"],
-    "pastel-3": ["#cdb4db", "#ffc8dd", "#ffafcc"],
-    "pastel-4": ["#cdb4db", "#ffc8dd", "#ffafcc", "#bde0fe"],
+    "pastel":   ["#845EC2", "#D65DB1", "#FF6F91", "#FF9671", "#FFC75F", "#F9F871"],
+    "pastel-1": ["#845EC2"],
+    "pastel-2": ["#845EC2", "#D65DB1"],
+    "pastel-3": ["#845EC2", "#D65DB1", "#FF6F91"],
+    "pastel-4": ["#845EC2", "#D65DB1", "#FF6F91", "#FF9671"],
+    "pastel-5": ["#845EC2", "#D65DB1", "#FF6F91", "#FF9671", "#FFC75F"],
+    "pastel-6": ["#845EC2", "#D65DB1", "#FF6F91", "#FF9671", "#FFC75F", "#F9F871"],
 }
 
 # 2. Earth 大地色系
@@ -161,24 +162,46 @@ EARTH_PALETTE: Dict[str, List[str]] = {
 
 # 3. Ocean 海洋蓝绿
 OCEAN_PALETTE: Dict[str, List[str]] = {
-    "ocean":   ["#88afd8", "#90bfcf", "#afd1bf", "#cfe5bb", "#e0eeb8"],
-    "ocean-1": ["#88afd8"],
-    "ocean-2": ["#88afd8", "#90bfcf"],
-    "ocean-3": ["#88afd8", "#90bfcf", "#afd1bf"],
-    "ocean-4": ["#88afd8", "#90bfcf", "#afd1bf", "#cfe5bb"],
+    "ocean":   ["#5E98C2", "#26B3D1", "#00CCCB", "#56E2B0", "#A6F18C", "#F9F871"],
+    "ocean-1": ["#5E98C2"],
+    "ocean-2": ["#5E98C2", "#26B3D1"],
+    "ocean-3": ["#5E98C2", "#26B3D1", "#00CCCB"],
+    "ocean-4": ["#5E98C2", "#26B3D1", "#00CCCB", "#56E2B0"],
+    "ocean-5": ["#5E98C2", "#26B3D1", "#00CCCB", "#56E2B0", "#A6F18C"],
+    "ocean-6": ["#5E98C2", "#26B3D1", "#00CCCB", "#56E2B0", "#A6F18C", "#F9F871"],
 }
 
-# 合并所有常驻配色（顺序：pastel 优先展示）
+# 4. Forest 森林渐变
+FOREST_PALETTE: Dict[str, List[str]] = {
+    "forest":   ["#5EC299", "#00B3A2", "#00A2AD", "#0090B8", "#007DBD", "#0067B9"],
+    "forest-1": ["#5EC299"],
+    "forest-2": ["#5EC299", "#00B3A2"],
+    "forest-3": ["#5EC299", "#00B3A2", "#00A2AD"],
+    "forest-4": ["#5EC299", "#00B3A2", "#00A2AD", "#0090B8"],
+    "forest-5": ["#5EC299", "#00B3A2", "#00A2AD", "#0090B8", "#007DBD"],
+    "forest-6": ["#5EC299", "#00B3A2", "#00A2AD", "#0090B8", "#007DBD", "#0067B9"],
+}
+
+# 5. Sunset 日落暖色
+SUNSET_PALETTE: Dict[str, List[str]] = {
+    "sunset":   ["#D44132", "#F45E4A", "#FF7A62", "#FF967C", "#FFB296"],
+    "sunset-1": ["#D44132"],
+    "sunset-2": ["#D44132", "#F45E4A"],
+    "sunset-3": ["#D44132", "#F45E4A", "#FF7A62"],
+    "sunset-4": ["#D44132", "#F45E4A", "#FF7A62", "#FF967C"],
+    "sunset-5": ["#D44132", "#F45E4A", "#FF7A62", "#FF967C", "#FFB296"],
+}
+
+# 合并所有内置配色（顺序：pastel > ocean > forest > sunset）
 RESIDENT_PALETTES: Dict[str, List[str]] = {
     **PASTEL_PALETTE,
-    **EARTH_PALETTE,
     **OCEAN_PALETTE,
+    **FOREST_PALETTE,
+    **SUNSET_PALETTE,
 }
 
 # 所有内置配色名（不含用户自定义）
-ALL_BUILTIN_PALETTES: List[str] = (
-    list(RESIDENT_PALETTES.keys()) + list(RMB_PALETTES.keys())
-)
+ALL_BUILTIN_PALETTES: List[str] = list(RESIDENT_PALETTES.keys())
 
 # 向后兼容别名
 ALL_PALETTES = ALL_BUILTIN_PALETTES
@@ -195,10 +218,9 @@ def apply_palette(palette: str, n_colors: Optional[int] = None) -> None:
     将指定配色应用到 matplotlib rcParams（内部函数）
 
     优先级：
-      1. 三大常驻配色系（pastel / earth / ocean 及其子集）
-      2. 人民币配色
-      3. 用户自定义配色
-      4. 用户自定义配色方案（自动选择）
+      1. 四大内置配色（pastel / ocean / forest / sunset 及其子集）
+      2. 用户自定义配色
+      3. 用户自定义配色方案（自动选择）
 
     参数:
         palette: 配色名称
@@ -206,16 +228,13 @@ def apply_palette(palette: str, n_colors: Optional[int] = None) -> None:
     """
     colors = None
 
-    # 1. 三大常驻配色系
+    # 1. 四大内置配色
     if palette in RESIDENT_PALETTES:
         colors = RESIDENT_PALETTES[palette]
-    # 2. 人民币配色
-    elif palette in RMB_PALETTES:
-        colors = RMB_PALETTES[palette]
-    # 3. 用户自定义配色
+    # 2. 用户自定义配色
     elif _UserPaletteStore.has(palette):
         colors = _UserPaletteStore.get(palette)
-    # 4. 尝试自动选择（配色方案）
+    # 3. 尝试自动选择（配色方案）
     elif n_colors is not None and _UserPaletteStore.has_scheme(palette):
         colors = _UserPaletteStore.auto_select(palette, n_colors)
 
@@ -255,10 +274,16 @@ def set_custom_palette(
     if not colors:
         raise ValueError("颜色列表不能为空")
     for c in colors:
-        if not (c.startswith("#") and len(c) in (4, 7)):
+        if not _validate_hex_color(c):
             raise ValueError(
-                f"颜色格式错误：'{c}'，请使用 HEX 格式（如 '#FF0000'）"
+                f"颜色格式错误：'{c}'，请使用有效的 HEX 格式（如 '#FF0000' 或 '#F00'）"
             )
+    if len(colors) < 2:
+        warnings.warn(
+            "配色建议至少包含 2 种颜色",
+            UserWarning,
+            stacklevel=2,
+        )
     if len(colors) > 8:
         warnings.warn(
             f"自定义配色建议不超过 8 色，当前 {len(colors)} 色；"
@@ -275,13 +300,12 @@ def get_palette(name: str) -> List[str]:
 
     示例:
         >>> sp.get_palette("pastel")
-        ['#cdb4db', '#ffc8dd', '#ffafcc', '#bde0fe', '#a2d2ff']
-        >>> sp.get_palette("100yuan")
-        ['#780018', '#AA0033', '#DD0022', '#CC0044', '#FA8095']
+        ['#845EC2', '#D65DB1', '#FF6F91', '#FF9671', '#FFC75F', '#F9F871']
+        >>> sp.get_palette("ocean")
+        ['#5E98C2', '#26B3D1', '#00CCCB', '#56E2B0', '#A6F18C', '#F9F871']
     """
-    for store in (RESIDENT_PALETTES, RMB_PALETTES):
-        if name in store:
-            return store[name]
+    if name in RESIDENT_PALETTES:
+        return RESIDENT_PALETTES[name]
     if _UserPaletteStore.has(name):
         return _UserPaletteStore.get(name)
     raise ValueError(
@@ -300,7 +324,7 @@ def list_all_palettes() -> List[str]:
 
 
 def list_resident_palettes() -> List[str]:
-    """列出三大常驻配色系（pastel / earth / ocean 及其子集）"""
+    """列出四大内置配色系（pastel / ocean / forest / sunset 及其子集）"""
     return list(RESIDENT_PALETTES.keys())
 
 
@@ -319,9 +343,14 @@ def list_ocean_subsets() -> List[str]:
     return list(OCEAN_PALETTE.keys())
 
 
-def list_rmb_palettes() -> List[str]:
-    """列出人民币配色方案名称"""
-    return list(RMB_PALETTES.keys())
+def list_forest_subsets() -> List[str]:
+    """列出 forest 系列名称"""
+    return list(FOREST_PALETTE.keys())
+
+
+def list_sunset_subsets() -> List[str]:
+    """列出 sunset 系列名称"""
+    return list(SUNSET_PALETTE.keys())
 
 
 def register_color_scheme(
@@ -372,8 +401,10 @@ def register_color_scheme(
         if not isinstance(colors, list):
             raise ValueError(f"'{key}' 必须是颜色列表")
         for c in colors:
-            if not (isinstance(c, str) and c.startswith("#") and len(c) in (4, 7)):
-                raise ValueError(f"颜色格式错误：'{c}'，请使用 HEX 格式（如 '#FF0000'）")
+            if not (isinstance(c, str) and _validate_hex_color(c)):
+                raise ValueError(
+                    f"颜色格式错误：'{c}'，请使用有效的 HEX 格式（如 '#FF0000' 或 '#F00'）"
+                )
 
     _UserPaletteStore.register_scheme(name, scheme)
 
@@ -416,3 +447,5 @@ def auto_select_palette(name: str, n: int) -> List[str]:
     if colors is None:
         raise ValueError(f"无法为 '{name}' 选择 {n} 色配色")
     return colors
+
+

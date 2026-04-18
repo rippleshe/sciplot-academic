@@ -236,16 +236,18 @@ class TestConfidenceInterval:
 class TestComboChart:
     """测试组合图"""
     
-    def test_combo_basic(self, cleanup_figures):
+    def test_combo_basic(self):
         """测试基础组合图（柱状+折线）"""
         x = ["Q1", "Q2", "Q3", "Q4"]
         bar_data = {"销售额": [100, 120, 140, 160]}
         line_data = {"增长率": [5, 8, 12, 15]}
         
-        fig, ax, ax2 = sp.plot_combo(x, bar_data, line_data)
+        result = sp.plot_combo(x, bar_data, line_data)
+        assert isinstance(result, sp.PlotResult)
+        fig, axes = result
         assert isinstance(fig, Figure)
-        # 检查有双 Y 轴
-        assert ax2 is not None
+        ax_bar, ax_line = result.ax_array
+        assert ax_line is not None
 
 
 class TestEdgeCases:
