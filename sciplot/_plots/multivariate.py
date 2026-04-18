@@ -95,6 +95,9 @@ def plot_parallel(
     if data.ndim != 2:
         raise ValueError(f"data 必须是二维数组，当前维度: {data.ndim}")
 
+    if not np.issubdtype(data.dtype, np.number):
+        raise ValueError("data 必须是数值型二维数组")
+
     n_samples, n_features = data.shape
 
     if columns is None:
@@ -132,12 +135,19 @@ def plot_parallel(
                 raise ValueError(f"列名 '{color_by}' 不在 columns 中")
         else:
             color_idx = int(color_by)
+            if not (-n_features <= color_idx < n_features):
+                raise ValueError(
+                    f"color_by 索引越界: {color_idx}，有效范围: [{-n_features}, {n_features - 1}]"
+                )
+            if color_idx < 0:
+                color_idx += n_features
 
-        color_values = data[:, color_idx]
+        color_values = np.asarray(data[:, color_idx])
         unique_values = np.unique(color_values)
+        is_numeric_color = np.issubdtype(color_values.dtype, np.number)
+        colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
-        if len(unique_values) <= 10:
-            colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+        if (not is_numeric_color) or len(unique_values) <= 10:
             color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
 
             for i in range(n_samples):
@@ -152,14 +162,19 @@ def plot_parallel(
                 )
             ax.legend(handles=legend_handles, title=columns[color_idx])
         else:
+            finite_values = color_values[np.isfinite(color_values)]
+            if finite_values.size == 0:
+                raise ValueError("color_by 列全为 NaN 或 Inf，无法进行连续映射")
+
             try:
                 cmap = plt.colormaps.get_cmap("viridis")
             except AttributeError:
                 cmap = plt.cm.get_cmap("viridis")
-            norm = plt.Normalize(vmin=color_values.min(), vmax=color_values.max())
+            norm = plt.Normalize(vmin=finite_values.min(), vmax=finite_values.max())
 
             for i in range(n_samples):
-                color = cmap(norm(color_values[i]))
+                val = color_values[i]
+                color = cmap(norm(val)) if np.isfinite(val) else colors[0]
                 ax.plot(x, data_norm[i, :], alpha=alpha, color=color, linewidth=linewidth, **kwargs)
 
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)

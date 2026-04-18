@@ -157,6 +157,19 @@ def plot_heatmap(
         ... )
         >>> sp.save(fig, "correlation")
     """
+    data = np.asarray(data)
+    if data.ndim != 2:
+        raise ValueError(f"data 必须是二维数组，当前维度: {data.ndim}")
+
+    if row_labels is not None and len(row_labels) != data.shape[0]:
+        raise ValueError(
+            f"row_labels 长度 ({len(row_labels)}) 与行数 ({data.shape[0]}) 不一致"
+        )
+    if col_labels is not None and len(col_labels) != data.shape[1]:
+        raise ValueError(
+            f"col_labels 长度 ({len(col_labels)}) 与列数 ({data.shape[1]}) 不一致"
+        )
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 

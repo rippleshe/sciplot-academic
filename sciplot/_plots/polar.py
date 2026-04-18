@@ -68,6 +68,9 @@ def plot_radar(
                 f"values_list[{i}] 长度 ({len(values)}) "
                 f"与 categories 长度 ({n_cats}) 不一致"
             )
+        numeric_values = np.asarray(values, dtype=float)
+        if not np.all(np.isfinite(numeric_values)):
+            raise ValueError(f"values_list[{i}] 包含 NaN 或 Inf，无法绘制雷达图")
 
     if labels is None:
         labels = [f"系列 {i+1}" for i in range(len(values_list))]

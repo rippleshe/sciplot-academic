@@ -13,7 +13,7 @@ import matplotlib.dates as mdates
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from datetime import datetime
+from datetime import date, datetime
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import apply_resolved_style
@@ -25,7 +25,7 @@ def _is_datetime(data: np.ndarray) -> bool:
     if len(data) == 0:
         return False
     first = data[0]
-    if isinstance(first, (datetime, np.datetime64)):
+    if isinstance(first, (datetime, date, np.datetime64)):
         return True
     if hasattr(first, "dtype") and np.issubdtype(first.dtype, np.datetime64):
         return True

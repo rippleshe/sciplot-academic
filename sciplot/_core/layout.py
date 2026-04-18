@@ -284,6 +284,8 @@ def add_panel_labels(
     def _int_to_roman(num: int) -> str:
         if num <= 0:
             raise ValueError("roman 序号必须为正整数")
+        if num > 3999:
+            raise ValueError("roman 序号不能超过 3999")
         vals = [
             (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
             (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
@@ -355,11 +357,29 @@ def add_panel_labels(
 # 保存
 # ============================================================================
 
+def _normalize_output_formats(formats: Union[str, Sequence[str]]) -> Tuple[str, ...]:
+    """规范化输出格式参数，兼容单字符串输入。"""
+    if isinstance(formats, str):
+        normalized = (formats,)
+    else:
+        normalized = tuple(formats)
+
+    if not normalized:
+        raise ValueError("formats 不能为空")
+
+    result: List[str] = []
+    for fmt in normalized:
+        if not isinstance(fmt, str) or not fmt.strip():
+            raise ValueError("formats 必须是非空字符串或字符串序列")
+        result.append(fmt.strip().lower())
+
+    return tuple(result)
+
 def save(
     fig: Figure,
     name: str,
     dpi: int = 1200,
-    formats: Tuple[str, ...] = ("pdf", "png"),
+    formats: Union[str, Sequence[str]] = ("pdf", "png"),
     bbox_inches: str = "tight",
     dir: Optional[str] = None,
     **kwargs: Any,
@@ -387,11 +407,23 @@ def save(
         >>> sp.save(fig, "nested/dir/fig")                    # 自动创建嵌套目录
     """
     VECTOR_FORMATS = {"pdf", "svg", "eps"}
+    normalized_formats = _normalize_output_formats(formats)
 
     # 处理 name 可能包含路径的情况
     name_path = Path(name)
+    if name_path.name in {"", ".", ".."}:
+        raise ValueError("name 必须是有效文件名")
+
     if dir:
-        save_dir = Path(dir) / name_path.parent
+        if name_path.is_absolute():
+            raise ValueError("指定 dir 时，name 不能为绝对路径")
+
+        base_dir = Path(dir).expanduser().resolve()
+        save_dir = (base_dir / name_path.parent).resolve()
+        try:
+            save_dir.relative_to(base_dir)
+        except ValueError as exc:
+            raise ValueError("name 不能通过路径回退跳出 dir 指定目录") from exc
     else:
         save_dir = name_path.parent if name_path.parent != Path(".") else Path.cwd()
         if not save_dir.is_absolute():
@@ -404,7 +436,7 @@ def save(
     filename = name_path.name
 
     saved_paths: List[Path] = []
-    for fmt in formats:
+    for fmt in normalized_formats:
         path = save_dir / f"{filename}.{fmt}"
         extra = {} if fmt in VECTOR_FORMATS else {"dpi": dpi}
         fig.savefig(path, bbox_inches=bbox_inches, format=fmt, **extra, **kwargs)

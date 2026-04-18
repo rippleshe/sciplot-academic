@@ -49,7 +49,16 @@ def _get_layout(G, layout: str, **kwargs):
             f"未知布局: '{layout}'。可用布局: {list(layout_funcs.keys())}"
         )
 
-    return layout_funcs[layout](G, **kwargs)
+    layout_func = layout_funcs[layout]
+    try:
+        return layout_func(G, **kwargs)
+    except TypeError:
+        # 部分布局函数（如 circular/shell）在某些 networkx 版本不接受 seed。
+        if "seed" in kwargs:
+            fallback_kwargs = dict(kwargs)
+            fallback_kwargs.pop("seed", None)
+            return layout_func(G, **fallback_kwargs)
+        raise
 
 
 def plot_network(
@@ -216,6 +225,14 @@ def plot_network_from_matrix(
         >>> adj = (adj + adj.T) / 2  # 对称化
         >>> fig, ax = sp.plot_network_from_matrix(adj, threshold=0.5)
     """
+    adj_matrix = np.asarray(adj_matrix)
+    if adj_matrix.ndim != 2:
+        raise ValueError(f"adj_matrix 必须是二维数组，当前维度: {adj_matrix.ndim}")
+    if adj_matrix.shape[0] != adj_matrix.shape[1]:
+        raise ValueError(
+            f"adj_matrix 必须是方阵，当前形状: {adj_matrix.shape}"
+        )
+
     nx = _check_networkx()
 
     n = adj_matrix.shape[0]

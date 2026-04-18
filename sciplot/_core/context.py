@@ -93,24 +93,33 @@ class StyleContext:
         self._saved_state = copy.deepcopy(dict(rcParams))
 
         # 将当前状态压入栈
-        self._get_stack().append(self._saved_state)
+        stack = self._get_stack()
+        stack.append(self._saved_state)
 
-        # 应用新样式
-        has_explicit_style = any(v is not None for v in (self.venue, self.palette, self.lang))
-        if has_explicit_style:
-            # 仅指定了 palette：不重置 venue/lang，只覆盖颜色循环
-            if self.venue is None and self.lang is None and self.palette is not None:
-                apply_palette(self.palette)
-            else:
-                setup_style(
-                    venue=self.venue or "nature",
-                    palette=self.palette or "pastel",
-                    lang=self.lang if self.lang is not None else "zh",
-                )
+        try:
+            # 应用新样式
+            has_explicit_style = any(v is not None for v in (self.venue, self.palette, self.lang))
+            if has_explicit_style:
+                # 仅指定了 palette：不重置 venue/lang，只覆盖颜色循环
+                if self.venue is None and self.lang is None and self.palette is not None:
+                    apply_palette(self.palette)
+                else:
+                    setup_style(
+                        venue=self.venue or "nature",
+                        palette=self.palette or "pastel",
+                        lang=self.lang if self.lang is not None else "zh",
+                    )
 
-        # 应用额外的 rcParams
-        if self.rc_params:
-            plt.rcParams.update(self.rc_params)
+            # 应用额外的 rcParams
+            if self.rc_params:
+                plt.rcParams.update(self.rc_params)
+        except Exception:
+            # __enter__ 失败时必须回滚全局样式并清理上下文栈，避免“悬挂上下文”。
+            rcParams.update(self._saved_state)
+            if stack and stack[-1] is self._saved_state:
+                stack.pop()
+            self._saved_state = None
+            raise
 
         return self
 

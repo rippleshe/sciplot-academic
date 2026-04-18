@@ -70,6 +70,25 @@ def plot_pca(
         >>> result = plot_pca(X, labels=y, venue="nature")
         >>> result.save("pca")
     """
+    data = np.asarray(data)
+    if data.ndim != 2:
+        raise ValueError(f"data 必须是二维数组，当前维度: {data.ndim}")
+
+    n_samples, n_features = data.shape
+    if n_samples < n_components:
+        raise ValueError(
+            f"样本数不足，至少需要 {n_components} 个样本，实际: {n_samples}"
+        )
+    if n_features < n_components:
+        raise ValueError(
+            f"特征数不足，至少需要 {n_components} 个特征，实际: {n_features}"
+        )
+
+    if labels is not None and len(labels) != n_samples:
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与样本数 ({n_samples}) 不一致"
+        )
+
     if n_components != 2:
         raise ValueError(f"n_components 目前仅支持 2，实际值: {n_components}")
 
@@ -131,6 +150,18 @@ def plot_confusion_matrix(
         ...     labels=class_names, normalize=True, venue="ieee")
         >>> result.save("confusion_matrix", formats=("pdf",))
     """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+
+    if y_true.ndim != 1 or y_pred.ndim != 1:
+        raise ValueError("y_true 和 y_pred 必须是一维数组")
+    if len(y_true) != len(y_pred):
+        raise ValueError(
+            f"y_true 长度 ({len(y_true)}) 与 y_pred 长度 ({len(y_pred)}) 不一致"
+        )
+    if len(y_true) == 0:
+        raise ValueError("y_true 和 y_pred 不能为空")
+
     import itertools
     _, confusion_matrix = _check_sklearn()
 
@@ -195,6 +226,18 @@ def plot_feature_importance(
         >>> result = plot_feature_importance(feat_names, importances, top_n=15)
         >>> result.save("feature_importance", formats=("pdf",))
     """
+    importance = np.asarray(importance)
+    if importance.ndim != 1:
+        raise ValueError("importance 必须是一维数组")
+    if len(features) != len(importance):
+        raise ValueError(
+            f"features 长度 ({len(features)}) 与 importance 长度 ({len(importance)}) 不一致"
+        )
+    if len(features) == 0:
+        raise ValueError("features 不能为空")
+    if top_n is not None and top_n <= 0:
+        raise ValueError(f"top_n 必须为正整数，实际值: {top_n}")
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 
@@ -252,11 +295,30 @@ def plot_learning_curve(
         >>> result = plot_learning_curve(tr.mean(1), va.mean(1), sizes)
         >>> result.save("learning_curve")
     """
+    train_scores = np.asarray(train_scores)
+    val_scores = np.asarray(val_scores)
+    if train_scores.ndim != 1 or val_scores.ndim != 1:
+        raise ValueError("train_scores 和 val_scores 必须是一维数组")
+    if len(train_scores) != len(val_scores):
+        raise ValueError(
+            f"train_scores 长度 ({len(train_scores)}) 与 val_scores 长度 ({len(val_scores)}) 不一致"
+        )
+    if len(train_scores) == 0:
+        raise ValueError("train_scores 和 val_scores 不能为空")
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 
     if train_sizes is None:
         train_sizes = np.arange(1, len(train_scores) + 1)
+    else:
+        train_sizes = np.asarray(train_sizes)
+        if train_sizes.ndim != 1:
+            raise ValueError("train_sizes 必须是一维数组")
+        if len(train_sizes) != len(train_scores):
+            raise ValueError(
+                f"train_sizes 长度 ({len(train_sizes)}) 与 scores 长度 ({len(train_scores)}) 不一致"
+            )
 
     ax.plot(train_sizes, train_scores, label=label_train, marker="o", **kwargs)
     ax.plot(train_sizes, val_scores, label=label_val, marker="s", **kwargs)

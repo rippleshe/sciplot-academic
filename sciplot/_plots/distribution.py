@@ -248,6 +248,15 @@ def plot_violin(
         ...     ylabel="Accuracy (%)", showmedians=True
         ... )
     """
+    if isinstance(data, (list, tuple)):
+        if not data:
+            raise ValueError("参数 'data' 不能为空列表")
+        for i, values in enumerate(data):
+            if np.asarray(values).size == 0:
+                raise ValueError(f"data[{i}] 不能为空")
+    elif np.asarray(data).size == 0:
+        raise ValueError("参数 'data' 不能为空")
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
@@ -517,11 +526,29 @@ def plot_combo(
     if not bar_data:
         raise ValueError("bar_data 不能为空，至少需要一个柱状图系列")
 
+    if len(x) == 0:
+        raise ValueError("x 不能为空")
+
+    n_groups = len(x)
+    for name, values in bar_data.items():
+        series_values = validate_array_like(values, f"bar_data['{name}']")
+        if len(series_values) != n_groups:
+            raise ValueError(
+                f"bar_data['{name}'] 长度 ({len(series_values)}) 与 x 长度 ({n_groups}) 不一致"
+            )
+
+    if line_data:
+        for name, values in line_data.items():
+            series_values = validate_array_like(values, f"line_data['{name}']")
+            if len(series_values) != n_groups:
+                raise ValueError(
+                    f"line_data['{name}'] 长度 ({len(series_values)}) 与 x 长度 ({n_groups}) 不一致"
+                )
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax_bar = new_figure(effective_venue)
     colors = _get_cycle_colors()
 
-    n_groups = len(x)
     n_bars = len(bar_data)
     indices = np.arange(n_groups)
 

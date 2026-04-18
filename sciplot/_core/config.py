@@ -21,7 +21,6 @@
 
 from __future__ import annotations
 
-import os
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
@@ -33,13 +32,55 @@ except ImportError:
 
 _CONFIG_LOCK = threading.Lock()
 
-_CONFIG_TYPES: Dict[str, type] = {
-    "venue": str,
-    "palette": str,
-    "lang": str,
-    "dpi": int,
+_CONFIG_TYPES: Dict[str, Tuple[type, ...]] = {
+    "venue": (str,),
+    "palette": (str,),
+    "lang": (str,),
+    "dpi": (int,),
     "formats": (tuple, list),
 }
+
+
+def _normalize_formats(formats: Union[Tuple[str, ...], list]) -> Tuple[str, ...]:
+    """规范化并校验 formats 配置。"""
+    normalized = tuple(formats)
+    if not normalized:
+        raise ValueError("配置项 'formats' 不能为空")
+    for fmt in normalized:
+        if not isinstance(fmt, str) or not fmt.strip():
+            raise ValueError(
+                "配置项 'formats' 必须是非空字符串序列"
+            )
+    return tuple(fmt.strip().lower() for fmt in normalized)
+
+
+def _normalize_config_value(key: str, value: Any) -> Any:
+    """对配置值做标准化与语义校验。"""
+    if key == "formats":
+        return _normalize_formats(value)
+
+    if key == "dpi":
+        if value <= 0:
+            raise ValueError("配置项 'dpi' 必须为正整数")
+        return value
+
+    if key == "venue":
+        from sciplot._core.style import VENUES
+        if value not in VENUES:
+            raise ValueError(
+                f"配置项 'venue' 取值无效: {value!r}，可用选项: {list(VENUES.keys())}"
+            )
+        return value
+
+    if key == "lang":
+        from sciplot._core.style import LANGUAGES
+        if value not in LANGUAGES:
+            raise ValueError(
+                f"配置项 'lang' 取值无效: {value!r}，可用选项: {list(LANGUAGES.keys())}"
+            )
+        return value
+
+    return value
 
 
 class SciPlotConfig:
@@ -91,12 +132,12 @@ class SciPlotConfig:
                     raise ValueError(
                         f"未知配置项: '{key}'。有效配置项: {sorted(valid_keys)}"
                     )
-                expected_type = _CONFIG_TYPES.get(key)
-                if expected_type and not isinstance(value, expected_type):
+                expected_types = _CONFIG_TYPES.get(key)
+                if expected_types and not isinstance(value, expected_types):
                     raise ValueError(
-                        f"配置项 '{key}' 类型错误: 期望 {expected_type}, 实际 {type(value).__name__}"
+                        f"配置项 '{key}' 类型错误: 期望 {expected_types}, 实际 {type(value).__name__}"
                     )
-                cls._user_settings[key] = value
+                cls._user_settings[key] = _normalize_config_value(key, value)
 
     @classmethod
     def get(cls, key: str) -> Any:
@@ -231,18 +272,22 @@ class SciPlotConfig:
         if not config:
             return False
 
+        applied_count = 0
         with _CONFIG_LOCK:
             for key, value in config.items():
                 if key in cls._defaults:
-                    expected_type = _CONFIG_TYPES.get(key)
-                    if expected_type and not isinstance(value, expected_type):
+                    expected_types = _CONFIG_TYPES.get(key)
+                    if expected_types and not isinstance(value, expected_types):
                         continue
-                    if key == "formats" and isinstance(value, list):
-                        value = tuple(value)
+                    try:
+                        value = _normalize_config_value(key, value)
+                    except ValueError:
+                        continue
                     cls._file_settings[key] = value
-            cls._config_loaded = True
+                    applied_count += 1
+            cls._config_loaded = applied_count > 0
 
-        return True
+        return applied_count > 0
 
     @classmethod
     def _read_toml(cls, path: Path) -> Optional[Dict[str, Any]]:

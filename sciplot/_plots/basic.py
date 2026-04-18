@@ -21,6 +21,14 @@ LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
 MARKERS: List[str] = ["o", "s", "^", "D", "v", "<", ">", "p", "*", "h"]
 
 
+def _validate_xy_lengths(x: np.ndarray, y: np.ndarray, x_name: str = "x", y_name: str = "y") -> None:
+    """校验 x/y 长度一致，避免 matplotlib 抛出难以定位的底层错误。"""
+    if len(x) != len(y):
+        raise ValueError(
+            f"{x_name} 长度 ({len(x)}) 与 {y_name} 长度 ({len(y)}) 不一致"
+        )
+
+
 def plot_line(
     x: np.ndarray,
     y: np.ndarray,
@@ -40,6 +48,8 @@ def plot_line(
         >>> fig, ax = sp.plot(x, np.sin(x), xlabel="时间 (s)", ylabel="幅度", label="sin(x)")
         >>> sp.save(fig, "result")
     """
+    _validate_xy_lengths(x, y)
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     ax.plot(x, y, label=label, **kwargs)
@@ -135,8 +145,14 @@ def plot_multi_line(
 
     labels = validate_labels_match_data(labels, y_list)
 
+    if isinstance(x, list) and len(x) != len(y_list):
+        raise ValueError(
+            f"x 列表长度 ({len(x)}) 与 y_list 长度 ({len(y_list)}) 不一致"
+        )
+
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
         xi = x if isinstance(x, np.ndarray) else x[i]
+        _validate_xy_lengths(xi, y, x_name=("x" if isinstance(x, np.ndarray) else f"x[{i}]"), y_name=f"y_list[{i}]")
         ls = LINE_STYLES[i % len(LINE_STYLES)] if use_linestyles else "-"
         ax.plot(xi, y, label=lbl, linestyle=ls, **kwargs)
 
@@ -174,6 +190,8 @@ def plot_scatter(
         ...                           label="样本", s=30, alpha=0.6)
         >>> sp.save(fig, "scatter")
     """
+    _validate_xy_lengths(x, y)
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     sc = ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
@@ -216,6 +234,8 @@ def plot_step(
         ...     xlabel="值", ylabel="累积概率", label="CDF")
         >>> sp.save(fig, "cdf")
     """
+    _validate_xy_lengths(x, y)
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
     ax.step(x, y, where=where, label=label, **kwargs)
@@ -261,6 +281,8 @@ def plot_area(
         >>> ax.legend()
         >>> sp.save(fig, "stacked_area")
     """
+    _validate_xy_lengths(x, y)
+
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
 

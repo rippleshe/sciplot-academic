@@ -119,17 +119,17 @@ def plot_qq(
     """
     from scipy import stats
 
-    data = np.asarray(data)
-    data = data[~np.isnan(data)]
+    data = np.asarray(data, dtype=float)
+    data = data[np.isfinite(data)]
 
     if len(data) < 3:
         raise ValueError("数据点太少，至少需要 3 个有效值")
 
     dist_map = {
-        "norm": stats.norm,
-        "expon": stats.expon,
-        "uniform": stats.uniform,
-        "t": stats.t,
+        "norm": (stats.norm, ()),
+        "expon": (stats.expon, ()),
+        "uniform": (stats.uniform, ()),
+        "t": (stats.t, (10,)),
     }
 
     if distribution not in dist_map:
@@ -142,7 +142,13 @@ def plot_qq(
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
-    (osm, osr), (slope, intercept, r) = stats.probplot(data, dist=distribution, plot=None)
+    dist_obj, sparams = dist_map[distribution]
+    (osm, osr), (slope, intercept, _r) = stats.probplot(
+        data,
+        dist=dist_obj,
+        sparams=sparams,
+        plot=None,
+    )
 
     ax.scatter(osm, osr, alpha=0.6, color=colors[0], **kwargs)
 

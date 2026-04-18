@@ -179,6 +179,20 @@ def plot_clustermap(
     if n_rows == 0 or n_cols == 0:
         raise ValueError(f"data 不能为空矩阵，实际形状: {data.shape}")
 
+    if row_labels is not None and len(row_labels) != n_rows:
+        raise ValueError(
+            f"row_labels 长度 ({len(row_labels)}) 与数据行数 ({n_rows}) 不一致"
+        )
+
+    if col_labels is not None and len(col_labels) != n_cols:
+        raise ValueError(
+            f"col_labels 长度 ({len(col_labels)}) 与数据列数 ({n_cols}) 不一致"
+        )
+
+    # scipy linkage 需要至少 2 个观测值；单行/单列时自动跳过对应聚类。
+    row_cluster = row_cluster and n_rows > 1
+    col_cluster = col_cluster and n_cols > 1
+
     if row_cluster:
         row_Z = hierarchy.linkage(data, method='ward')
         row_order = hierarchy.leaves_list(row_Z)

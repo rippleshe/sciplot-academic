@@ -23,6 +23,7 @@ SciPlot 内置 4 套精选配色方案，均不依赖 SciencePlots：
 from __future__ import annotations
 
 import re
+import threading
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
@@ -51,57 +52,72 @@ def _validate_hex_color(color: str) -> bool:
 
 class _UserPaletteStore:
     """用户自定义配色存储器（单例模式）"""
+    _lock = threading.RLock()
     _palettes: Dict[str, List[str]] = {}
     _schemes: Dict[str, Dict[str, List[str]]] = {}  # 完整配色方案存储
 
     @classmethod
     def set(cls, name: str, colors: List[str]) -> None:
         """注册一个配色及其所有子集"""
-        cls._palettes[name] = colors
-        for i in range(1, len(colors) + 1):
-            cls._palettes[f"{name}-{i}"] = colors[:i]
+        safe_colors = list(colors)
+        with cls._lock:
+            cls._palettes[name] = safe_colors
+            for i in range(1, len(safe_colors) + 1):
+                cls._palettes[f"{name}-{i}"] = safe_colors[:i]
 
     @classmethod
     def get(cls, name: str) -> Optional[List[str]]:
-        return cls._palettes.get(name)
+        with cls._lock:
+            colors = cls._palettes.get(name)
+            return list(colors) if colors is not None else None
 
     @classmethod
     def get_all_names(cls) -> List[str]:
-        return list(cls._palettes.keys())
+        with cls._lock:
+            return list(cls._palettes.keys())
 
     @classmethod
     def has(cls, name: str) -> bool:
-        return name in cls._palettes
+        with cls._lock:
+            return name in cls._palettes
 
     @classmethod
     def register_scheme(cls, name: str, scheme: Dict[str, List[str]]) -> None:
         """注册完整的配色方案"""
-        cls._schemes[name] = scheme
-        # 同时注册到 palettes 以便直接使用
-        for key, colors in scheme.items():
-            cls._palettes[f"{name}-{key}"] = colors
-        # 注册默认完整版
-        if "quintuple" in scheme:
-            cls._palettes[name] = scheme["quintuple"]
-        elif "quadruple" in scheme:
-            cls._palettes[name] = scheme["quadruple"]
-        elif "triple" in scheme:
-            cls._palettes[name] = scheme["triple"]
+        safe_scheme = {key: list(colors) for key, colors in scheme.items()}
+        with cls._lock:
+            cls._schemes[name] = safe_scheme
+            # 同时注册到 palettes 以便直接使用
+            for key, colors in safe_scheme.items():
+                cls._palettes[f"{name}-{key}"] = list(colors)
+            # 注册默认完整版
+            if "quintuple" in safe_scheme:
+                cls._palettes[name] = list(safe_scheme["quintuple"])
+            elif "quadruple" in safe_scheme:
+                cls._palettes[name] = list(safe_scheme["quadruple"])
+            elif "triple" in safe_scheme:
+                cls._palettes[name] = list(safe_scheme["triple"])
 
     @classmethod
     def get_scheme(cls, name: str) -> Optional[Dict[str, List[str]]]:
         """获取完整的配色方案"""
-        return cls._schemes.get(name)
+        with cls._lock:
+            scheme = cls._schemes.get(name)
+            if scheme is None:
+                return None
+            return {key: list(colors) for key, colors in scheme.items()}
 
     @classmethod
     def has_scheme(cls, name: str) -> bool:
         """检查是否存在配色方案"""
-        return name in cls._schemes
+        with cls._lock:
+            return name in cls._schemes
 
     @classmethod
     def list_schemes(cls) -> List[str]:
         """列出所有注册的配色方案"""
-        return list(cls._schemes.keys())
+        with cls._lock:
+            return list(cls._schemes.keys())
 
     @classmethod
     def auto_select(cls, name: str, n: int) -> Optional[List[str]]:
@@ -112,26 +128,27 @@ class _UserPaletteStore:
         2. 从配色方案中选择最接近的
         3. 返回默认配色
         """
-        # 尝试精确匹配
-        exact = cls._palettes.get(f"{name}-{n}")
-        if exact:
-            return exact
+        with cls._lock:
+            # 尝试精确匹配
+            exact = cls._palettes.get(f"{name}-{n}")
+            if exact:
+                return list(exact)
 
-        # 从配色方案中选择
-        scheme = cls._schemes.get(name)
-        if scheme:
-            key_map = {1: "single", 2: "double", 3: "triple",
-                       4: "quadruple", 5: "quintuple", 6: "sextuple"}
-            key = key_map.get(n, "quintuple")
-            if key in scheme:
-                return scheme[key]
-            # 回退到最大可用
-            for k in ["quintuple", "quadruple", "triple", "double", "single"]:
-                if k in scheme:
-                    colors = scheme[k]
-                    if len(colors) >= n:
-                        return colors[:n]
-                    return colors
+            # 从配色方案中选择
+            scheme = cls._schemes.get(name)
+            if scheme:
+                key_map = {1: "single", 2: "double", 3: "triple",
+                           4: "quadruple", 5: "quintuple", 6: "sextuple"}
+                key = key_map.get(n, "quintuple")
+                if key in scheme:
+                    return list(scheme[key])
+                # 回退到最大可用
+                for k in ["quintuple", "quadruple", "triple", "double", "single"]:
+                    if k in scheme:
+                        colors = scheme[k]
+                        if len(colors) >= n:
+                            return list(colors[:n])
+                        return list(colors)
 
         return None
 
@@ -305,9 +322,11 @@ def get_palette(name: str) -> List[str]:
         ['#5E98C2', '#26B3D1', '#00CCCB', '#56E2B0', '#A6F18C', '#F9F871']
     """
     if name in RESIDENT_PALETTES:
-        return RESIDENT_PALETTES[name]
+        return list(RESIDENT_PALETTES[name])
     if _UserPaletteStore.has(name):
-        return _UserPaletteStore.get(name)
+        colors = _UserPaletteStore.get(name)
+        if colors is not None:
+            return colors
     raise ValueError(
         f"未知配色方案 '{name}'。调用 sp.list_palettes() 查看所有可用选项。"
     )
