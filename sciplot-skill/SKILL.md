@@ -79,6 +79,11 @@ sp.save(fig, "结果图")
 # 方式 4: PlotResult 增强返回类型
 result = sp.PlotResult(*sp.plot(x, np.sin(x)))
 result.xlabel("时间 (s)").ylabel("电压 (V)").save("结果图")
+
+# 方式 5: 上下文管理器
+with sp.style_context("ieee", palette="forest"):
+    fig, ax = sp.plot(x, np.sin(x))
+    sp.save(fig, "ieee_fig")
 ```
 
 ---
@@ -129,6 +134,13 @@ result.xlabel("X").ylabel("Y").title("图表").grid(True).save("output")
 fig, axes = sp.paper_subplots(1, 2)
 result = sp.PlotResult(fig, axes)
 result.xlabel("共同X标签").add_panel_labels().save("subplots")
+```
+
+**风格 E: 上下文管理器（推荐用于临时样式切换）**
+```python
+with sp.ieee_context(palette="ocean"):
+    fig, ax = sp.plot(x, y)
+    sp.save(fig, "ieee_fig")
 ```
 
 ### Step 3: 生成独立脚本
@@ -205,7 +217,9 @@ fig, ax = sp.plot(x, y)  # 使用 nature + pastel
 - `sp.scatter(x, y)` - 散点图
 - `sp.plot_step(x, y)` / `sp.step(x, y)` - 阶梯图
 - `sp.plot_area(x, y)` / `sp.area(x, y)` - 面积图
-- `sp.plot_multi(x, [y1, y2])` - 多线图
+- `sp.plot_multi(x, [y1, y2])` / `sp.multi(x, [y1, y2])` - 多线图
+- `sp.plot_multi_line(x, y_list)` / `sp.multi_line(x, y_list)` - 多线图（完整参数）
+- `sp.plot_multi_area(x, [y1, y2])` / `sp.multi_area(x, [y1, y2])` - 堆叠面积图
 
 ### 柱状图
 - `sp.plot_bar(cats, vals)` / `sp.bar(cats, vals)` - 单组柱状图
@@ -218,21 +232,31 @@ fig, ax = sp.plot(x, y)  # 使用 nature + pastel
 - `sp.plot_violin(data)` / `sp.violin(data)` - 小提琴图
 - `sp.plot_histogram(data)` / `sp.hist(data)` - 直方图
 - `sp.plot_heatmap(data)` / `sp.heatmap(data)` - 热力图
+- `sp.plot_combo(x, bar_data, line_data)` / `sp.combo(...)` - 组合图（柱状+折线）
 
 ### 误差与置信
 - `sp.plot_errorbar(x, y, yerr)` / `sp.errorbar(x, y, yerr)` - 误差条
-- `sp.plot_confidence(x, mean, std)` - 置信区间
+- `sp.plot_confidence(x, mean, std)` / `sp.confidence(x, mean, std)` - 置信区间
 
 ### 组合与标注
-- `sp.plot_combo(x, bar_data, line_data)` - 组合图（柱状+折线）
 - `sp.annotate_significance(ax, x1, x2, y, p_value)` - 显著性标注
+
+### 时序图表
+- `sp.plot_timeseries(dates, values)` / `sp.timeseries(...)` - 时间序列图
+- `sp.plot_multi_timeseries(dates, [y1, y2])` - 多时间序列图
 
 ### 进阶图表
 - `sp.plot_radar(values, labels=...)` / `sp.radar(...)` - 雷达图
 - `sp.plot_timeseries(...)` / `sp.timeseries(...)` - 时间序列图
+- `sp.plot_multi_timeseries(...)` - 多时间序列图
 - `sp.plot_parallel(...)` / `sp.parallel(...)` - 平行坐标图
-- `sp.plot_residuals(...)` / `sp.plot_qq(...)` / `sp.plot_bland_altman(...)` - 回归诊断图
-- `sp.plot_network(...)` / `sp.plot_dendrogram(...)` / `sp.plot_venn2(...)` / `sp.plot_venn3(...)` - 网络图、层次聚类图、维恩图
+- `sp.plot_residuals(...)` - 残差图（回归诊断）
+- `sp.plot_qq(...)` - Q-Q 图（正态性检验）
+- `sp.plot_bland_altman(...)` - Bland-Altman 图（一致性分析）
+- `sp.plot_network(...)` / `sp.plot_network_from_matrix(...)` / `sp.plot_network_communities(...)` - 网络图、邻接矩阵图、社区检测图
+- `sp.plot_dendrogram(...)` - 层次聚类树状图
+- `sp.plot_clustermap(...)` - 聚类热图
+- `sp.plot_venn2(...)` / `sp.plot_venn3(...)` - 维恩图（2/3集合）
 
 ### 机器学习扩展
 - `plot_pca(data, labels=...)` - PCA 降维可视化
@@ -299,6 +323,100 @@ sp.register_color_scheme("mytheme", scheme)
 
 ---
 
+## 配置系统（v1.7.4 新增）
+
+全局配置管理，持久化设置到项目或用户级别。
+
+```python
+# 设置全局默认值
+sp.set_defaults(venue="nature", lang="zh", palette="pastel")
+
+# 获取当前配置
+config = sp.get_config()
+
+# 从文件加载配置（JSON/YAML）
+sp.load_config("sciplot_config.json")
+
+# 重置为出厂默认
+sp.reset_config()
+```
+
+---
+
+## 颜色工具
+
+颜色转换、调整和渐变生成工具。
+
+```python
+from sciplot.utils import hex_to_rgb, rgb_to_hex, lighten_color, darken_color, generate_gradient
+
+# HEX 转 RGB
+r, g, b = hex_to_rgb("#E74C3C")  # (231, 76, 60)
+
+# RGB 转 HEX
+hex_color = rgb_to_hex(231, 76, 60)  # "#E74C3C"
+
+# 颜色调整
+lighter = lighten_color("#E74C3C", amount=0.2)  # 变亮 20%
+darker = darken_color("#E74C3C", amount=0.3)    # 变暗 30%
+
+# 生成渐变色
+gradient = generate_gradient("#E74C3C", "#3498DB", n=5)
+```
+
+---
+
+## 智能辅助
+
+自动优化图表外观的辅助函数。
+
+```python
+# 自动旋转 X 轴标签避免重叠
+sp.auto_rotate_labels(ax)
+
+# 智能图例位置（自动选择最佳位置）
+sp.smart_legend(ax, outside=True)
+
+# 自动优化布局
+sp.optimize_layout(fig)
+
+# 根据数据量建议尺寸
+figsize = sp.suggest_figsize(n_items=20, orientation="horizontal")
+
+# 检查颜色对比度（无障碍）
+is_ok = sp.check_color_contrast("#FFFFFF", "#000000")
+```
+
+---
+
+## 验证工具
+
+数据验证和错误检查工具。
+
+```python
+from sciplot.utils import (
+    validate_array_like,
+    validate_labels_match_data,
+    validate_positive_number,
+    validate_choice,
+    validate_dict_not_empty,
+)
+
+# 验证数组类数据
+data = validate_array_like([1, 2, 3])
+
+# 验证标签匹配
+validate_labels_match_data(data, labels)
+
+# 验证正数
+validate_positive_number(value, name="value")
+
+# 验证选项
+validate_choice(value, choices=["A", "B", "C"])
+```
+
+---
+
 ## 完整文档索引
 
 详细文档请查阅 references/ 目录：
@@ -335,3 +453,14 @@ sp.register_color_scheme("mytheme", scheme)
 - 新增 `GridSpecResult` GridSpec 结果封装
 - 修复 `save()` 函数递归创建目录问题
 - 统一 `bar()` 和 `plot_bar()` 参数签名
+- 新增四大内置色系：pastel（柔和粉彩）、ocean（海洋蓝绿）、forest（森林渐变）、sunset（日落暖色）
+- 新增配置系统：`set_defaults()`、`get_config()`、`load_config()`、`reset_config()`
+- 新增颜色工具：`hex_to_rgb`、`rgb_to_hex`、`lighten_color`、`darken_color`、`generate_gradient`
+- 新增智能辅助：`auto_rotate_labels`、`smart_legend`、`optimize_layout`、`adjust_subplots`、`suggest_figsize`、`check_color_contrast`
+- 新增验证工具：`validate_array_like`、`validate_labels_match_data`、`validate_positive_number`、`validate_choice`、`validate_dict_not_empty`
+- 新增网络社区检测图 `plot_network_communities`
+- 新增聚类热图 `plot_clustermap`
+- 新增多时间序列图 `plot_multi_timeseries`
+- 新增回归诊断图组：`plot_residuals`、`plot_qq`、`plot_bland_altman`
+- 新增多面积图 `plot_multi_area`
+- 优化链式调用和上下文管理器

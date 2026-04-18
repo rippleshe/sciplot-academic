@@ -16,7 +16,7 @@ SciPlot Academic — 期刊级科研绘图库
     >>> fig = sp.style("nature").palette("pastel").plot(x, y).save("output")
 
 上下文管理器（新功能）:
-    >>> with sp.style_context("ieee", palette="earth"):
+    >>> with sp.style_context("ieee", palette="forest"):
     ...     fig, ax = sp.plot(x, y)
 
 简洁别名（新功能）:

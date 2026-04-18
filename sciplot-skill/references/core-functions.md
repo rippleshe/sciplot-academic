@@ -18,7 +18,7 @@ sp.setup_style(venue="nature", palette="pastel", lang="zh")
 sp.setup_style()                       # 默认：nature + pastel + 中文
 sp.setup_style(lang="en")              # 英文模式
 sp.setup_style("ieee", "pastel-2")     # IEEE + 前2色
-sp.setup_style("thesis", "earth-3")    # 学位论文 + 大地色
+sp.setup_style("thesis", "forest-3")   # 学位论文 + 森林色
 ```
 
 ### 语言与 LaTeX 渲染
@@ -167,4 +167,53 @@ sp.smart_legend(ax, outside=True)   # 智能图例位置
 sp.optimize_layout(fig)             # 自动优化布局
 sp.suggest_figsize(n_items=20)      # 根据数据量建议尺寸
 sp.check_color_contrast("#FFF", "#000")  # 检查颜色对比度
+```
+
+---
+
+## 配置系统（v1.7.4 新增）
+
+```python
+# 设置全局默认值
+sp.set_defaults(venue="nature", lang="zh", palette="pastel")
+
+# 获取当前配置
+config = sp.get_config()
+print(config.venue)   # "nature"
+print(config.lang)    # "zh"
+
+# 从文件加载配置
+sp.load_config("sciplot_config.json")
+
+# 重置为出厂默认
+sp.reset_config()
+```
+
+---
+
+## 验证工具
+
+```python
+from sciplot.utils import (
+    validate_array_like,
+    validate_labels_match_data,
+    validate_positive_number,
+    validate_choice,
+    validate_dict_not_empty,
+)
+
+# 验证数组类数据
+data = validate_array_like([1, 2, 3])
+
+# 验证标签匹配
+validate_labels_match_data([1, 2, 3], ["A", "B", "C"])
+
+# 验证正数
+validate_positive_number(value, name="value")
+
+# 验证选项
+validate_choice(value, choices=["A", "B", "C"])
+
+# 验证字典非空
+validate_dict_not_empty(my_dict, name="my_dict")
 ```

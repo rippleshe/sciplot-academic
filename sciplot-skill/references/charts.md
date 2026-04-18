@@ -30,6 +30,16 @@ sp.plot_area(x, y, alpha=0.3)                    # 单组面积
 sp.plot_multi_area(x, [y1, y2], stacked=True)    # 堆叠面积
 ```
 
+### 多系列图表
+
+```python
+sp.plot_multi(x, [y1, y2, y3])           # 多线图（自动配色）
+sp.plot_multi_line(x, y_list, use_linestyles=False)  # 多线图（完整参数）
+sp.multi(x, [y1, y2])                    # 简洁别名
+sp.multi_line(x, [y1, y2])               # 简洁别名
+sp.multi_area(x, [y1, y2], stacked=True) # 多面积图
+```
+
 ---
 
 ## 柱状图
@@ -84,6 +94,61 @@ sp.plot_histogram(data, bins=30, density=False)
 
 ```python
 sp.plot_heatmap(data, cmap="Blues", show_values=False)
+sp.heatmap(data, cmap="viridis")  # 简洁别名
+```
+
+---
+
+## 时序图表
+
+### 时间序列图
+
+```python
+import pandas as pd
+dates = pd.date_range("2023-01-01", periods=365, freq="D")
+values = np.cumsum(np.random.randn(365))
+
+sp.plot_timeseries(dates, values, xlabel="日期", ylabel="累计值")
+sp.timeseries(dates, values)  # 简洁别名
+```
+
+### 多时间序列图
+
+```python
+sp.plot_multi_timeseries(dates, [series1, series2], labels=["A", "B"])
+```
+
+---
+
+## 多维图表
+
+### 平行坐标图
+
+```python
+sp.plot_parallel(data, labels=feature_names)
+sp.parallel(data, labels=feature_names)  # 简洁别名
+```
+
+---
+
+## 统计诊断图表
+
+### 残差图
+
+```python
+sp.plot_residuals(model, X, y)
+```
+
+### Q-Q 图
+
+```python
+sp.plot_qq(residuals)
+```
+
+### Bland-Altman 图
+
+```python
+sp.plot_bland_altman(method1, method2)
 ```
 
 ---
