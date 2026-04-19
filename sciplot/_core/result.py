@@ -471,10 +471,12 @@ class GridSpecResult:
         name: str,
         dpi: int = 1200,
         formats: Tuple[str, ...] = ("pdf", "png"),
+        tight: bool = True,
         **kwargs: Any,
     ) -> List[Path]:
         """保存图形"""
-        self._fig.tight_layout()
+        if tight:
+            self._fig.tight_layout()
         return _save(self._fig, name, dpi=dpi, formats=formats, **kwargs)
 
     def show(self) -> None:

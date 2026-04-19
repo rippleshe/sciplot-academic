@@ -52,56 +52,57 @@ def validate_params(
     def decorator(func: F) -> F:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            # 获取函数签名和参数绑定
             import inspect
             sig = inspect.signature(func)
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
-            
-            # 验证类数组参数
+
+            arguments = bound.arguments
+
             if arrays:
                 for name in arrays:
-                    value = bound.arguments.get(name)
-                    if value is not None:
-                        validate_array_like(value, name)
-            
-            # 验证正数参数
+                    if name in arguments:
+                        value = arguments[name]
+                        if value is not None:
+                            validate_array_like(value, name)
+
             if positive:
                 for name in positive:
-                    value = bound.arguments.get(name)
-                    if value is not None:
-                        validate_positive_number(value, name, allow_zero=True)
-            
-            # 验证非空参数
+                    if name in arguments:
+                        value = arguments[name]
+                        if value is not None:
+                            validate_positive_number(value, name, allow_zero=True)
+
             if non_empty:
                 for name in non_empty:
-                    value = bound.arguments.get(name)
-                    if value is not None:
-                        if isinstance(value, (list, tuple)) and len(value) == 0:
-                            raise ValueError(f"参数 '{name}' 不能为空")
-                        if isinstance(value, dict) and len(value) == 0:
-                            raise ValueError(f"参数 '{name}' 不能为空字典")
-            
-            # 验证选项参数
+                    if name in arguments:
+                        value = arguments[name]
+                        if value is not None:
+                            if isinstance(value, (list, tuple)) and len(value) == 0:
+                                raise ValueError(f"参数 '{name}' 不能为空")
+                            if isinstance(value, dict) and len(value) == 0:
+                                raise ValueError(f"参数 '{name}' 不能为空字典")
+
             if choices:
                 for name, options in choices.items():
-                    value = bound.arguments.get(name)
-                    if value is not None:
-                        validate_choice(value, options, name)
-            
-            # 验证等长参数
+                    if name in arguments:
+                        value = arguments[name]
+                        if value is not None:
+                            validate_choice(value, options, name)
+
             if equal_length:
                 for name1, name2 in equal_length:
-                    value1 = bound.arguments.get(name1)
-                    value2 = bound.arguments.get(name2)
-                    if value1 is not None and value2 is not None:
-                        len1 = len(value1) if hasattr(value1, '__len__') else 0
-                        len2 = len(value2) if hasattr(value2, '__len__') else 0
-                        if len1 != len2:
-                            raise ValueError(
-                                f"参数 '{name1}' 长度 ({len1}) 与 '{name2}' 长度 ({len2}) 不一致"
-                            )
-            
+                    if name1 in arguments and name2 in arguments:
+                        value1 = arguments[name1]
+                        value2 = arguments[name2]
+                        if value1 is not None and value2 is not None:
+                            len1 = len(value1) if hasattr(value1, '__len__') else 0
+                            len2 = len(value2) if hasattr(value2, '__len__') else 0
+                            if len1 != len2:
+                                raise ValueError(
+                                    f"参数 '{name1}' 长度 ({len1}) 与 '{name2}' 长度 ({len2}) 不一致"
+                                )
+
             return func(*args, **kwargs)
         return wrapper  # type: ignore
     return decorator

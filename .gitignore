@@ -52,3 +52,13 @@ htmlcov/
 # Local planning/review folders (do not push)
 /.trae/
 /docs/
+
+# Test output files (generated during testing)
+test_chain.pdf
+test_chain.png
+*.test.pdf
+*.test.png
+
+# Internal planning documents
+SciPlot_v1.7.6_Plan.md
+待修复的问题.md
