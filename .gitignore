@@ -51,5 +51,4 @@ htmlcov/
 
 # Local planning/review folders (do not push)
 /.trae/
-/.github/
 /docs/
