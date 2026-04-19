@@ -192,42 +192,8 @@ matplotlib >= 3.5.0
 numpy >= 1.20.0
 ```
 
-> v1.7 起，所有配色均为内置，**配色系统不依赖 SciencePlots**。
+> 所有配色均为内置，**配色系统不依赖 SciencePlots**。
 > 注：期刊样式渲染仍使用 SciencePlots（已随安装自动解决依赖）。
-
-## 更新日志
-
-### v1.8.0
-
-- 新增 `plot_lollipop()` 棒棒糖图
-- 新增 `plot_slope()` 斜率图
-- 新增 `plot_density()` / `plot_multi_density()` 密度图
-- 新增 `plot_scatter_matrix()` 散点矩阵图
-- 新增 `earth` 色系（地形配色，6色）
-- 新增 `rmb` 色系（人民币配色，5色）
-- 新增 `diverging` 色系（发散配色，8色）
-- 扩展配置系统：支持从 JSON/YAML 文件加载配置
-- 优化 `PlotResult` 链式调用支持更多方法
-- 新增 `adjust_subplots()` 布局微调工具
-- 新增 `suggest_figsize()` 根据数据量建议图形尺寸
-- 新增多语言支持：`list_languages()` 查看支持语言
-
-### v1.7.4
-
-- 新增 `PlotResult` 增强返回类型，支持元组解包、属性访问、链式调用
-- 新增 `GridSpecResult` GridSpec 结果封装
-- 修复 `save()` 函数递归创建嵌套目录问题
-- 统一 `bar()` 和 `plot_bar()` 参数签名
-
-### v1.7.0
-
-- 新增配色方案系统 `register_color_scheme()`，支持单/双/三/四/五色自动选择
-- 新增面积图 `plot_area()` / `plot_multi_area()`
-- 新增堆叠柱状图 `plot_stacked_bar()`
-- 新增水平柱状图 `plot_horizontal_bar()`
-- 新增组合图 `plot_combo()`（柱状+折线，双Y轴）
-- 新增 3D 可视化扩展模块 `_ext/plot3d.py`
-- 新增智能辅助工具 `utils/smart.py`
 
 ---
 

@@ -1,9 +1,10 @@
-# SciPlot Academic — 科研绘图 Skill (v1.8)
+# SciPlot Academic — 科研绘图 Skill (v1.8.1)
 
 ---
+
 name: sciplot
 description: >
-  科研绘图技能（sciplot-academic 包版 v1.8）。
+  科研绘图技能（sciplot-academic 包版 v1.8.1）。
 
   ## 触发规则（最高优先级 — 无条件触发）
 
@@ -531,25 +532,5 @@ validate_dict_not_empty(my_dict, name="my_dict")
 ## 版本信息
 
 - 包名：`sciplot-academic`（PyPI）
-- 版本：**1.8.0**
+- 版本：**1.8.1**
 - GitHub：https://github.com/rippleshe/sciplot-academic
-
-### v1.8.0 更新内容
-- 新增 `plot_lollipop()` 棒棒糖图
-- 新增 `plot_slope()` 斜率图
-- 新增 `plot_density()` / `plot_multi_density()` 密度图
-- 新增 `plot_scatter_matrix()` 散点矩阵图
-- 新增 `earth` 色系（地形配色）
-- 新增 `rmb` 色系（人民币配色）
-- 新增 `diverging` 色系（发散配色）
-- 扩展配置系统：支持 JSON/YAML 配置文件
-- 优化 `PlotResult` 链式调用支持更多方法
-- 新增 `adjust_subplots()` 布局微调工具
-- 新增 `suggest_figsize()` 根据数据量建议尺寸
-- 新增多语言支持
-
-### v1.7.4 更新内容
-- 新增 `PlotResult` 增强返回类型
-- 新增 `GridSpecResult` GridSpec 结果封装
-- 修复 `save()` 函数递归创建目录问题
-- 统一 `bar()` 和 `plot_bar()` 参数签名

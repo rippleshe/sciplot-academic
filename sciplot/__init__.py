@@ -67,7 +67,7 @@ else:
         from importlib.metadata import version as _get_version
         __version__ = _get_version("sciplot-academic")
     except Exception:
-        __version__ = "1.8.0"
+        __version__ = "1.8.1"
 __author__ = "SciPlot Team"
 
 import warnings as _warnings
