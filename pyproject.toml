@@ -75,3 +75,16 @@ exclude = ["tests*", "examples*", "dist*"]
 
 [tool.setuptools.package-data]
 sciplot = ["py.typed"]
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E402",  # Module level import not at top of file (needed for __init__.py with version checks)
+    "F401",  # Imported but unused (for __all__ exports and internal imports)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
