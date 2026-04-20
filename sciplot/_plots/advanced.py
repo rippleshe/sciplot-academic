@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -88,6 +88,7 @@ def plot_confidence(
     label_std: Optional[str] = None,
     n_std: float = 1.0,
     alpha: float = 0.25,
+    fill_kwargs: Optional[Dict[str, Any]] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -103,7 +104,8 @@ def plot_confidence(
         n_std  : 阴影带宽度（以标准差为单位），默认 1.0（±1σ）
                  设为 1.96 可画出 95% 置信区间
         alpha  : 阴影透明度，默认 0.25
-        **kwargs: 传递给 ax.plot() 的额外参数（只影响线条，不影响填充）
+        fill_kwargs: 传递给 ax.fill_between() 的额外参数（如 hatch、edgecolor）
+        **kwargs: 传递给 ax.plot() 的额外参数（只影响线条）
 
     示例:
         >>> fig, ax = sp.plot_confidence(
@@ -131,11 +133,15 @@ def plot_confidence(
     fig, ax = new_figure(effective_venue)
     (line,) = ax.plot(x, y_mean, label=label_mean, **kwargs)
     color = line.get_color()
+    effective_fill_kwargs: Dict[str, Any] = dict(fill_kwargs or {})
+    effective_fill_kwargs.setdefault("alpha", alpha)
+    effective_fill_kwargs.setdefault("color", color)
+    effective_fill_kwargs.setdefault("label", label_std)
     ax.fill_between(
         x,
         y_mean - n_std * y_std,
         y_mean + n_std * y_std,
-        alpha=alpha, color=color, label=label_std,
+        **effective_fill_kwargs,
     )
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

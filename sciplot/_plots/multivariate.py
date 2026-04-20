@@ -15,6 +15,7 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
 from sciplot._core.layout import new_figure
+from sciplot._core.style import VENUES, get_current_venue
 from sciplot._core.utils import apply_resolved_style
 from sciplot._core.result import PlotResult
 
@@ -270,12 +271,16 @@ def plot_scatter_matrix(
         scipy_stats = None
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    matrix_size = max(4.0, min(14.0, n_features * 2.2))
+    active_venue = effective_venue or get_current_venue() or "nature"
+    venue_cfg = VENUES.get(active_venue, VENUES["nature"])
+    scale = max(1.0, n_features / 2.0)
+    fig_w = max(4.0, min(14.0, venue_cfg.figsize[0] * scale))
+    fig_h = max(4.0, min(14.0, venue_cfg.figsize[1] * scale))
     fig, axes = plt.subplots(
         n_features,
         n_features,
         squeeze=False,
-        figsize=(matrix_size, matrix_size),
+        figsize=(fig_w, fig_h),
     )
 
     if color_values is not None:

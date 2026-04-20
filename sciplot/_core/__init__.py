@@ -2,13 +2,6 @@
 SciPlot 核心模块
 """
 
-from sciplot._core.registry import (
-    PlotterMetadata,
-    PLOTTER_REGISTRY,
-    register_plotter,
-    get_plotter,
-    list_plotters,
-)
 from sciplot._core.style import setup_style, reset_style
 from sciplot._core.palette import (
     apply_palette,
@@ -41,11 +34,6 @@ from sciplot._core.config import (
 )
 
 __all__ = [
-    "PlotterMetadata",
-    "PLOTTER_REGISTRY",
-    "register_plotter",
-    "get_plotter",
-    "list_plotters",
     "setup_style",
     "reset_style",
     "apply_palette",

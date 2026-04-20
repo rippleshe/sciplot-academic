@@ -14,6 +14,7 @@ from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 
 from sciplot._core.style import VENUES
+from sciplot._core.palette import DEFAULT_PALETTE
 
 
 # ============================================================================
@@ -105,7 +106,7 @@ def new_figure(
 
     if venue not in VENUES:
         raise ValueError(f"未知 venue '{venue}'，可用选项: {list(VENUES.keys())}")
-    _, default_figsize, _ = VENUES[venue]
+    default_figsize = VENUES[venue].figsize
     size = figsize if figsize is not None else default_figsize
     return plt.subplots(figsize=size, **kwargs)
 
@@ -143,13 +144,18 @@ def create_subplots(
     """
     from sciplot._core.style import setup_style
     from sciplot._core.style import get_current_lang, VALID_LANGS
+    from sciplot._core.config import get_config
+
     current_lang = get_current_lang()
     effective_lang = lang if lang is not None else (
         current_lang if current_lang in VALID_LANGS else "zh"
     )
-    setup_style(venue, palette or "pastel", effective_lang)
+    effective_palette = palette if palette is not None else get_config("palette")
+    if not isinstance(effective_palette, str) or not effective_palette:
+        effective_palette = DEFAULT_PALETTE
+    setup_style(venue, effective_palette, effective_lang)
 
-    _, base_figsize, _ = VENUES[venue]
+    base_figsize = VENUES[venue].figsize
     figsize = (base_figsize[0] * ncols * 0.85, base_figsize[1] * nrows * 0.85)
 
     fig, axes = plt.subplots(
@@ -194,11 +200,16 @@ def paper_subplots(
     """
     from sciplot._core.style import setup_style
     from sciplot._core.style import get_current_lang, VALID_LANGS
+    from sciplot._core.config import get_config
+
     current_lang = get_current_lang()
     effective_lang = lang if lang is not None else (
         current_lang if current_lang in VALID_LANGS else "zh"
     )
-    setup_style(venue, palette or "pastel", effective_lang)
+    effective_palette = palette if palette is not None else get_config("palette")
+    if not isinstance(effective_palette, str) or not effective_palette:
+        effective_palette = DEFAULT_PALETTE
+    setup_style(venue, effective_palette, effective_lang)
 
     if figsize is not None:
         final_figsize = figsize
@@ -208,7 +219,7 @@ def paper_subplots(
         final_figsize = venue_layouts.get(layout_key)
         if final_figsize is None:
             # 回退：基于 venue 默认尺寸等比缩放
-            _, base_fs, _ = VENUES.get(venue, VENUES["nature"])
+            base_fs = VENUES.get(venue, VENUES["nature"]).figsize
             final_figsize = (base_fs[0] * ncols * 0.85, base_fs[1] * nrows * 0.85)
 
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=final_figsize, **kwargs)
@@ -245,12 +256,17 @@ def create_gridspec(
     from sciplot._core.style import setup_style
     from sciplot._core.result import GridSpecResult
     from sciplot._core.style import get_current_lang, VALID_LANGS
+    from sciplot._core.config import get_config
+
     current_lang = get_current_lang()
     effective_lang = lang if lang is not None else (
         current_lang if current_lang in VALID_LANGS else "zh"
     )
-    setup_style(venue, palette or "pastel", effective_lang)
-    _, figsize, _ = VENUES[venue]
+    effective_palette = palette if palette is not None else get_config("palette")
+    if not isinstance(effective_palette, str) or not effective_palette:
+        effective_palette = DEFAULT_PALETTE
+    setup_style(venue, effective_palette, effective_lang)
+    figsize = VENUES[venue].figsize
     fig = plt.figure(figsize=figsize)
     gs = GridSpec(nrows, ncols, figure=fig, **kwargs)
     return GridSpecResult(fig, gs)
@@ -412,8 +428,8 @@ def _normalize_output_formats(formats: Union[str, Sequence[str]]) -> Tuple[str, 
 def save(
     fig: Figure,
     name: str,
-    dpi: int = 1200,
-    formats: Union[str, Sequence[str]] = ("pdf", "png"),
+    dpi: Optional[Union[int, float]] = None,
+    formats: Optional[Union[str, Sequence[str]]] = None,
     bbox_inches: str = "tight",
     dir: Optional[str] = None,
     **kwargs: Any,
@@ -424,8 +440,8 @@ def save(
     参数:
         fig        : Matplotlib 图形对象
         name       : 文件名（不含扩展名），可包含子目录路径
-        dpi        : 位图分辨率，默认 1200（印刷级）
-        formats    : 输出格式元组，默认 ("pdf", "png")
+        dpi        : 位图分辨率；为 None 时读取配置默认值
+        formats    : 输出格式元组；为 None 时读取配置默认值
                      支持："pdf" | "png" | "svg" | "eps"
         bbox_inches: 默认 "tight"，自动裁剪多余白边
         dir        : 保存目录；为 None 则保存到当前工作目录
@@ -440,8 +456,12 @@ def save(
         >>> sp.save(fig, "fig", dir="outputs/figures")        # 保存到指定目录
         >>> sp.save(fig, "nested/dir/fig")                    # 自动创建嵌套目录
     """
+    from sciplot._core.config import get_config
+
     VECTOR_FORMATS = {"pdf", "svg", "eps"}
-    normalized_formats = _normalize_output_formats(formats)
+    resolved_formats = formats if formats is not None else get_config("formats")
+    normalized_formats = _normalize_output_formats(resolved_formats)
+    resolved_dpi = dpi if dpi is not None else get_config("dpi")
 
     supported_formats = set(fig.canvas.get_supported_filetypes().keys())
     invalid_formats = [fmt for fmt in normalized_formats if fmt not in supported_formats]
@@ -451,8 +471,8 @@ def save(
         )
 
     if any(fmt not in VECTOR_FORMATS for fmt in normalized_formats):
-        if not isinstance(dpi, (int, float)) or dpi <= 0:
-            raise ValueError(f"dpi 必须为正数，实际值: {dpi!r}")
+        if not isinstance(resolved_dpi, (int, float)) or resolved_dpi <= 0:
+            raise ValueError(f"dpi 必须为正数，实际值: {resolved_dpi!r}")
 
     # 处理 name 可能包含路径的情况
     name_path = Path(name)
@@ -483,7 +503,7 @@ def save(
     saved_paths: List[Path] = []
     for fmt in normalized_formats:
         path = save_dir / f"{filename}.{fmt}"
-        extra = {} if fmt in VECTOR_FORMATS else {"dpi": dpi}
+        extra = {} if fmt in VECTOR_FORMATS else {"dpi": resolved_dpi}
         fig.savefig(path, bbox_inches=bbox_inches, format=fmt, **extra, **kwargs)
         saved_paths.append(path)
     return saved_paths
@@ -526,3 +546,4 @@ def _set_ticks_inward(axes: Union[Axes, np.ndarray, Sequence[Axes]]) -> None:
         for ax in axes:
             if isinstance(ax, Axes):
                 ax.tick_params(direction="in")
+

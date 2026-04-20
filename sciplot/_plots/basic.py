@@ -9,6 +9,7 @@ from typing import Any, List, Optional, Union
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 
 from sciplot._core.style import setup_style
 from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
@@ -20,6 +21,7 @@ from sciplot._core.result import PlotResult
 LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
 MARKERS: List[str] = ["o", "s", "^", "D", "v", "<", ">", "p", "*", "h"]
 _AUTO_SUBSET_BASES = {"pastel", "earth", "ocean", "forest", "sunset"}
+_LINE2D_KWARGS = set(Line2D([], []).properties().keys()) | set(getattr(Line2D, "_alias_map", {}).keys())
 
 
 def _resolve_auto_subset_palette(palette: Optional[str], n_series: int) -> str:
@@ -301,7 +303,7 @@ def plot_area(
     绘制面积图（折线下方填充）
 
     参数:
-        alpha: 填充区域透明度，默认 0.3；fill=False 时应用于线条透明度
+        alpha: 填充区域透明度，默认 0.3；fill=False 时忽略
         fill : 是否填充面积，默认 True；False 则只画线
         lang : 语言设置
 
@@ -322,10 +324,10 @@ def plot_area(
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
 
-    (line,) = ax.plot(x, y, label=label, alpha=alpha if not fill else 1.0, **kwargs)
-    color = line.get_color()
+    (line,) = ax.plot(x, y, label=label, **kwargs)
 
     if fill:
+        color = line.get_color()
         ax.fill_between(x, y, alpha=alpha, color=color)
 
     ax.set_xlabel(xlabel)
@@ -405,13 +407,19 @@ def plot_multi_area(
             ax.fill_between(x, y_stack, y_stack + y, label=lbl, **fill_kwargs)
             y_stack = y_stack + y
     else:
-        # 独立面积图 - 使用 fill_between 的 label 参数
+        # 独立面积图：绘制边界线 + 半透明填充
         for i, (y, lbl) in enumerate(zip(y_list, labels)):
             color = colors[i % len(colors)]
+
+            line_kwargs = {k: v for k, v in kwargs.items() if k in _LINE2D_KWARGS}
+            line_kwargs.pop("label", None)
+            line_kwargs.setdefault("color", color)
+            (line,) = ax.plot(x, y, **line_kwargs)
+
             fill_kwargs = dict(kwargs)
             fill_kwargs.pop("label", None)
-            fill_kwargs.setdefault("alpha", alpha)
-            fill_kwargs.setdefault("color", color)
+            fill_kwargs["alpha"] = alpha
+            fill_kwargs.setdefault("color", line.get_color())
             ax.fill_between(x, y, label=lbl, **fill_kwargs)
 
     ax.set_xlabel(xlabel)

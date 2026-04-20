@@ -50,10 +50,11 @@ def validate_params(
         ...     ...
     """
     def decorator(func: F) -> F:
+        import inspect
+        sig = inspect.signature(func)
+
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            import inspect
-            sig = inspect.signature(func)
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
 
@@ -166,24 +167,81 @@ def apply_resolved_style(
     返回:
         应使用的 venue（None 表示复用当前样式）
     """
-    effective_venue, should_apply = resolve_style_venue(venue, palette, lang)
-    if should_apply:
-        from sciplot._core.style import setup_style, get_current_lang, VALID_LANGS
+    from sciplot._core.context import StyleContext
+
+    # 在 StyleContext 内，显式参数应只覆盖对应层，未传入参数应继承当前上下文。
+    if StyleContext.is_in_context():
+        if venue is None and palette is None and lang is None:
+            return None
+
+        # 仅覆盖 palette：不触发 setup_style，避免重置 venue/lang 与其他 rcParams。
+        if venue is None and lang is None and palette is not None:
+            from sciplot._core.palette import apply_palette
+            from sciplot._core.style import set_current_palette
+
+            apply_palette(palette)
+            set_current_palette(palette)
+            return None
+
+        from sciplot._core.style import (
+            setup_style,
+            get_current_lang,
+            get_current_venue,
+            get_current_palette,
+            VALID_LANGS,
+        )
         from sciplot._core.palette import DEFAULT_PALETTE
-        effective_palette = palette or DEFAULT_PALETTE
-        
-        # 确定有效语言：优先使用传入的lang，否则使用全局状态（如果有效），否则使用默认值
+
+        effective_venue = venue or get_current_venue() or "nature"
+
         if lang is not None:
             effective_lang = lang
         else:
             current_lang = get_current_lang()
-            # 验证全局语言状态是否有效
-            if current_lang is not None and current_lang in VALID_LANGS:
-                effective_lang = current_lang
+            effective_lang = current_lang if current_lang in VALID_LANGS else "zh"
+
+        effective_palette = palette or get_current_palette() or DEFAULT_PALETTE
+        setup_style(effective_venue, effective_palette, lang=effective_lang)
+
+        return effective_venue
+
+    from sciplot._core.config import get_config
+    from sciplot._core.style import (
+        setup_style,
+        get_current_lang,
+        get_current_venue,
+        get_current_palette,
+        VALID_LANGS,
+    )
+    from sciplot._core.palette import DEFAULT_PALETTE
+
+    # 非上下文场景：未显式传入的层先继承当前状态，再回退到配置默认值。
+    cfg_venue = get_config("venue")
+    base_venue = get_current_venue() or (
+        cfg_venue if isinstance(cfg_venue, str) and cfg_venue else "nature"
+    )
+    effective_venue = venue if venue is not None else base_venue
+
+    cfg_palette = get_config("palette")
+    base_palette = get_current_palette() or (
+        cfg_palette if isinstance(cfg_palette, str) and cfg_palette else DEFAULT_PALETTE
+    )
+    effective_palette = palette if palette is not None else base_palette
+
+    if lang is not None:
+        effective_lang = lang
+    else:
+        current_lang = get_current_lang()
+        if current_lang in VALID_LANGS:
+            effective_lang = current_lang
+        else:
+            cfg_lang = get_config("lang")
+            if isinstance(cfg_lang, str) and cfg_lang in VALID_LANGS:
+                effective_lang = cfg_lang
             else:
                 effective_lang = "zh"
-        
-        setup_style(effective_venue, effective_palette, lang=effective_lang)
+
+    setup_style(effective_venue, effective_palette, lang=effective_lang)
     return effective_venue
 
 
@@ -397,3 +455,4 @@ __all__ = [
     "validate_choice",
     "validate_dict_not_empty",
 ]
+

@@ -90,6 +90,42 @@ def _normalize_shade_regions(
     return normalized
 
 
+def _is_numeric_time_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    return isinstance(value, (int, float, np.number))
+
+
+def _is_datetime_time_value(value: Any) -> bool:
+    return isinstance(value, (datetime, date, np.datetime64))
+
+
+def _validate_time_value_for_axis(value: Any, x_type: str, field_name: str) -> None:
+    if x_type == "datetime":
+        if not _is_datetime_time_value(value):
+            raise TypeError(
+                f"{field_name} 必须是 datetime/date 类型，实际类型: {type(value).__name__}"
+            )
+    else:
+        if not _is_numeric_time_value(value):
+            raise TypeError(
+                f"{field_name} 必须是数值类型，实际类型: {type(value).__name__}"
+            )
+
+
+def _validate_annotations_axis_compatibility(
+    events: List[Dict[str, Any]],
+    regions: List[Dict[str, Any]],
+    x_type: str,
+) -> None:
+    for i, event in enumerate(events):
+        _validate_time_value_for_axis(event["time"], x_type, f"events[{i}]['time']")
+
+    for i, region in enumerate(regions):
+        _validate_time_value_for_axis(region["start"], x_type, f"shade_regions[{i}]['start']")
+        _validate_time_value_for_axis(region["end"], x_type, f"shade_regions[{i}]['end']")
+
+
 def plot_timeseries(
     t: Union[List, np.ndarray],
     y: Union[List, np.ndarray],
@@ -160,6 +196,7 @@ def plot_timeseries(
     fig, ax = new_figure(effective_venue)
 
     x_type = _detect_x_type(t)
+    _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
     main_color = colors[0]
@@ -270,6 +307,7 @@ def plot_multi_timeseries(
     fig, ax = new_figure(effective_venue)
 
     x_type = _detect_x_type(t)
+    _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 

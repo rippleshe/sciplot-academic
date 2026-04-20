@@ -10,6 +10,7 @@ import warnings
 from typing import Any, List, Optional
 from statistics import NormalDist
 
+from cycler import cycler
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
@@ -18,6 +19,25 @@ from matplotlib.figure import Figure
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import apply_resolved_style
 from sciplot._core.result import PlotResult
+
+
+_FALLBACK_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+
+def _ensure_non_empty_prop_cycle() -> None:
+    """确保 rcParams 中存在可用颜色循环，避免 Matplotlib 内部取色时崩溃。"""
+    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
+    if not colors:
+        plt.rcParams["axes.prop_cycle"] = cycler(color=_FALLBACK_COLORS)
+
+
+def _get_cycle_colors() -> List[str]:
+    """获取当前颜色循环，空循环时回退到 Matplotlib 默认色。"""
+    _ensure_non_empty_prop_cycle()
+    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
+    if not colors:
+        colors = _FALLBACK_COLORS
+    return colors
 
 
 def _try_import_scipy_stats():
@@ -114,9 +134,10 @@ def plot_residuals(
     residuals = y_true - y_pred
 
     effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = _get_cycle_colors()
 
     ax.scatter(y_pred, residuals, alpha=0.6, color=colors[0], **kwargs)
 
@@ -196,9 +217,10 @@ def plot_qq(
         )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = _get_cycle_colors()
 
     if stats is not None:
         scipy_dist_map = {
@@ -292,9 +314,10 @@ def plot_bland_altman(
     lower_loa = mean_diff - 1.96 * std_diff
 
     effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = _get_cycle_colors()
 
     ax.scatter(mean_vals, diff_vals, alpha=0.6, color=colors[0], **kwargs)
 
@@ -363,6 +386,7 @@ def plot_density(
     y_eval = kde(x_eval)
 
     effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     (line,) = ax.plot(x_eval, y_eval, **kwargs)
@@ -394,6 +418,8 @@ def plot_multi_density(
     """绘制多组核密度估计曲线。
 
     参数:
+        fill: 是否绘制密度曲线下方填充，默认 False
+        alpha: 填充透明度，仅在 fill=True 时生效
         lang: 语言设置
     """
     stats = _check_scipy_stats()
@@ -416,6 +442,7 @@ def plot_multi_density(
         )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     all_values = np.concatenate(normalized_data)

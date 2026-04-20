@@ -30,11 +30,20 @@ SciPlot Academic — 期刊级科研绘图库
     forest / forest-1~6  — 森林渐变
     sunset / sunset-1~5  — 日落暖色
 
+子图布局选择:
+    create_subplots  — 快速创建并按 venue 比例缩放，适合探索与草稿
+    paper_subplots   — 严格按论文版心尺寸创建，适合投稿与定稿
+
+面积图语义:
+    plot_area(fill=True)   — 线条 + 填充
+    plot_area(fill=False)  — 仅线条；alpha 参数仅在填充开启时生效
+
 期刊样式:
     nature（默认）| ieee | aps | springer | thesis | presentation
 """
 
 from pathlib import Path as _Path
+from types import MappingProxyType as _MappingProxyType
 
 
 def _read_local_version() -> str:
@@ -162,7 +171,6 @@ from sciplot._core.result import (
 
 # ── 公共工具函数 (Utilities) ───────────────────────────────────
 from sciplot._core.utils import (
-    validate_params,
     validate_array_like,
     validate_labels_match_data,
     validate_positive_number,
@@ -428,7 +436,52 @@ def inspect() -> None:
     print("\n配色信息:")
     preview = ", ".join(list_palettes()[:12])
     print(f"已注册配色(前12个): {preview}")
-    print(f"当前默认: venue={get_config('venue')}, palette={get_config('palette')}, lang={get_config('lang')}")
+
+    try:
+        import matplotlib.pyplot as plt
+
+        current_figsize = tuple(float(v) for v in plt.rcParams.get("figure.figsize", (0.0, 0.0)))
+        guessed_venue = "unknown"
+        for venue_name, venue_cfg in VENUES.items():
+            v_w, v_h = venue_cfg.figsize
+            if abs(current_figsize[0] - v_w) < 1e-6 and abs(current_figsize[1] - v_h) < 1e-6:
+                guessed_venue = venue_name
+                break
+
+        from sciplot._core.style import get_current_lang
+
+        active_lang = get_current_lang() or "unknown"
+        print(
+            "当前活跃: "
+            f"figsize={current_figsize} (推断 venue≈{guessed_venue}), "
+            f"lang={active_lang}"
+        )
+    except Exception:
+        print("当前活跃: 无法读取 rcParams 状态")
+
+    print(
+        f"当前默认: venue={get_config('venue')}, "
+        f"palette={get_config('palette')}, lang={get_config('lang')}"
+    )
+
+
+def _freeze_palette_mapping(data):
+    """导出层提供只读映射，避免用户误改全局配色。"""
+    return _MappingProxyType({k: tuple(v) for k, v in data.items()})
+
+
+# 对外公开常量使用只读视图，降低全局状态被意外污染的风险。
+PASTEL_PALETTE = _freeze_palette_mapping(PASTEL_PALETTE)
+EARTH_PALETTE = _freeze_palette_mapping(EARTH_PALETTE)
+OCEAN_PALETTE = _freeze_palette_mapping(OCEAN_PALETTE)
+FOREST_PALETTE = _freeze_palette_mapping(FOREST_PALETTE)
+SUNSET_PALETTE = _freeze_palette_mapping(SUNSET_PALETTE)
+RMB_PALETTES = _freeze_palette_mapping(RMB_PALETTES)
+DIVERGING_PALETTES = _freeze_palette_mapping(DIVERGING_PALETTES)
+RESIDENT_PALETTES = _freeze_palette_mapping(RESIDENT_PALETTES)
+ALL_PALETTES = tuple(ALL_PALETTES)
+LINE_STYLES = tuple(LINE_STYLES)
+MARKERS = tuple(MARKERS)
 
 
 __all__ = [
@@ -515,15 +568,6 @@ __all__ = [
     # ── 3D 扩展 ──
     "plot_surface", "plot_contour", "plot_3d_scatter", "plot_wireframe",
 
-    # ── 网络图扩展 ──
-    "plot_network", "plot_network_from_matrix", "plot_network_communities",
-
-    # ── 层次聚类扩展 ──
-    "plot_dendrogram", "plot_clustermap",
-
-    # ── Venn 图扩展 ──
-    "plot_venn2", "plot_venn3",
-
     # ── 颜色工具 ──
     "hex_to_rgb", "rgb_to_hex",
     "lighten_color", "darken_color", "generate_gradient",
@@ -543,3 +587,4 @@ __all__ = [
     # ── 状态 ──
     "HAS_SCIENCEPLOTS",
 ]
+

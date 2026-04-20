@@ -35,8 +35,17 @@ import logging
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 
-from sciplot._core.style import setup_style, VENUES
-from sciplot._core.palette import apply_palette
+from sciplot._core.style import (
+    setup_style,
+    get_current_lang,
+    set_current_lang,
+    get_current_venue,
+    set_current_venue,
+    get_current_palette,
+    set_current_palette,
+    VALID_LANGS,
+)
+from sciplot._core.palette import apply_palette, DEFAULT_PALETTE
 
 _logger = logging.getLogger(__name__)
 
@@ -53,7 +62,7 @@ class StyleContext:
     _local = threading.local()
 
     @classmethod
-    def _get_stack(cls) -> List[Dict[str, Any]]:
+    def _get_stack(cls) -> List["StyleContext"]:
         """获取当前线程的上下文栈"""
         if not hasattr(cls._local, "stack"):
             cls._local.stack = []
@@ -86,15 +95,21 @@ class StyleContext:
 
         # 保存进入上下文前的状态
         self._saved_state: Optional[Dict[str, Any]] = None
+        self._saved_lang: Optional[str] = None
+        self._saved_venue: Optional[str] = None
+        self._saved_palette: Optional[str] = None
 
     def __enter__(self) -> StyleContext:
         """进入上下文，保存当前状态并应用新样式"""
         # 保存当前 rcParams 的副本
         self._saved_state = copy.deepcopy(dict(rcParams))
+        self._saved_lang = get_current_lang()
+        self._saved_venue = get_current_venue()
+        self._saved_palette = get_current_palette()
 
         # 将当前状态压入栈
         stack = self._get_stack()
-        stack.append(self._saved_state)
+        stack.append(self)
 
         try:
             # 应用新样式
@@ -103,12 +118,16 @@ class StyleContext:
                 # 仅指定了 palette：不重置 venue/lang，只覆盖颜色循环
                 if self.venue is None and self.lang is None and self.palette is not None:
                     apply_palette(self.palette)
+                    set_current_palette(self.palette)
                 else:
-                    from sciplot._core.style import get_current_lang
-                    effective_lang = self.lang or get_current_lang() or "zh"
+                    inherited_lang = self._saved_lang if self._saved_lang in VALID_LANGS else "zh"
+                    effective_lang = self.lang if self.lang is not None else inherited_lang
+                    effective_venue = self.venue or self._saved_venue or "nature"
+                    effective_palette = self.palette or self._saved_palette or DEFAULT_PALETTE
+
                     setup_style(
-                        venue=self.venue or "nature",
-                        palette=self.palette or "pastel",
+                        venue=effective_venue,
+                        palette=effective_palette,
                         lang=effective_lang,
                     )
 
@@ -118,9 +137,15 @@ class StyleContext:
         except Exception:
             # __enter__ 失败时必须回滚全局样式并清理上下文栈，避免“悬挂上下文”。
             rcParams.update(self._saved_state)
-            if stack and stack[-1] is self._saved_state:
+            set_current_lang(self._saved_lang)
+            set_current_venue(self._saved_venue)
+            set_current_palette(self._saved_palette)
+            if stack and stack[-1] is self:
                 stack.pop()
             self._saved_state = None
+            self._saved_lang = None
+            self._saved_venue = None
+            self._saved_palette = None
             raise
 
         return self
@@ -144,7 +169,16 @@ class StyleContext:
         """
         stack = self._get_stack()
         if stack:
-            saved_state = stack.pop()
+            if stack[-1] is self:
+                stack.pop()
+            else:
+                try:
+                    stack.remove(self)
+                except ValueError:
+                    pass
+
+        if self._saved_state is not None:
+            saved_state = self._saved_state
 
             keys_to_delete = []
             for key in list(rcParams.keys()):
@@ -163,16 +197,22 @@ class StyleContext:
                 except (ValueError, KeyError) as e:
                     _logger.warning(f"无法恢复 rcParams[{key!r}]: {e}")
 
+        set_current_lang(self._saved_lang)
+        set_current_venue(self._saved_venue)
+        set_current_palette(self._saved_palette)
+
         self._saved_state = None
+        self._saved_lang = None
+        self._saved_venue = None
+        self._saved_palette = None
 
         return False
 
     @classmethod
     def get_current_context(cls) -> Optional[StyleContext]:
         """获取当前活动的上下文（如果有）"""
-        if cls._get_stack():
-            return cls
-        return None
+        stack = cls._get_stack()
+        return stack[-1] if stack else None
 
     @classmethod
     def is_in_context(cls) -> bool:
@@ -262,7 +302,7 @@ def ieee_context(
         >>> with sp.ieee_context("earth"):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext("ieee", palette or "pastel", lang=lang, **kwargs)
+    return StyleContext("ieee", palette or DEFAULT_PALETTE, lang=lang, **kwargs)
 
 
 def nature_context(
@@ -285,7 +325,7 @@ def nature_context(
         >>> with sp.nature_context("earth"):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext("nature", palette or "pastel", lang=lang, **kwargs)
+    return StyleContext("nature", palette or DEFAULT_PALETTE, lang=lang, **kwargs)
 
 
 def thesis_context(
@@ -308,7 +348,7 @@ def thesis_context(
         >>> with sp.thesis_context("earth"):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext("thesis", palette or "pastel", lang=lang, **kwargs)
+    return StyleContext("thesis", palette or DEFAULT_PALETTE, lang=lang, **kwargs)
 
 
 __all__ = [

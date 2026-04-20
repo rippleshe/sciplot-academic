@@ -4,45 +4,68 @@
 
 from __future__ import annotations
 
-import contextvars
 import shutil
-from typing import Any, Dict, List, Optional, Tuple
+import threading
+from typing import Any, Dict, Optional, Tuple, NamedTuple
 
 import matplotlib.pyplot as plt
 
 
 # ============================================================================
-# 上下文变量 — 线程安全的语言设置
+# 线程局部状态 — 语言设置
 # ============================================================================
 
-# 使用 contextvars 实现线程/协程安全的全局状态
-_current_lang: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    '_current_lang', default=None
-)
+_thread_local = threading.local()
 
 
 def get_current_lang() -> Optional[str]:
     """获取当前设置的语言代码（线程安全）"""
-    return _current_lang.get()
+    return getattr(_thread_local, "lang", None)
 
 
 def set_current_lang(lang: Optional[str]) -> None:
     """设置当前语言代码（线程安全）"""
-    _current_lang.set(lang)
+    _thread_local.lang = lang
+
+
+def get_current_venue() -> Optional[str]:
+    """获取当前设置的 venue（线程安全）。"""
+    return getattr(_thread_local, "venue", None)
+
+
+def set_current_venue(venue: Optional[str]) -> None:
+    """设置当前 venue（线程安全）。"""
+    _thread_local.venue = venue
+
+
+def get_current_palette() -> Optional[str]:
+    """获取当前设置的 palette（线程安全）。"""
+    return getattr(_thread_local, "palette", None)
+
+
+def set_current_palette(palette: Optional[str]) -> None:
+    """设置当前 palette（线程安全）。"""
+    _thread_local.palette = palette
 
 
 # ============================================================================
 # Venues — 期刊/场合预设
-# 格式：(SciencePlots 样式列表, 图尺寸(宽, 高)英寸, 基础字号 pt)
+# 使用具名配置，避免位置索引带来的可维护性风险。
 # ============================================================================
 
-VENUES: Dict[str, tuple] = {
-    "nature":       (["science", "nature",   "no-latex"], (7.0, 5.0),  8),  # 10→8
-    "ieee":         (["science", "ieee",     "no-latex"], (3.5, 3.0),  6),  # 8→6
-    "aps":          (["science",             "no-latex"], (3.4, 2.8),  6),  # 8→6
-    "springer":     (["science",             "no-latex"], (6.0, 4.5),  8),  # 10→8
-    "thesis":       (["science",             "no-latex"], (6.1, 4.3),  8),  # 10→8 (Word论文)
-    "presentation": (["science", "notebook", "no-latex"], (8.0, 5.5), 12),  # 14→12
+class VenueConfig(NamedTuple):
+    styles: Tuple[str, ...]
+    figsize: Tuple[float, float]
+    fontsize: int
+
+
+VENUES: Dict[str, VenueConfig] = {
+    "nature": VenueConfig(("science", "nature", "no-latex"), (7.0, 5.0), 8),
+    "ieee": VenueConfig(("science", "ieee", "no-latex"), (3.5, 3.0), 6),
+    "aps": VenueConfig(("science", "no-latex"), (3.4, 2.8), 6),
+    "springer": VenueConfig(("science", "no-latex"), (6.0, 4.5), 8),
+    "thesis": VenueConfig(("science", "no-latex"), (6.1, 4.3), 8),
+    "presentation": VenueConfig(("science", "notebook", "no-latex"), (8.0, 5.5), 12),
 }
 
 # ============================================================================
@@ -92,7 +115,9 @@ def setup_style(
             f"未知 venue '{venue}'，可用选项: {list(VENUES.keys())}"
         )
 
-    styles, _, fontsize = VENUES[venue]
+    venue_cfg = VENUES[venue]
+    styles = list(venue_cfg.styles)
+    fontsize = venue_cfg.fontsize
 
     # ── 语言 / 字体 ──
     lang_style: Optional[str] = None
@@ -109,9 +134,6 @@ def setup_style(
             cjk_font = None
         else:
             cjk_font = main_font
-
-    # 参数全部验证通过后再更新全局语言状态，避免异常路径污染状态。
-    set_current_lang(lang)
 
     # ── 重置并应用样式（优先 SciencePlots，缺失时自动降级） ──
     plt.rcdefaults()
@@ -192,10 +214,18 @@ def setup_style(
     # ── 其他规范 ──
     plt.rcParams["axes.grid"] = False   # 科研图默认不加网格
 
+    # 所有样式应用成功后再写入线程局部状态，避免异常路径污染状态。
+    set_current_lang(lang)
+    set_current_venue(venue)
+    set_current_palette(palette)
+
 
 def reset_style() -> None:
     """重置 Matplotlib 为系统默认样式"""
     plt.rcdefaults()
+    set_current_lang(None)
+    set_current_venue(None)
+    set_current_palette(None)
 
 
 def get_venue_info(venue: str) -> Dict[str, Any]:
@@ -212,8 +242,13 @@ def get_venue_info(venue: str) -> Dict[str, Any]:
     """
     if venue not in VENUES:
         raise ValueError(f"未知 venue '{venue}'，可用选项: {list(VENUES.keys())}")
-    styles, figsize, fontsize = VENUES[venue]
-    return {"name": venue, "styles": styles, "figsize": figsize, "fontsize": fontsize}
+    venue_cfg = VENUES[venue]
+    return {
+        "name": venue,
+        "styles": venue_cfg.styles,
+        "figsize": venue_cfg.figsize,
+        "fontsize": venue_cfg.fontsize,
+    }
 
 
 def list_venues() -> List[str]:
@@ -224,3 +259,4 @@ def list_venues() -> List[str]:
 def list_languages() -> List[str]:
     """列出所有可用语言代码"""
     return list(LANGUAGES.keys())
+

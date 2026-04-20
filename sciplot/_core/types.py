@@ -46,19 +46,22 @@ VenueType = Literal["nature", "ieee", "aps", "springer", "thesis", "presentation
 # 语言类型
 LangType = Literal["zh", "zh-cn", "en"]
 
-# 配色方案类型（包含子集）
-PaletteType = Literal[
+# 内置配色方案类型（包含子集）
+BuiltinPaletteType = Literal[
     # 常驻系列
     "pastel", "pastel-1", "pastel-2", "pastel-3", "pastel-4", "pastel-5", "pastel-6",
-    "earth", "earth-1", "earth-2", "earth-3", "earth-4", "earth-5", "earth-6",
+    "earth", "earth-1", "earth-2", "earth-3", "earth-4",
     "ocean", "ocean-1", "ocean-2", "ocean-3", "ocean-4", "ocean-5", "ocean-6",
-    "forest", "forest-1", "forest-2", "forest-3", "forest-4", "forest-5",
+    "forest", "forest-1", "forest-2", "forest-3", "forest-4", "forest-5", "forest-6",
     "sunset", "sunset-1", "sunset-2", "sunset-3", "sunset-4", "sunset-5",
     # 人民币系列
     "100yuan", "50yuan", "20yuan", "10yuan", "5yuan", "1yuan",
     # 发散配色
     "diverging-rdylbu", "diverging-rdylgn", "diverging-spectral",
 ]
+
+# 运行时可接受任意字符串（支持用户自定义配色名称）
+PaletteType = str
 
 # 颜色映射类型
 CmapType = Literal[
@@ -161,6 +164,7 @@ __all__ = [
     # 图表类型
     "VenueType",
     "LangType",
+    "BuiltinPaletteType",
     "PaletteType",
     "CmapType",
     "LineStyleType",

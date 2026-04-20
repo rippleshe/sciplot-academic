@@ -296,8 +296,17 @@ def plot_violin(
         for i, values in enumerate(data):
             if np.asarray(values).size == 0:
                 raise ValueError(f"data[{i}] 不能为空")
-    elif np.asarray(data).size == 0:
-        raise ValueError("参数 'data' 不能为空")
+        n_groups = len(data)
+    else:
+        data_arr = np.asarray(data)
+        if data_arr.size == 0:
+            raise ValueError("参数 'data' 不能为空")
+        n_groups = data_arr.shape[1] if data_arr.ndim > 1 else 1
+
+    if labels is not None and len(labels) != n_groups:
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与数据组数 ({n_groups}) 不一致"
+        )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
@@ -310,8 +319,8 @@ def plot_violin(
         pc.set_facecolor(colors[i % len(colors)])
         pc.set_alpha(0.75)
 
-    if labels:
-        ax.set_xticks(range(1, len(labels) + 1))
+    if labels is not None:
+        ax.set_xticks(range(1, n_groups + 1))
         ax.set_xticklabels(labels)
 
     ax.set_xlabel(xlabel)
@@ -577,6 +586,7 @@ def plot_lollipop(
     baseline: float = 0.0,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """绘制棒棒糖图，用于类别排名与重要性展示。"""
@@ -601,7 +611,7 @@ def plot_lollipop(
         categories = [categories[i] for i in order]
         values_arr = values_arr[order]
 
-    effective_venue = apply_resolved_style(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
     colors = _get_cycle_colors()
     main_color = colors[0]
@@ -795,8 +805,8 @@ def annotate_significance(
                  默认 0.02，适合 y 轴范围为 [0, 1] 的场景
                  y 轴范围较大时（如 [0, 100]），建议设为 y_range * 0.03 左右
         p_value: p 值
-        h      : 括号高度（axes 单位），默认 0.02
-        tip_len: 括号端竖线长度（axes 单位），默认 0.01
+        h      : 括号高度（数据坐标单位），默认 0.02
+        tip_len: 括号端竖线长度（数据坐标单位），默认 0.01
         color  : 线条和文字颜色
         fontsize: 标注字号；None 则继承当前设置
         ns_text: p ≥ 0.05 时显示的文字，默认 "ns"

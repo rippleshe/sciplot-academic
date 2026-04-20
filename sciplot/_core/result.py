@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, overload, Literal
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, overload, Literal, Sequence
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -64,6 +64,18 @@ class PlotResult:
         self._is_array = isinstance(ax, np.ndarray)
         self._auto_close = auto_close
 
+    def _get_target_ax(self, ax_index: int = 0) -> Axes:
+        """根据 ax_index 获取目标子图，单子图时忽略索引。"""
+        if not self._is_array:
+            return self._ax  # type: ignore[return-value]
+
+        flat_axes = list(self._ax.flat)  # type: ignore[union-attr]
+        if ax_index < 0 or ax_index >= len(flat_axes):
+            raise IndexError(
+                f"ax_index 超出范围: {ax_index}，可用范围 [0, {len(flat_axes) - 1}]"
+            )
+        return flat_axes[ax_index]
+
     # ═══════════════════════════════════════════════════════════════
     # 属性访问
     # ═══════════════════════════════════════════════════════════════
@@ -98,6 +110,11 @@ class PlotResult:
         if not self._is_array:
             raise AttributeError("单个子图请使用 result.ax 访问")
         return self._ax  # type: ignore
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """获取结果元数据副本。"""
+        return dict(self._metadata)
 
     # ═══════════════════════════════════════════════════════════════
     # 元组解包支持
@@ -201,6 +218,16 @@ class PlotResult:
             self._ax.grid(visible, **kwargs)
         return self
 
+    def tick_params(self, **kwargs: Any) -> PlotResult:
+        """设置刻度参数，默认刻度朝内。"""
+        kwargs.setdefault("direction", "in")
+        if self._is_array:
+            for ax in self._ax.flat:
+                ax.tick_params(**kwargs)
+        else:
+            self._ax.tick_params(**kwargs)
+        return self
+
     def tight_layout(self, **kwargs: Any) -> PlotResult:
         """自动调整布局"""
         self._fig.tight_layout(**kwargs)
@@ -210,18 +237,28 @@ class PlotResult:
     # 图层添加方法（单个子图时）
     # ═══════════════════════════════════════════════════════════════
 
-    def plot(self, x: Union[List[float], np.ndarray], y: Union[List[float], np.ndarray], **kwargs: Any) -> PlotResult:
-        """添加折线"""
-        if self._is_array:
-            raise ValueError("多子图请使用 result.axes[i].plot()")
-        self._ax.plot(x, y, **kwargs)
+    def plot(
+        self,
+        x: Union[List[float], np.ndarray],
+        y: Union[List[float], np.ndarray],
+        ax_index: int = 0,
+        **kwargs: Any,
+    ) -> PlotResult:
+        """添加折线；多子图时可通过 ax_index 指定目标子图。"""
+        target_ax = self._get_target_ax(ax_index)
+        target_ax.plot(x, y, **kwargs)
         return self
 
-    def scatter(self, x: Union[List[float], np.ndarray], y: Union[List[float], np.ndarray], **kwargs: Any) -> PlotResult:
-        """添加散点"""
-        if self._is_array:
-            raise ValueError("多子图请使用 result.axes[i].scatter()")
-        self._ax.scatter(x, y, **kwargs)
+    def scatter(
+        self,
+        x: Union[List[float], np.ndarray],
+        y: Union[List[float], np.ndarray],
+        ax_index: int = 0,
+        **kwargs: Any,
+    ) -> PlotResult:
+        """添加散点；多子图时可通过 ax_index 指定目标子图。"""
+        target_ax = self._get_target_ax(ax_index)
+        target_ax.scatter(x, y, **kwargs)
         return self
 
     def axhline(self, y: float, **kwargs: Any) -> PlotResult:
@@ -242,11 +279,16 @@ class PlotResult:
             self._ax.axvline(x, **kwargs)
         return self
 
-    def annotate(self, text: str, xy: Tuple[float, float], **kwargs: Any) -> PlotResult:
-        """添加标注"""
-        if self._is_array:
-            raise ValueError("多子图请使用 result.axes[i].annotate()")
-        self._ax.annotate(text, xy, **kwargs)
+    def annotate(
+        self,
+        text: str,
+        xy: Tuple[float, float],
+        ax_index: int = 0,
+        **kwargs: Any,
+    ) -> PlotResult:
+        """添加标注；多子图时可通过 ax_index 指定目标子图。"""
+        target_ax = self._get_target_ax(ax_index)
+        target_ax.annotate(text, xy, **kwargs)
         return self
 
     # ═══════════════════════════════════════════════════════════════
@@ -256,8 +298,8 @@ class PlotResult:
     def save(
         self,
         name: str,
-        dpi: int = 1200,
-        formats: Tuple[str, ...] = ("pdf", "png"),
+        dpi: Optional[Union[int, float]] = None,
+        formats: Optional[Union[str, Sequence[str]]] = None,
         bbox_inches: str = "tight",
         dir: Optional[str] = None,
         tight: bool = True,
@@ -268,8 +310,8 @@ class PlotResult:
 
         参数:
             name: 文件名（不含扩展名）
-            dpi: 分辨率，默认 1200
-            formats: 输出格式，默认 ("pdf", "png")
+            dpi: 分辨率；为 None 时读取配置默认值
+            formats: 输出格式；为 None 时读取配置默认值
             bbox_inches: 边界处理，默认 "tight"
             dir: 保存目录
             tight: 是否自动调整布局，默认 True
@@ -404,6 +446,17 @@ class ComboPlotResult(PlotResult):
             return values[index]
         raise IndexError("ComboPlotResult 只支持索引 0 (fig)、1 (ax_bar)、2 (ax_line)")
 
+    def ylabel_left(self, label: str, **kwargs: Any) -> ComboPlotResult:
+        """设置左 Y 轴标签。"""
+        self.ax_bar.set_ylabel(label, **kwargs)
+        return self
+
+    def ylabel_right(self, label: str, **kwargs: Any) -> ComboPlotResult:
+        """设置右 Y 轴标签（仅双轴组合图生效）。"""
+        if self.ax_line is not None:
+            self.ax_line.set_ylabel(label, **kwargs)
+        return self
+
 
 class GridSpecResult:
     """
@@ -466,11 +519,18 @@ class GridSpecResult:
         else:
             raise IndexError("GridSpecResult 只支持索引 0 (fig) 和 1 (gridspec)")
 
+    def add_panel_labels(self, **kwargs: Any) -> GridSpecResult:
+        """对当前 figure 的全部子图添加面板标签。"""
+        from sciplot._core.layout import add_panel_labels
+
+        add_panel_labels(self._fig.axes, **kwargs)
+        return self
+
     def save(
         self,
         name: str,
-        dpi: int = 1200,
-        formats: Tuple[str, ...] = ("pdf", "png"),
+        dpi: Optional[Union[int, float]] = None,
+        formats: Optional[Union[str, Sequence[str]]] = None,
         tight: bool = True,
         **kwargs: Any,
     ) -> List[Path]:

@@ -13,7 +13,9 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from sciplot._core.style import setup_style
+from sciplot._core.style import setup_style, get_current_lang, VALID_LANGS
+from sciplot._core.config import get_config
+from sciplot._core.palette import DEFAULT_PALETTE
 from sciplot._core.layout import new_figure
 from sciplot._core.result import PlotResult
 
@@ -39,8 +41,15 @@ class PlotChain:
         palette: Optional[str] = None,
         lang: Optional[str] = None,
     ):
-        self._venue = venue or "nature"
-        self._palette = palette or "pastel"
+        resolved_venue = venue if venue is not None else get_config("venue")
+        resolved_palette = palette if palette is not None else get_config("palette")
+
+        self._venue = resolved_venue if isinstance(resolved_venue, str) and resolved_venue else "nature"
+        self._palette = (
+            resolved_palette
+            if isinstance(resolved_palette, str) and resolved_palette
+            else DEFAULT_PALETTE
+        )
         self._lang = lang
         self._figsize: Optional[Tuple[float, float]] = None
         self._fig: Optional[Figure] = None
@@ -50,7 +59,11 @@ class PlotChain:
     def _apply_style(self) -> None:
         """应用当前样式设置"""
         if not self._style_applied:
-            setup_style(self._venue, self._palette, self._lang)
+            effective_lang = self._lang
+            if effective_lang is None:
+                current_lang = get_current_lang()
+                effective_lang = current_lang if current_lang in VALID_LANGS else "zh"
+            setup_style(self._venue, self._palette, effective_lang)
             self._style_applied = True
 
     def _ensure_figure(self) -> Tuple[Figure, Axes]:
