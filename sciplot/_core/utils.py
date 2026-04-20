@@ -22,6 +22,15 @@ F = TypeVar("F", bound=Callable[..., Any])
 # 参数验证装饰器
 # ═══════════════════════════════════════════════════════════════
 
+def _get_data_length(obj: Any) -> int:
+    """获取数据的有效长度，对 numpy 多维数组返回元素总数。"""
+    if isinstance(obj, np.ndarray):
+        return obj.size
+    if hasattr(obj, '__len__'):
+        return len(obj)
+    return 0
+
+
 def validate_params(
     *,
     arrays: Optional[List[str]] = None,
@@ -97,15 +106,15 @@ def validate_params(
                         value1 = arguments[name1]
                         value2 = arguments[name2]
                         if value1 is not None and value2 is not None:
-                            len1 = len(value1) if hasattr(value1, '__len__') else 0
-                            len2 = len(value2) if hasattr(value2, '__len__') else 0
+                            len1 = _get_data_length(value1)
+                            len2 = _get_data_length(value2)
                             if len1 != len2:
                                 raise ValueError(
                                     f"参数 '{name1}' 长度 ({len1}) 与 '{name2}' 长度 ({len2}) 不一致"
                                 )
 
             return func(*args, **kwargs)
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[return-value]
     return decorator
 
 
@@ -356,6 +365,11 @@ def validate_positive_number(
     抛出:
         ValueError: 验证失败时
     """
+    if isinstance(value, bool):
+        raise ValueError(
+            f"参数 '{name}' 必须是数值类型，实际值: {value!r}"
+        )
+
     try:
         num = float(value)
     except (TypeError, ValueError):

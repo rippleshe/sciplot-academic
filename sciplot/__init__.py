@@ -66,8 +66,9 @@ def _read_local_version() -> str:
     try:
         with pyproject_path.open("rb") as f:
             data = _toml.load(f)
-        return str(data.get("project", {}).get("version", ""))
-    except Exception:
+        version = data.get("project", {}).get("version", "")
+        return str(version) if version is not None else ""
+    except (OSError, ValueError, TypeError):
         return ""
 
 

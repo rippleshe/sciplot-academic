@@ -122,8 +122,8 @@ class StyleContext:
                 else:
                     inherited_lang = self._saved_lang if self._saved_lang in VALID_LANGS else "zh"
                     effective_lang = self.lang if self.lang is not None else inherited_lang
-                    effective_venue = self.venue or self._saved_venue or "nature"
-                    effective_palette = self.palette or self._saved_palette or DEFAULT_PALETTE
+                    effective_venue = self.venue or (self._saved_venue if isinstance(self._saved_venue, str) else "nature")
+                    effective_palette = self.palette or (self._saved_palette if isinstance(self._saved_palette, str) else DEFAULT_PALETTE)
 
                     setup_style(
                         venue=effective_venue,
@@ -180,16 +180,12 @@ class StyleContext:
         if self._saved_state is not None:
             saved_state = self._saved_state
 
-            keys_to_delete = []
             for key in list(rcParams.keys()):
                 if key not in saved_state:
-                    keys_to_delete.append(key)
-
-            for key in keys_to_delete:
-                try:
-                    del rcParams[key]
-                except (KeyError, ValueError) as e:
-                    _logger.debug(f"无法删除 rcParams[{key!r}]: {e}")
+                    try:
+                        del rcParams[key]
+                    except (KeyError, ValueError) as e:
+                        _logger.debug(f"无法删除 rcParams[{key!r}]: {e}")
 
             for key, value in saved_state.items():
                 try:

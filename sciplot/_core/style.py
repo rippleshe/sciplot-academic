@@ -20,7 +20,7 @@ _thread_local = threading.local()
 
 def _ensure_thread_local_initialized() -> None:
     """确保线程局部状态已初始化。"""
-    if not hasattr(_thread_local, "_initialized"):
+    if not getattr(_thread_local, "_initialized", False):
         _thread_local.lang = None
         _thread_local.venue = None
         _thread_local.palette = None

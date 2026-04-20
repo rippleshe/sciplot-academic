@@ -323,3 +323,108 @@ class TestColorBlindFriendly:
         assert len(palette) >= 5
         # 颜色应该足够区分
         assert len(set(palette)) == len(palette)
+
+
+class TestValidateHexColor:
+    """测试 _validate_hex_color 类型安全"""
+
+    def test_non_string_input_returns_false(self):
+        """非字符串输入应返回 False"""
+        from sciplot._core.palette import _validate_hex_color
+        assert _validate_hex_color(123) is False
+        assert _validate_hex_color(None) is False
+        assert _validate_hex_color(["#FF0000"]) is False
+
+    def test_valid_hex_returns_true(self):
+        """有效 HEX 颜色应返回 True"""
+        from sciplot._core.palette import _validate_hex_color
+        assert _validate_hex_color("#FF0000") is True
+        assert _validate_hex_color("#F00") is True
+        assert _validate_hex_color("#845EC2") is True
+
+    def test_invalid_hex_returns_false(self):
+        """无效 HEX 颜色应返回 False"""
+        from sciplot._core.palette import _validate_hex_color
+        assert _validate_hex_color("FF0000") is False
+        assert _validate_hex_color("#GG0000") is False
+        assert _validate_hex_color("") is False
+
+
+class TestAutoSelectBestMatch:
+    """测试 auto_select 最近匹配逻辑"""
+
+    def test_auto_select_exact_match(self):
+        """精确匹配 name-n"""
+        from sciplot._core.palette import _UserPaletteStore
+        _UserPaletteStore.set("test_exact", ["#A", "#B", "#C"])
+        result = _UserPaletteStore.auto_select("test_exact", 2)
+        assert result == ["#A", "#B"]
+
+    def test_auto_select_fallback_to_largest(self):
+        """当所有配色方案颜色数都小于 n 时，返回最大的配色"""
+        from sciplot._core.palette import _UserPaletteStore
+        scheme = {
+            "single": ["#111111"],
+            "double": ["#111111", "#222222"],
+            "triple": ["#111111", "#222222", "#333333"],
+        }
+        _UserPaletteStore.register_scheme("test_fallback", scheme)
+        result = _UserPaletteStore.auto_select("test_fallback", 10)
+        assert result is not None
+        assert len(result) == 3
+
+    def test_auto_select_unknown_returns_none(self):
+        """未知配色方案返回 None"""
+        from sciplot._core.palette import _UserPaletteStore
+        result = _UserPaletteStore.auto_select("nonexistent_scheme_xyz", 3)
+        assert result is None
+
+
+class TestSetCustomPaletteValidation:
+    """测试 set_custom_palette 的输入验证"""
+
+    def test_non_hex_color_raises(self):
+        """非 HEX 格式颜色应抛出异常"""
+        with pytest.raises(ValueError, match="颜色格式错误"):
+            sp.set_custom_palette(["not_a_color", "#3498DB"], name="bad")
+
+    def test_empty_colors_raises(self):
+        """空颜色列表应抛出异常"""
+        with pytest.raises(ValueError, match="不能为空"):
+            sp.set_custom_palette([], name="empty")
+
+    def test_single_color_warns(self):
+        """单色配色应发出警告"""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            sp.set_custom_palette(["#E74C3C"], name="single_warn")
+            assert len(w) >= 1
+            assert "至少包含 2 种颜色" in str(w[0].message)
+
+
+class TestRegisterColorSchemeValidation:
+    """测试 register_color_scheme 的输入验证"""
+
+    def test_missing_required_key_raises(self):
+        """缺少必要键应抛出异常"""
+        with pytest.raises(ValueError, match="必须包含"):
+            sp.register_color_scheme("bad_scheme", {"double": ["#A", "#B"]})
+
+    def test_non_list_value_raises(self):
+        """非列表值应抛出异常"""
+        with pytest.raises(ValueError, match="必须是颜色列表"):
+            sp.register_color_scheme("bad_scheme2", {
+                "single": "#264653",
+                "double": ["#264653", "#2a9d8f"],
+                "triple": ["#264653", "#2a9d8f", "#e9c46a"],
+            })
+
+    def test_non_hex_in_scheme_raises(self):
+        """配色方案中非 HEX 颜色应抛出异常"""
+        with pytest.raises(ValueError, match="颜色格式错误"):
+            sp.register_color_scheme("bad_scheme3", {
+                "single": ["not_a_color"],
+                "double": ["#264653", "#2a9d8f"],
+                "triple": ["#264653", "#2a9d8f", "#e9c46a"],
+            })

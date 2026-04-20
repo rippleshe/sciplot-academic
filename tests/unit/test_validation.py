@@ -334,3 +334,97 @@ class TestPlotMultiTimeseriesValidation:
         t = np.arange(10)
         with pytest.raises(ValueError, match="y_list"):
             sp.plot_multi_timeseries(t, [])
+
+
+class TestValidatePositiveNumberBool:
+    """测试 validate_positive_number 对布尔值的处理"""
+
+    def test_bool_true_raises(self):
+        """布尔值 True 应该抛出 ValueError"""
+        with pytest.raises(ValueError, match="必须是数值类型"):
+            sp.validate_positive_number(True, "test")
+
+    def test_bool_false_raises(self):
+        """布尔值 False 应该抛出 ValueError"""
+        with pytest.raises(ValueError, match="必须是数值类型"):
+            sp.validate_positive_number(False, "test")
+
+    def test_int_one_passes(self):
+        """整数 1 应该通过验证"""
+        result = sp.validate_positive_number(1, "test")
+        assert result == 1.0
+
+    def test_int_zero_allow_zero(self):
+        """整数 0 在 allow_zero=True 时应该通过"""
+        result = sp.validate_positive_number(0, "test", allow_zero=True)
+        assert result == 0.0
+
+
+class TestValidateParamsEqualLength:
+    """测试 validate_params 装饰器的 equal_length 对 numpy 数组的处理"""
+
+    def test_numpy_1d_equal_length(self):
+        """一维 numpy 数组等长验证"""
+        from sciplot._core.utils import validate_params
+
+        @validate_params(equal_length=[("x", "y")])
+        def dummy_func(x, y):
+            return True
+
+        assert dummy_func(np.array([1, 2, 3]), np.array([4, 5, 6]))
+
+    def test_numpy_1d_unequal_length_raises(self):
+        """一维 numpy 数组不等长应抛出异常"""
+        from sciplot._core.utils import validate_params
+
+        @validate_params(equal_length=[("x", "y")])
+        def dummy_func(x, y):
+            return True
+
+        with pytest.raises(ValueError, match="长度.*不一致"):
+            dummy_func(np.array([1, 2, 3]), np.array([4, 5]))
+
+    def test_list_vs_numpy_equal_length(self):
+        """列表与 numpy 数组等长验证"""
+        from sciplot._core.utils import validate_params
+
+        @validate_params(equal_length=[("x", "y")])
+        def dummy_func(x, y):
+            return True
+
+        assert dummy_func([1, 2, 3], np.array([4, 5, 6]))
+
+    def test_none_values_skip_validation(self):
+        """None 值应跳过等长验证"""
+        from sciplot._core.utils import validate_params
+
+        @validate_params(equal_length=[("x", "y")])
+        def dummy_func(x, y):
+            return True
+
+        assert dummy_func(None, np.array([1, 2, 3]))
+
+
+class TestValidateArrayLikeEdgeCases:
+    """测试 validate_array_like 边界情况"""
+
+    def test_generator_input(self):
+        """生成器输入应该被转换为列表"""
+        result = sp.validate_array_like(range(5), "test")
+        assert result == [0, 1, 2, 3, 4]
+
+    def test_min_length_negative_raises(self):
+        """负数 min_length 应该抛出异常"""
+        with pytest.raises(ValueError, match="min_length 必须为非负整数"):
+            sp.validate_array_like([1, 2], "test", min_length=-1)
+
+    def test_min_length_zero_passes(self):
+        """min_length=0 应该通过"""
+        result = sp.validate_array_like([1], "test", min_length=0)
+        assert result == [1]
+
+    def test_numpy_2d_array(self):
+        """二维 numpy 数组应该被转换为嵌套列表"""
+        arr = np.array([[1, 2], [3, 4]])
+        result = sp.validate_array_like(arr, "test")
+        assert result == [[1, 2], [3, 4]]

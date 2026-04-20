@@ -25,7 +25,7 @@ from pathlib import Path
 
 def run(cmd: str) -> None:
     print(f"\n>>> {cmd}")
-    result = subprocess.run(cmd, shell=True)
+    result = subprocess.run(cmd, shell=True, check=False)
     if result.returncode != 0:
         print(f"❌ 命令失败，退出码 {result.returncode}")
         sys.exit(result.returncode)

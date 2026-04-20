@@ -44,6 +44,8 @@ def _validate_hex_color(color: str) -> bool:
     返回:
         是否为有效的 HEX 颜色
     """
+    if not isinstance(color, str):
+        return False
     return bool(_HEX_COLOR_PATTERN.match(color))
 
 
@@ -126,16 +128,14 @@ class _UserPaletteStore:
 
         优先级：
         1. 精确匹配 name-n
-        2. 从配色方案中选择最接近的
+        2. 从配色方案中选择最接近的（优先选颜色数 >= n 的最小匹配）
         3. 返回默认配色
         """
         with cls._lock:
-            # 尝试精确匹配
             exact = cls._palettes.get(f"{name}-{n}")
             if exact:
                 return list(exact)
 
-            # 从配色方案中选择
             scheme = cls._schemes.get(name)
             if scheme:
                 key_map = {1: "single", 2: "double", 3: "triple",
@@ -143,13 +143,18 @@ class _UserPaletteStore:
                 key = key_map.get(n, "quintuple")
                 if key in scheme:
                     return list(scheme[key])
-                # 回退到最大可用
-                for k in ["quintuple", "quadruple", "triple", "double", "single"]:
+                best_match = None
+                best_length = -1
+                for k in ["sextuple", "quintuple", "quadruple", "triple", "double", "single"]:
                     if k in scheme:
                         colors = scheme[k]
                         if len(colors) >= n:
                             return list(colors[:n])
-                        return list(colors)
+                        if len(colors) > best_length:
+                            best_length = len(colors)
+                            best_match = colors
+                if best_match:
+                    return list(best_match)
 
         return None
 

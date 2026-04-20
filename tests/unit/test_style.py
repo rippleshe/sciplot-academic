@@ -151,3 +151,95 @@ class TestEdgeCases:
         # venue=None 应该报错，因为 None 不在 VENUES 中
         with pytest.raises(ValueError):
             sp.setup_style(venue=None, palette=None, lang=None)
+
+
+class TestStyleContextBasics:
+    """测试 StyleContext 上下文管理器基础功能"""
+
+    def test_context_restores_style(self, reset_style):
+        """退出上下文后应恢复之前的样式"""
+        sp.setup_style("nature", "pastel")
+        original_venue = sp.get_venue_info("nature")
+
+        with sp.style_context("ieee", palette="ocean"):
+            pass
+
+    def test_context_palette_only(self, reset_style):
+        """仅修改配色不重置 venue/lang"""
+        sp.setup_style("nature", "pastel")
+        with sp.style_context(palette="ocean"):
+            pass
+
+    def test_nested_context(self, reset_style):
+        """嵌套上下文应正确恢复"""
+        sp.setup_style("nature", "pastel")
+        with sp.style_context("ieee", palette="ocean"):
+            with sp.style_context("thesis", palette="forest"):
+                pass
+
+    def test_context_with_exception(self, reset_style):
+        """上下文内异常不应影响样式恢复"""
+        sp.setup_style("nature", "pastel")
+        try:
+            with sp.style_context("ieee", palette="ocean"):
+                raise ValueError("test error")
+        except ValueError:
+            pass
+
+    def test_context_is_in_context(self, reset_style):
+        """is_in_context 在上下文内应返回 True"""
+        from sciplot._core.context import StyleContext
+        assert StyleContext.is_in_context() is False
+        with sp.style_context("ieee"):
+            assert StyleContext.is_in_context() is True
+        assert StyleContext.is_in_context() is False
+
+    def test_context_enter_failure_rollback(self, reset_style):
+        """__enter__ 失败时应回滚状态"""
+        from sciplot._core.context import StyleContext
+        sp.setup_style("nature", "pastel")
+        with pytest.raises(ValueError):
+            with sp.style_context("invalid_venue_xyz"):
+                pass
+
+    def test_convenience_contexts(self, reset_style):
+        """测试便捷上下文函数"""
+        with sp.ieee_context():
+            pass
+        with sp.nature_context():
+            pass
+        with sp.thesis_context():
+            pass
+
+    def test_context_alias(self, reset_style):
+        """测试 context 别名"""
+        with sp.context("ieee", palette="earth"):
+            pass
+
+
+class TestThreadLocalState:
+    """测试线程局部状态管理"""
+
+    def test_get_set_lang(self, reset_style):
+        """测试 get/set_current_lang"""
+        from sciplot._core.style import get_current_lang, set_current_lang
+        set_current_lang("en")
+        assert get_current_lang() == "en"
+        set_current_lang(None)
+        assert get_current_lang() is None
+
+    def test_get_set_venue(self, reset_style):
+        """测试 get/set_current_venue"""
+        from sciplot._core.style import get_current_venue, set_current_venue
+        set_current_venue("ieee")
+        assert get_current_venue() == "ieee"
+        set_current_venue(None)
+        assert get_current_venue() is None
+
+    def test_get_set_palette(self, reset_style):
+        """测试 get/set_current_palette"""
+        from sciplot._core.style import get_current_palette, set_current_palette
+        set_current_palette("ocean")
+        assert get_current_palette() == "ocean"
+        set_current_palette(None)
+        assert get_current_palette() is None
