@@ -539,7 +539,8 @@ def _set_ticks_inward(axes: Union[Axes, np.ndarray, Sequence[Axes]]) -> None:
     """将所有子图的刻度设为朝内"""
     if isinstance(axes, np.ndarray):
         for ax in axes.flat:
-            ax.tick_params(direction="in")
+            if isinstance(ax, Axes):
+                ax.tick_params(direction="in")
     elif isinstance(axes, Axes):
         axes.tick_params(direction="in")
     elif hasattr(axes, "__iter__"):

@@ -16,7 +16,7 @@
 
 | 特性             | 说明                                                                                                                   |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **零依赖配色**   | 所有配色（pastel/ocean/forest/sunset）均为内置，无需 SciencePlots                                                       |
+| **全内置配色**   | 所有配色（pastel/ocean/forest/sunset 等 9 套）完全内置，零外部依赖                                                       |
 | **中文优化**     | 默认宋体中文环境，IEEE 中文字号自动调优                                                                                |
 | **论文级输出**   | 预置 Nature/IEEE/APS/Springer/Thesis 版心尺寸，Word/LaTeX 分辨率一键切换                                              |
 | **智能配色**     | ≤6 条线自动选 pastel-N 子集，支持自定义配色方案                                                                        |
@@ -33,9 +33,6 @@
 ```bash
 # uv（推荐）
 uv pip install sciplot-academic
-
-# pip
-pip install sciplot-academic
 
 # ML 扩展（可选）
 uv pip install sciplot-academic[ml]
@@ -117,11 +114,14 @@ result.xlabel("时间 (s)").ylabel("电压 (V)").save("PlotResult示例")
 ### 🎨 配色方案
 
 ```
-四大内置色系（推荐）：
+九大内置色系（推荐）：
   pastel    → 柔和粉彩（默认，6色）
   ocean     → 海洋蓝绿（6色）
   forest    → 森林渐变（6色）
   sunset    → 日落暖色（5色）
+  earth     → 地形配色（6色）
+  rmb       → 人民币配色（5色）
+  diverging → 发散配色（8色）
 
 自定义配色：
   sp.set_custom_palette(["#E74C3C", "#3498DB"])  # 简单配色
@@ -192,8 +192,7 @@ matplotlib >= 3.5.0
 numpy >= 1.20.0
 ```
 
-> 所有配色均为内置，**配色系统不依赖 SciencePlots**。
-> 注：期刊样式渲染仍使用 SciencePlots（已随安装自动解决依赖）。
+> 所有配色和样式均为内置，无需额外安装。
 
 ---
 

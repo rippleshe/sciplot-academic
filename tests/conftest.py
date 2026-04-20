@@ -22,6 +22,15 @@ def _check_ml_available():
         return False
 
 
+def _check_scipy_available():
+    """检查 scipy 是否可用"""
+    try:
+        import scipy
+        return True
+    except ImportError:
+        return False
+
+
 @pytest.fixture(scope="session")
 def test_data():
     """生成标准测试数据"""
@@ -80,4 +89,10 @@ slow = pytest.mark.skipif(
 requires_ml = pytest.mark.skipif(
     not _check_ml_available(),
     reason="需要安装 sciplot-academic[ml]"
+)
+
+# 标记需要 scipy 的测试
+requires_scipy = pytest.mark.skipif(
+    not _check_scipy_available(),
+    reason="需要安装 scipy"
 )

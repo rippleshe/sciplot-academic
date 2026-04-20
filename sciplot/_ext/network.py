@@ -126,8 +126,9 @@ def plot_network(
             else:
                 norm = plt.Normalize(min(color_values.values()), max(color_values.values()))
                 try:
-                    cmap = plt.colormaps["viridis"]
-                except Exception:
+                    cmap = plt.colormaps.get_cmap("viridis")
+                except AttributeError:
+                    # 低版本matplotlib兼容
                     cmap = plt.cm.get_cmap("viridis")
                 node_colors = [cmap(norm(color_values.get(n, 0))) for n in G.nodes()]
         else:

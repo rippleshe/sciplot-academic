@@ -29,7 +29,24 @@ from matplotlib.figure import Figure
 
 _CONFIG_LOCK = threading.Lock()
 _TOML_IMPORT_WARNED = False
-_SUPPORTED_SAVE_FORMATS = frozenset(Figure().canvas.get_supported_filetypes().keys())
+
+
+def _get_supported_formats() -> frozenset:
+    """延迟获取支持的文件格式，避免导入时创建Figure实例。"""
+    try:
+        # 使用非交互式后端避免GUI初始化问题
+        import matplotlib
+        backend = matplotlib.get_backend()
+        if backend in matplotlib.rcsetup.interactive_bk:
+            matplotlib.use('Agg', force=False)
+        from matplotlib.figure import Figure
+        return frozenset(Figure().canvas.get_supported_filetypes().keys())
+    except Exception:
+        # 回退到常见格式列表
+        return frozenset({'png', 'pdf', 'svg', 'eps', 'ps', 'jpg', 'jpeg', 'tif', 'tiff'})
+
+
+_SUPPORTED_SAVE_FORMATS = _get_supported_formats()
 
 
 def _load_toml_module():

@@ -173,6 +173,7 @@ def plot_parallel(
             try:
                 cmap = plt.colormaps.get_cmap("viridis")
             except AttributeError:
+                # 低版本matplotlib兼容
                 cmap = plt.cm.get_cmap("viridis")
             norm = plt.Normalize(vmin=finite_values.min(), vmax=finite_values.max())
 
@@ -260,6 +261,7 @@ def plot_scatter_matrix(
     if diag not in {"hist", "kde", "none"}:
         raise ValueError("diag 仅支持 'hist'、'kde'、'none'")
 
+    scipy_stats = None
     if diag == "kde":
         try:
             from scipy import stats as scipy_stats
@@ -267,8 +269,6 @@ def plot_scatter_matrix(
             raise ImportError(
                 "diag='kde' 需要安装 scipy。请运行: pip install scipy"
             ) from e
-    else:
-        scipy_stats = None
 
     effective_venue = apply_resolved_style(venue, palette, lang)
     active_venue = effective_venue or get_current_venue() or "nature"

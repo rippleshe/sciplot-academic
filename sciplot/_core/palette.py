@@ -241,18 +241,30 @@ RESIDENT_PALETTES: Dict[str, List[str]] = {
 def _register_diverging_cmaps() -> None:
     """将 SciPlot 发散配色注册为 matplotlib colormap。"""
     for name, colors in DIVERGING_PALETTES.items():
+        # 检查是否已存在同名colormap
         try:
-            plt.colormaps[name]
-            continue
-        except Exception:
+            existing = plt.colormaps.get_cmap(name)
+            if existing is not None:
+                continue
+        except (KeyError, ValueError):
+            pass
+        except AttributeError:
+            # 低版本matplotlib可能没有get_cmap方法
             pass
 
         cmap = LinearSegmentedColormap.from_list(name, colors)
         try:
             plt.colormaps.register(cmap, name=name)
-        except Exception:
-            # 重复注册或低版本兼容问题时静默跳过，不影响主流程。
+        except (ValueError, KeyError):
+            # 重复注册或名称冲突时静默跳过
             pass
+        except AttributeError:
+            # 低版本matplotlib可能没有register方法
+            try:
+                import matplotlib
+                matplotlib.cm.register_cmap(name=name, cmap=cmap)
+            except Exception:
+                pass
 
 
 _register_diverging_cmaps()

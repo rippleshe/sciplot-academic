@@ -18,6 +18,7 @@ from sciplot._core.style import (
     get_current_palette,
     get_current_venue,
 )
+from tests.conftest import requires_scipy
 
 
 def test_setup_style_invalid_palette_does_not_pollute_thread_local_state(cleanup_figures):
@@ -102,6 +103,7 @@ def test_style_context_get_current_context_returns_active_instance(cleanup_figur
     assert StyleContext.get_current_context() is None
 
 
+@requires_scipy
 def test_statistical_plots_do_not_crash_on_empty_color_cycle(cleanup_figures):
     y_true = np.array([1.0, 2.0, 3.0, 4.0])
     y_pred = np.array([1.1, 1.9, 3.2, 3.8])

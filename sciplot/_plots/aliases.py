@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from sciplot._plots.basic import (
     plot_line,
@@ -34,11 +34,7 @@ from sciplot._plots.advanced import (
     plot_confidence,
     plot_heatmap,
 )
-
-if TYPE_CHECKING:
-    from sciplot._core.result import PlotResult, ComboPlotResult
-    from typing import Dict, List, Optional, Sequence
-    import numpy as np
+from sciplot._core.result import PlotResult, ComboPlotResult
 
 
 def line(
