@@ -62,6 +62,8 @@ BuiltinPaletteType = Literal[
     "100yuan", "50yuan", "20yuan", "10yuan", "5yuan", "1yuan",
     # 发散配色
     "rdbu", "coolwarm",
+    # 向后兼容别名（v1.8.2 之前使用的发散配色名称）
+    "diverging-rdylbu", "diverging-rdylgn", "diverging-spectral",
 ]
 
 # 运行时可接受任意字符串（支持用户自定义配色名称）

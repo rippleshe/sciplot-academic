@@ -37,10 +37,10 @@ _HEX_COLOR_PATTERN = re.compile(r'^#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?$')
 def _validate_hex_color(color: str) -> bool:
     """
     验证 HEX 颜色格式是否有效
-    
+
     参数:
         color: 颜色字符串
-    
+
     返回:
         是否为有效的 HEX 颜色
     """
@@ -231,6 +231,13 @@ DIVERGING_PALETTES: Dict[str, List[str]] = {
     "coolwarm": ["#3A5FCC", "#7A9EF0", "#C8D8F8", "#F5F5F5", "#F8C8C8", "#F07A7A", "#CC3A3A"],
 }
 
+# 向后兼容别名（v1.8.2 之前使用的发散配色名称）
+_DIVERGING_ALIASES: Dict[str, str] = {
+    "diverging-rdylbu": "rdbu",
+    "diverging-rdylgn": "rdbu",  # 映射到最接近的配色
+    "diverging-spectral": "coolwarm",  # 映射到最接近的配色
+}
+
 # 合并所有内置配色
 RESIDENT_PALETTES: Dict[str, List[str]] = {
     **PASTEL_PALETTE,
@@ -287,6 +294,14 @@ DEFAULT_PALETTE = "pastel"
 # 配色应用
 # ============================================================================
 
+def _resolve_palette_name(palette: str) -> str:
+    """解析配色名称，处理向后兼容别名。"""
+    # 检查是否为发散配色别名
+    if palette in _DIVERGING_ALIASES:
+        return _DIVERGING_ALIASES[palette]
+    return palette
+
+
 def apply_palette(palette: str, n_colors: Optional[int] = None) -> None:
     """
     将指定配色应用到 matplotlib rcParams（内部函数）
@@ -302,15 +317,18 @@ def apply_palette(palette: str, n_colors: Optional[int] = None) -> None:
     """
     colors = None
 
+    # 解析别名（向后兼容）
+    resolved_palette = _resolve_palette_name(palette)
+
     # 1. 内置配色
-    if palette in RESIDENT_PALETTES:
-        colors = RESIDENT_PALETTES[palette]
+    if resolved_palette in RESIDENT_PALETTES:
+        colors = RESIDENT_PALETTES[resolved_palette]
     # 2. 用户自定义配色
-    elif _UserPaletteStore.has(palette):
-        colors = _UserPaletteStore.get(palette)
+    elif _UserPaletteStore.has(resolved_palette):
+        colors = _UserPaletteStore.get(resolved_palette)
     # 3. 尝试自动选择（配色方案）
-    elif n_colors is not None and _UserPaletteStore.has_scheme(palette):
-        colors = _UserPaletteStore.auto_select(palette, n_colors)
+    elif n_colors is not None and _UserPaletteStore.has_scheme(resolved_palette):
+        colors = _UserPaletteStore.auto_select(resolved_palette, n_colors)
 
     if colors is None:
         raise ValueError(
@@ -533,5 +551,3 @@ def auto_select_palette(name: str, n: int) -> List[str]:
     if colors is None:
         raise ValueError(f"无法为 '{name}' 选择 {n} 色配色")
     return colors
-
-
