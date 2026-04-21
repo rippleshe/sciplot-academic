@@ -179,14 +179,7 @@ class StyleContext:
 
         if self._saved_state is not None:
             saved_state = self._saved_state
-
-            for key in list(rcParams.keys()):
-                if key not in saved_state:
-                    try:
-                        del rcParams[key]
-                    except (KeyError, ValueError) as e:
-                        _logger.debug(f"无法删除 rcParams[{key!r}]: {e}")
-
+            plt.rcdefaults()
             for key, value in saved_state.items():
                 try:
                     rcParams[key] = value

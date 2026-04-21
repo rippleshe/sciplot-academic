@@ -33,24 +33,31 @@ _logger = logging.getLogger(__name__)
 
 _CONFIG_LOCK = threading.Lock()
 _TOML_IMPORT_WARNED = False
+_SUPPORTED_SAVE_FORMATS: Optional[frozenset[str]] = None
+_FORMATS_LOCK = threading.Lock()
 
 
 def _get_supported_formats() -> frozenset[str]:
     """延迟获取支持的文件格式，避免导入时创建Figure实例。"""
-    try:
-        # 使用非交互式后端避免GUI初始化问题
-        import matplotlib
-        backend = matplotlib.get_backend()
-        if backend in matplotlib.rcsetup.interactive_bk:
-            matplotlib.use('Agg', force=False)
-        from matplotlib.figure import Figure
-        return frozenset(Figure().canvas.get_supported_filetypes().keys())
-    except Exception:
-        # 回退到常见格式列表
-        return frozenset({'png', 'pdf', 'svg', 'eps', 'ps', 'jpg', 'jpeg', 'tif', 'tiff'})
-
-
-_SUPPORTED_SAVE_FORMATS = _get_supported_formats()
+    global _SUPPORTED_SAVE_FORMATS
+    if _SUPPORTED_SAVE_FORMATS is not None:
+        return _SUPPORTED_SAVE_FORMATS
+    with _FORMATS_LOCK:
+        if _SUPPORTED_SAVE_FORMATS is not None:
+            return _SUPPORTED_SAVE_FORMATS
+        try:
+            import matplotlib
+            backend = matplotlib.get_backend()
+            if backend in matplotlib.rcsetup.interactive_bk:
+                matplotlib.use('Agg', force=False)
+            from matplotlib.figure import Figure
+            fig = Figure()
+            _SUPPORTED_SAVE_FORMATS = frozenset(fig.canvas.get_supported_filetypes().keys())
+            import matplotlib.pyplot as plt
+            plt.close(fig)
+        except Exception:
+            _SUPPORTED_SAVE_FORMATS = frozenset({'png', 'pdf', 'svg', 'eps', 'ps', 'jpg', 'jpeg', 'tif', 'tiff'})
+        return _SUPPORTED_SAVE_FORMATS
 
 
 def _load_toml_module() -> Any:
@@ -84,12 +91,21 @@ _CONFIG_TYPES: Dict[str, Tuple[Type[Any], ...]] = {
     "formats": (tuple, list),
 }
 
+_DEFAULTS_TEMPLATE: Dict[str, Any] = {
+    "venue": "nature",
+    "palette": "pastel",
+    "lang": "zh",
+    "dpi": 1200,
+    "formats": ("pdf", "png"),
+}
+
 
 def _normalize_formats(formats: Union[Tuple[str, ...], List[str]]) -> Tuple[str, ...]:
     """规范化并校验 formats 配置。"""
     normalized = tuple(formats)
     if not normalized:
         raise ValueError("配置项 'formats' 不能为空")
+    supported_formats = _get_supported_formats()
     result = []
     for fmt in normalized:
         if not isinstance(fmt, str) or not fmt.strip():
@@ -99,10 +115,10 @@ def _normalize_formats(formats: Union[Tuple[str, ...], List[str]]) -> Tuple[str,
         canonical = fmt.strip().lower()
         if canonical.startswith("."):
             canonical = canonical[1:]
-        if canonical not in _SUPPORTED_SAVE_FORMATS:
+        if canonical not in supported_formats:
             raise ValueError(
                 f"配置项 'formats' 包含不支持的格式: {fmt!r}。"
-                f"可用格式: {sorted(_SUPPORTED_SAVE_FORMATS)}"
+                f"可用格式: {sorted(supported_formats)}"
             )
         result.append(canonical)
     return tuple(result)
@@ -157,14 +173,7 @@ class SciPlotConfig:
         配置的读取和修改是线程安全的。
     """
 
-    _defaults: Dict[str, Any] = {
-        "venue": "nature",
-        "palette": "pastel",
-        "lang": "zh",
-        "dpi": 1200,
-        "formats": ("pdf", "png"),
-    }
-
+    _defaults: Dict[str, Any] = dict(_DEFAULTS_TEMPLATE)
     _user_settings: Dict[str, Any] = {}
     _file_settings: Dict[str, Any] = {}
     _config_loaded: bool = False

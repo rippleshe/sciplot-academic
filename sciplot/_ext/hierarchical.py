@@ -94,9 +94,6 @@ def plot_dendrogram(
     """
     hierarchy = _check_scipy()
 
-    effective_venue = apply_resolved_style(venue, palette)
-    fig, ax = new_figure(effective_venue)
-
     if isinstance(data_or_linkage, np.ndarray):
         if data_or_linkage.ndim == 2 and data_or_linkage.shape[1] == 4:
             Z = data_or_linkage
@@ -108,7 +105,15 @@ def plot_dendrogram(
                 f"实际收到: shape={data_or_linkage.shape}"
             )
     else:
-        Z = data_or_linkage
+        Z = np.asarray(data_or_linkage)
+        if Z.ndim != 2 or Z.shape[1] != 4:
+            raise ValueError(
+                f"data_or_linkage 必须是 linkage 矩阵 (n-1, 4) 或数据矩阵 (n, m)。\n"
+                f"实际收到: type={type(data_or_linkage).__name__}"
+            )
+
+    effective_venue = apply_resolved_style(venue, palette)
+    fig, ax = new_figure(effective_venue)
 
     if leaf_font_size is None:
         leaf_font_size = plt.rcParams.get("font.size", 9) - 1
@@ -178,11 +183,9 @@ def plot_clustermap(
         >>> result = sp.plot_clustermap(data, row_cluster=True, col_cluster=True)
         >>> result.save("clustermap")
     """
-    effective_venue = apply_resolved_style(venue, palette)
-    _, base_figsize, _ = VENUES.get(effective_venue or "nature", VENUES["nature"])
-    heatmap_scale = max(base_figsize)
-    fig = plt.figure(figsize=(heatmap_scale, heatmap_scale))
-
+    data = np.asarray(data, dtype=float)
+    if data.ndim != 2:
+        raise ValueError(f"data 必须是二维数组，当前维度: {data.ndim}")
     n_rows, n_cols = data.shape
 
     if n_rows == 0 or n_cols == 0:
@@ -198,7 +201,6 @@ def plot_clustermap(
             f"col_labels 长度 ({len(col_labels)}) 与数据列数 ({n_cols}) 不一致"
         )
 
-    # scipy linkage 需要至少 2 个观测值；单行/单列时自动跳过对应聚类。
     row_cluster = row_cluster and n_rows > 1
     col_cluster = col_cluster and n_cols > 1
 
@@ -213,6 +215,11 @@ def plot_clustermap(
             )
             row_cluster = False
             col_cluster = False
+
+    effective_venue = apply_resolved_style(venue, palette)
+    _, base_figsize, _ = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    heatmap_scale = max(base_figsize)
+    fig = plt.figure(figsize=(heatmap_scale, heatmap_scale))
 
     if row_cluster:
         row_Z = hierarchy.linkage(data, method='ward')

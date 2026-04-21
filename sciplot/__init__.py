@@ -45,6 +45,7 @@ SciPlot Academic — 期刊级科研绘图库
 from __future__ import annotations
 
 from pathlib import Path as _Path
+from threading import Lock as _Lock
 from types import MappingProxyType as _MappingProxyType
 from typing import Any
 
@@ -377,6 +378,7 @@ _LAZY_EXT = {
     "plot_venn2": ("sciplot._ext.venn", "matplotlib-venn"),
     "plot_venn3": ("sciplot._ext.venn", "matplotlib-venn"),
 }
+_LAZY_EXT_LOCK = _Lock()
 
 
 def __getattr__(name: str) -> Any:
@@ -388,25 +390,27 @@ def __getattr__(name: str) -> Any:
     if name not in _LAZY_EXT:
         raise AttributeError(f"module 'sciplot' has no attribute {name!r}")
     
-    import importlib
+    with _LAZY_EXT_LOCK:
+        if name in globals():
+            return globals()[name]
+        
+        import importlib
 
-    module_path, dep_name = _LAZY_EXT[name]
-    try:
-        mod = importlib.import_module(module_path)
-        attr = getattr(mod, name)
-    except ImportError as e:
-        # 优先推荐 uv，同时提供 pip 作为备选
-        install_cmd_uv = f"uv pip install {dep_name}"
-        install_cmd_pip = f"pip install {dep_name}"
-        raise ImportError(
-            f"sp.{name}() 需要安装 {dep_name}。\n"
-            f"推荐安装方式: {install_cmd_uv}\n"
-            f"或: {install_cmd_pip}"
-        ) from e
+        module_path, dep_name = _LAZY_EXT[name]
+        try:
+            mod = importlib.import_module(module_path)
+            attr = getattr(mod, name)
+        except ImportError as e:
+            install_cmd_uv = f"uv pip install {dep_name}"
+            install_cmd_pip = f"pip install {dep_name}"
+            raise ImportError(
+                f"sp.{name}() 需要安装 {dep_name}。\n"
+                f"推荐安装方式: {install_cmd_uv}\n"
+                f"或: {install_cmd_pip}"
+            ) from e
 
-    # 缓存到模块全局命名空间，避免重复导入
-    globals()[name] = attr
-    return attr
+        globals()[name] = attr
+        return attr
 
 
 def inspect() -> None:

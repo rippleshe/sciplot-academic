@@ -301,9 +301,11 @@ def plot_violin(
                 raise ValueError(f"data[{i}] 不能为空")
         n_groups = len(data)
     else:
-        data_arr = np.asarray(data)
+        data_arr = np.asarray(data, dtype=float)
         if data_arr.size == 0:
             raise ValueError("参数 'data' 不能为空")
+        if not np.all(np.isfinite(data_arr)):
+            raise ValueError("data 不能包含 NaN 或 Inf")
         n_groups = data_arr.shape[1] if data_arr.ndim > 1 else 1
 
     if labels is not None and len(labels) != n_groups:

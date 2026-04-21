@@ -38,9 +38,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-statistical = [
-    "scipy>=1.7.0",
-]
+statistical = []
 dev = [
     "build",
     "twine",
@@ -59,7 +57,6 @@ venn = [
     "matplotlib-venn>=0.11.0",
 ]
 all = [
-    "scipy>=1.7.0",
     "scikit-learn>=1.0.0",
     "networkx>=2.6.0",
     "matplotlib-venn>=0.11.0",

@@ -106,11 +106,10 @@ def plot_network(
         >>> sp.save(fig, "network")
     """
     nx = _check_networkx()
+    pos = _get_layout(G, layout, seed=42)
 
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
-
-    pos = _get_layout(G, layout, seed=42)
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
@@ -286,11 +285,10 @@ def plot_network_communities(
         >>> fig, ax = sp.plot_network_communities(G, communities)
     """
     nx = _check_networkx()
+    pos = _get_layout(G, layout, seed=42)
 
     effective_venue = apply_resolved_style(venue, palette)
     fig, ax = new_figure(effective_venue)
-
-    pos = _get_layout(G, layout, seed=42)
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
