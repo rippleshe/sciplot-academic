@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sciplot-academic"
-version = "1.8.2"
+version = "1.8.3"
 description = "中文科研绘图库 — 基于 Matplotlib，专为中文论文场景优化"
 readme = "README.md"
 license = { file = "LICENSE" }
