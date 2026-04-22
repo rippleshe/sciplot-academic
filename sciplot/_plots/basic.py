@@ -21,7 +21,7 @@ from sciplot._core.result import PlotResult
 LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
 MARKERS: List[str] = ["o", "s", "^", "D", "v", "<", ">", "p", "*", "h"]
 _AUTO_SUBSET_BASES = {"pastel", "earth", "ocean", "forest", "sunset"}
-_LINE2D_KWARGS = set(Line2D([], []).properties().keys()) | set(getattr(Line2D, "_alias_map", {}).keys())
+_LINE2D_KWARGS = frozenset(Line2D([], []).properties().keys())
 
 
 def _resolve_auto_subset_palette(palette: Optional[str], n_series: int) -> str:

@@ -297,8 +297,11 @@ def plot_violin(
         if not data:
             raise ValueError("参数 'data' 不能为空列表")
         for i, values in enumerate(data):
-            if np.asarray(values).size == 0:
+            values_arr = np.asarray(values, dtype=float).ravel()
+            if values_arr.size == 0:
                 raise ValueError(f"data[{i}] 不能为空")
+            if not np.all(np.isfinite(values_arr)):
+                raise ValueError(f"data[{i}] 不能包含 NaN 或 Inf")
         n_groups = len(data)
     else:
         data_arr = np.asarray(data, dtype=float)
@@ -823,11 +826,21 @@ def annotate_significance(
         >>> sp.annotate_significance(ax, 1, 3, y=max(d1.max(), d3.max()) + 1.5, p_value=0.0005)
         >>> sp.save(fig, "significance")
     """
-    if p_value < 0.001:
+    if not isinstance(p_value, (int, float, np.integer, np.floating)):
+        raise ValueError(f"p_value 必须是 [0, 1] 范围内的数值，实际类型: {type(p_value).__name__}")
+
+    p_value_float = float(p_value)
+    if not np.isfinite(p_value_float) or not (0.0 <= p_value_float <= 1.0):
+        raise ValueError(f"p_value 必须是 [0, 1] 范围内的数值，实际值: {p_value!r}")
+
+    if x1 == x2:
+        raise ValueError("x1 与 x2 不能相等，无法绘制显著性括号")
+
+    if p_value_float < 0.001:
         marker = "***"
-    elif p_value < 0.01:
+    elif p_value_float < 0.01:
         marker = "**"
-    elif p_value < 0.05:
+    elif p_value_float < 0.05:
         marker = "*"
     else:
         marker = ns_text

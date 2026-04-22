@@ -210,6 +210,17 @@ def apply_resolved_style(
             effective_lang = current_lang if current_lang in VALID_LANGS else "zh"
 
         effective_palette = palette or get_current_palette() or DEFAULT_PALETTE
+
+        current_venue = get_current_venue()
+        current_palette = get_current_palette()
+        current_lang = get_current_lang()
+        if (
+            current_venue == effective_venue
+            and current_palette == effective_palette
+            and current_lang == effective_lang
+        ):
+            return effective_venue
+
         setup_style(effective_venue, effective_palette, lang=effective_lang)
 
         return effective_venue
@@ -249,6 +260,16 @@ def apply_resolved_style(
                 effective_lang = cfg_lang
             else:
                 effective_lang = "zh"
+
+    current_venue = get_current_venue()
+    current_palette = get_current_palette()
+    current_lang = get_current_lang()
+    if (
+        current_venue == effective_venue
+        and current_palette == effective_palette
+        and current_lang == effective_lang
+    ):
+        return effective_venue
 
     setup_style(effective_venue, effective_palette, lang=effective_lang)
     return effective_venue

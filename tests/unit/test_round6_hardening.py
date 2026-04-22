@@ -88,7 +88,7 @@ class TestCriticalHardeningRound6:
         with pytest.raises(ValueError, match="labels 长度"):
             sp.plot_violin(data, labels=["only-one-label"])
 
-    def test_lazy_extension_names_not_in_all(self):
+    def test_lazy_extension_names_are_exported_in_all(self):
         lazy_names = {
             "plot_network",
             "plot_network_from_matrix",
@@ -98,4 +98,4 @@ class TestCriticalHardeningRound6:
             "plot_venn2",
             "plot_venn3",
         }
-        assert lazy_names.isdisjoint(set(sp.__all__))
+        assert lazy_names.issubset(set(sp.__all__))

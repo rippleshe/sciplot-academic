@@ -28,7 +28,6 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Any, Literal, cast
 from contextlib import contextmanager
 from types import TracebackType
-import copy
 import threading
 import logging
 
@@ -101,8 +100,8 @@ class StyleContext:
 
     def __enter__(self) -> StyleContext:
         """进入上下文，保存当前状态并应用新样式"""
-        # 保存当前 rcParams 的副本
-        self._saved_state = copy.deepcopy(dict(rcParams))
+        # 使用浅拷贝保存 rcParams，避免 deepcopy 带来的性能和兼容问题。
+        self._saved_state = dict(rcParams)
         self._saved_lang = get_current_lang()
         self._saved_venue = get_current_venue()
         self._saved_palette = get_current_palette()
@@ -179,12 +178,7 @@ class StyleContext:
 
         if self._saved_state is not None:
             saved_state = self._saved_state
-            plt.rcdefaults()
-            for key, value in saved_state.items():
-                try:
-                    rcParams[key] = value
-                except (ValueError, KeyError) as e:
-                    _logger.warning(f"无法恢复 rcParams[{key!r}]: {e}")
+            rcParams.update(saved_state)
 
         set_current_lang(self._saved_lang)
         set_current_venue(self._saved_venue)

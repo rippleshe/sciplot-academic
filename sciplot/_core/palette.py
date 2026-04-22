@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import re
 import threading
+import logging
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
@@ -32,6 +33,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import warnings
 
 _HEX_COLOR_PATTERN = re.compile(r'^#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?$')
+_logger = logging.getLogger(__name__)
 
 
 def _validate_hex_color(color: str) -> bool:
@@ -259,27 +261,37 @@ def _register_diverging_cmaps() -> None:
             if existing is not None:
                 continue
         except (KeyError, ValueError):
-            pass
+            _logger.debug("colormap '%s' 不存在，将尝试注册", name)
         except AttributeError:
             # 低版本matplotlib可能没有get_cmap方法
-            pass
+            _logger.debug("当前 matplotlib 不支持 plt.colormaps.get_cmap，使用兼容路径")
 
         cmap = LinearSegmentedColormap.from_list(name, colors)
         try:
             plt.colormaps.register(cmap, name=name)
         except (ValueError, KeyError):
             # 重复注册或名称冲突时静默跳过
-            pass
+            _logger.debug("colormap '%s' 注册跳过（可能已存在或名称冲突）", name)
         except AttributeError:
             # 低版本matplotlib可能没有register方法
             try:
                 import matplotlib
                 matplotlib.cm.register_cmap(name=name, cmap=cmap)
-            except Exception:
-                pass
+            except Exception as exc:
+                _logger.warning("colormap '%s' 注册失败: %s", name, exc)
 
 
-_register_diverging_cmaps()
+# 延迟注册标志
+_diverging_cmaps_registered = False
+
+
+def _ensure_diverging_cmaps() -> None:
+    """确保发散型 colormap 已注册（延迟执行）。"""
+    global _diverging_cmaps_registered
+    if not _diverging_cmaps_registered:
+        _register_diverging_cmaps()
+        _diverging_cmaps_registered = True
+
 
 # 所有内置配色名（不含用户自定义）
 ALL_BUILTIN_PALETTES: List[str] = list(RESIDENT_PALETTES.keys())
@@ -315,6 +327,9 @@ def apply_palette(palette: str, n_colors: Optional[int] = None) -> None:
         palette: 配色名称
         n_colors: 如果指定，尝试自动选择合适数量的颜色（用于配色方案）
     """
+    # 延迟注册发散型 colormap
+    _ensure_diverging_cmaps()
+
     colors = None
 
     # 解析别名（向后兼容）

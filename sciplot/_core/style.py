@@ -150,8 +150,7 @@ def setup_style(
         else:
             cjk_font = main_font
 
-    # ── 重置并应用样式（优先 SciencePlots，缺失时自动降级） ──
-    plt.rcdefaults()
+    # ── 应用样式（优先 SciencePlots，缺失时自动降级） ──
     active_styles = styles + ([lang_style] if lang_style else [])
     try:
         # 若已安装则确保样式注册到 matplotlib

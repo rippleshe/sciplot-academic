@@ -113,7 +113,10 @@ def plot_pca(
         ax.scatter(proj[:, 0], proj[:, 1], **kwargs)
 
     ax.set_xlabel(f"PC1 ({var[0]*100:.1f}%)")
-    ax.set_ylabel(f"PC2 ({var[1]*100:.1f}%)")
+    if len(var) >= 2:
+        ax.set_ylabel(f"PC2 ({var[1]*100:.1f}%)")
+    else:
+        ax.set_ylabel("PC2")
     ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 

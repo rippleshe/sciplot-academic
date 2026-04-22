@@ -84,7 +84,7 @@ def plot_radar(
 
     # 使用 venue 的尺寸计算雷达图尺寸
     from sciplot._core.style import VENUES
-    _, (w, h), _ = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    w, h = VENUES.get(effective_venue or "nature", VENUES["nature"]).figsize
     size = min(w, h) * 1.2  # 雷达图保持方形
     fig = plt.figure(figsize=(size, size))
     ax = fig.add_subplot(111, projection="polar")

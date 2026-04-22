@@ -47,7 +47,7 @@ from __future__ import annotations
 from pathlib import Path as _Path
 from threading import Lock as _Lock
 from types import MappingProxyType as _MappingProxyType
-from typing import Any
+from typing import Any, Mapping, Sequence, Tuple
 
 
 def _read_local_version() -> str:
@@ -81,7 +81,7 @@ else:
         from importlib.metadata import version as _get_version
         __version__ = _get_version("sciplot-academic")
     except Exception:
-        __version__ = "1.8.1"
+        __version__ = "unknown"
 __author__ = "SciPlot Team"
 
 import warnings as _warnings
@@ -483,20 +483,20 @@ def inspect() -> None:
     )
 
 
-def _freeze_palette_mapping(data):
-    """导出层提供只读映射，避免用户误改全局配色。"""
-    return _MappingProxyType({k: tuple(v) for k, v in data.items()})
+def _freeze_palette_mapping(data: Mapping[str, Sequence[str]]) -> _MappingProxyType:
+    """导出层提供只读映射，值保持 List 类型不变（与 get_palette() 一致）。"""
+    return _MappingProxyType(data)
 
 
-# 对外公开常量使用只读视图，降低全局状态被意外污染的风险。
-PASTEL_PALETTE = _freeze_palette_mapping(PASTEL_PALETTE)
-EARTH_PALETTE = _freeze_palette_mapping(EARTH_PALETTE)
-OCEAN_PALETTE = _freeze_palette_mapping(OCEAN_PALETTE)
-FOREST_PALETTE = _freeze_palette_mapping(FOREST_PALETTE)
-SUNSET_PALETTE = _freeze_palette_mapping(SUNSET_PALETTE)
-RMB_PALETTES = _freeze_palette_mapping(RMB_PALETTES)
-DIVERGING_PALETTES = _freeze_palette_mapping(DIVERGING_PALETTES)
-RESIDENT_PALETTES = _freeze_palette_mapping(RESIDENT_PALETTES)
+# 对外公开常量使用只读视图；如需可变副本请使用 get_palette()。
+PASTEL_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(PASTEL_PALETTE)
+EARTH_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(EARTH_PALETTE)
+OCEAN_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(OCEAN_PALETTE)
+FOREST_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(FOREST_PALETTE)
+SUNSET_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(SUNSET_PALETTE)
+RMB_PALETTES: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(RMB_PALETTES)
+DIVERGING_PALETTES: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(DIVERGING_PALETTES)
+RESIDENT_PALETTES: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(RESIDENT_PALETTES)
 ALL_PALETTES = tuple(ALL_PALETTES)
 LINE_STYLES = tuple(LINE_STYLES)
 MARKERS = tuple(MARKERS)
@@ -604,5 +604,14 @@ __all__ = [
 
     # ── 状态 ──
     "HAS_SCIENCEPLOTS",
+
+    # ── 延迟加载扩展 ──
+    "plot_network",
+    "plot_network_from_matrix",
+    "plot_network_communities",
+    "plot_dendrogram",
+    "plot_clustermap",
+    "plot_venn2",
+    "plot_venn3",
 ]
 

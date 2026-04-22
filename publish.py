@@ -4,7 +4,7 @@ SciPlot Academic — PyPI 发布脚本
 ===================================
 
 使用前提：
-  pip install build twine
+  uv add --dev build twine
 
 步骤：
   1. 修改 pyproject.toml 中的 version
@@ -17,18 +17,16 @@ SciPlot Academic — PyPI 发布脚本
   - 创建 API Token：https://pypi.org/manage/account/token/
 """
 
+import glob
 import subprocess
 import sys
 import shutil
 from pathlib import Path
 
 
-def run(cmd: str) -> None:
-    print(f"\n>>> {cmd}")
-    result = subprocess.run(cmd, shell=True, check=False)
-    if result.returncode != 0:
-        print(f"❌ 命令失败，退出码 {result.returncode}")
-        sys.exit(result.returncode)
+def run(cmd: list[str]) -> None:
+    print(f"\n>>> {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
 
 
 def main():
@@ -39,15 +37,20 @@ def main():
             print(f"✓ 已清理 {d}/")
 
     # 构建
-    run("python -m build")
+    run([sys.executable, "-m", "build"])
     print("\n✓ 构建完成，dist/ 目录：")
-    for f in Path("dist").iterdir():
+    for f in sorted(Path("dist").iterdir()):
         print(f"  {f.name}")
+
+    dist_files = glob.glob("dist/*")
+    if not dist_files:
+        print("❌ dist/ 目录为空，构建可能失败")
+        sys.exit(1)
 
     # 上传到 PyPI（输入 __token__ + API Token）
     answer = input("\n是否上传到 PyPI？(y/N): ").strip().lower()
     if answer == "y":
-        run("python -m twine upload dist/*")
+        run([sys.executable, "-m", "twine", "upload", *dist_files])
         print("\n✅ 发布成功！")
         print("查看：https://pypi.org/project/sciplot-academic/")
     else:

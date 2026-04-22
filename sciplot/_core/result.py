@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, overload, Literal, Sequence, cast
+import warnings
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -94,8 +95,12 @@ class PlotResult:
     def ax(self) -> Axes:
         """获取 Axes 对象（单个子图时）"""
         if self._is_array:
+            ax_arr = cast(np.ndarray, self._ax)
+            if ax_arr.size == 1:
+                return cast(Axes, ax_arr.flat[0])
             raise AttributeError(
-                "多子图请使用 result.axes 或 result.ax_array 访问"
+                f"此结果包含 {ax_arr.size} 个子图（形状 {ax_arr.shape}），"
+                "请使用 result.axes 或 result.ax_array 访问。"
             )
         return cast(Axes, self._ax)
 
@@ -320,13 +325,31 @@ class PlotResult:
             保存的文件路径列表
         """
         if tight:
-            self._fig.tight_layout()
+            try:
+                self._fig.tight_layout()
+            except ValueError as exc:
+                warnings.warn(
+                    f"tight_layout() 跳过: {exc}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            except Exception as exc:
+                warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
         return _save(self._fig, name, dpi=dpi, formats=formats,
                      bbox_inches=bbox_inches, dir=dir, **kwargs)
 
     def show(self) -> None:
         """显示图形"""
-        self._fig.tight_layout()
+        try:
+            self._fig.tight_layout()
+        except ValueError as exc:
+            warnings.warn(
+                f"tight_layout() 跳过: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
+        except Exception as exc:
+            warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
         plt.show()
 
     def close(self) -> None:
@@ -536,12 +559,30 @@ class GridSpecResult:
     ) -> List[Path]:
         """保存图形"""
         if tight:
-            self._fig.tight_layout()
+            try:
+                self._fig.tight_layout()
+            except ValueError as exc:
+                warnings.warn(
+                    f"tight_layout() 跳过: {exc}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            except Exception as exc:
+                warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
         return _save(self._fig, name, dpi=dpi, formats=formats, **kwargs)
 
     def show(self) -> None:
         """显示图形"""
-        self._fig.tight_layout()
+        try:
+            self._fig.tight_layout()
+        except ValueError as exc:
+            warnings.warn(
+                f"tight_layout() 跳过: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
+        except Exception as exc:
+            warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
         plt.show()
 
     def __repr__(self) -> str:

@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union, Tuple
+from typing import Any, Optional, Union, Tuple, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,11 +40,11 @@ def _validate_grid_shapes(X: np.ndarray, Y: np.ndarray, Z: np.ndarray) -> Tuple[
 def _get_3d_figsize(venue: Optional[str]) -> Tuple[float, float]:
     """获取3D图形的尺寸，基于venue设置。"""
     if venue and venue in VENUES:
-        _, (w, h), _ = VENUES[venue]
+        w, h = VENUES[venue].figsize
         # 3D图通常需要更大的尺寸来展示深度
         return (w * 1.2, h * 1.2)
     # 默认尺寸
-    return (8, 6)
+    return (8.0, 6.0)
 
 
 def plot_surface(
@@ -123,7 +123,7 @@ def plot_contour(
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
-    levels: int = 10,
+    levels: Union[int, Sequence[float]] = 10,
     cmap: str = "viridis",
     filled: bool = False,
     show_labels: bool = True,

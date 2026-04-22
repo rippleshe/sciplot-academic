@@ -25,38 +25,38 @@ import logging
 import threading
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union, cast, Type
-from matplotlib.figure import Figure
+from typing import Any, Dict, List, Optional, Tuple, Union, cast, Type
 
 # 配置模块日志记录器
 _logger = logging.getLogger(__name__)
 
 _CONFIG_LOCK = threading.Lock()
 _TOML_IMPORT_WARNED = False
-_SUPPORTED_SAVE_FORMATS: Optional[frozenset[str]] = None
+_SUPPORTED_SAVE_FORMATS: Optional[frozenset] = None
 _FORMATS_LOCK = threading.Lock()
 
 
-def _get_supported_formats() -> frozenset[str]:
-    """延迟获取支持的文件格式，避免导入时创建Figure实例。"""
+def _get_supported_formats() -> frozenset:
+    """延迟获取支持的文件格式，避免导入时创建 Figure 实例。"""
     global _SUPPORTED_SAVE_FORMATS
     if _SUPPORTED_SAVE_FORMATS is not None:
         return _SUPPORTED_SAVE_FORMATS
     with _FORMATS_LOCK:
         if _SUPPORTED_SAVE_FORMATS is not None:
             return _SUPPORTED_SAVE_FORMATS
+        fig = None
         try:
-            import matplotlib
-            backend = matplotlib.get_backend()
-            if backend in matplotlib.rcsetup.interactive_bk:
-                matplotlib.use('Agg', force=False)
             from matplotlib.figure import Figure
             fig = Figure()
             _SUPPORTED_SAVE_FORMATS = frozenset(fig.canvas.get_supported_filetypes().keys())
-            import matplotlib.pyplot as plt
-            plt.close(fig)
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except Exception:
             _SUPPORTED_SAVE_FORMATS = frozenset({'png', 'pdf', 'svg', 'eps', 'ps', 'jpg', 'jpeg', 'tif', 'tiff'})
+        finally:
+            if fig is not None:
+                fig.clf()
+                del fig
         return _SUPPORTED_SAVE_FORMATS
 
 
@@ -130,9 +130,16 @@ def _normalize_config_value(key: str, value: Any) -> Any:
         return _normalize_formats(value)
 
     if key == "dpi":
+        if not isinstance(value, (int, float)):
+            try:
+                value = int(value)
+            except (ValueError, TypeError):
+                raise ValueError(
+                    f"配置项 'dpi' 必须为正整数，实际值: {value!r}"
+                )
         if value <= 0:
-            raise ValueError("配置项 'dpi' 必须为正整数")
-        return value
+            raise ValueError(f"配置项 'dpi' 必须为正整数，实际值: {value}")
+        return int(value)
 
     if key == "venue":
         from sciplot._core.style import VENUES
@@ -197,8 +204,8 @@ class SciPlotConfig:
         示例:
             >>> sp.set_defaults(venue="ieee", palette="earth", dpi=600)
         """
-        valid_keys = set(cls._defaults.keys())
         with _CONFIG_LOCK:
+            valid_keys = set(cls._defaults.keys())
             for key, value in kwargs.items():
                 if key not in valid_keys:
                     raise ValueError(

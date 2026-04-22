@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union, Sequence
+import warnings
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -179,10 +180,16 @@ def plot_timeseries(
         ... )
     """
     t = np.asarray(t)
-    y = np.asarray(y)
+    y = np.asarray(y, dtype=float)
 
     if len(t) != len(y):
         raise ValueError(f"t 长度 ({len(t)}) 与 y 长度 ({len(y)}) 不一致")
+    if np.any(np.isinf(y)):
+        warnings.warn(
+            "y 数据包含 Inf 值，可能导致图形显示异常",
+            UserWarning,
+            stacklevel=2,
+        )
     if rolling_mean is not None:
         if not isinstance(rolling_mean, int):
             raise TypeError(f"rolling_mean 必须是整数或 None，实际类型: {type(rolling_mean).__name__}")
@@ -321,9 +328,15 @@ def plot_multi_timeseries(
         )
 
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
-        y = np.asarray(y)
+        y = np.asarray(y, dtype=float)
         if len(t) != len(y):
             raise ValueError(f"t 长度 ({len(t)}) 与 y_list[{i}] 长度 ({len(y)}) 不一致")
+        if np.any(np.isinf(y)):
+            warnings.warn(
+                f"y_list[{i}] 包含 Inf 值，可能导致图形显示异常",
+                UserWarning,
+                stacklevel=2,
+            )
         ax.plot(t, y, label=lbl, color=colors[i % len(colors)], **kwargs)
 
     for event in events_normalized:

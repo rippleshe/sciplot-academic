@@ -140,8 +140,14 @@ def test_context_partial_lang_override_keeps_venue_and_palette(
 
 
 def test_exported_palette_constants_are_read_only():
+    """验证配色常量外层只读保护有效，且类型与 get_palette() 一致。"""
+    # 外层 Dict 应该是只读的
     with pytest.raises(TypeError):
         sp.PASTEL_PALETTE["new"] = ("#000000",)
 
-    with pytest.raises(TypeError):
-        sp.PASTEL_PALETTE["pastel"][0] = "#000000"  # type: ignore[index]
+    # 值类型应该与 get_palette() 返回类型一致（List）
+    from sciplot import get_palette
+    palette_from_const = sp.PASTEL_PALETTE["pastel"]
+    palette_from_func = get_palette("pastel")
+    assert type(palette_from_const) == type(palette_from_func), \
+        f"类型不一致: {type(palette_from_const)} vs {type(palette_from_func)}"
