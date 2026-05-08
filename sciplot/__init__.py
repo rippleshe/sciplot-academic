@@ -413,6 +413,13 @@ def __getattr__(name: str) -> Any:
         return attr
 
 
+def __dir__() -> list[str]:
+    """支持 IDE 自动补全延迟加载的扩展函数。"""
+    public = [name for name in globals() if not name.startswith("_")]
+    public.extend(_LAZY_EXT.keys())
+    return sorted(set(public))
+
+
 def inspect() -> None:
     """输出 SciPlot 运行环境诊断信息。"""
     import importlib

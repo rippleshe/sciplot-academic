@@ -10,34 +10,21 @@ import warnings
 from typing import Any, List, Optional
 from statistics import NormalDist
 
-from cycler import cycler
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import (
+    apply_resolved_style,
+    get_cycle_colors as _get_cycle_colors,
+    _ensure_non_empty_prop_cycle,
+)
 from sciplot._core.result import PlotResult
 
 
-_FALLBACK_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
-
-
-def _ensure_non_empty_prop_cycle() -> None:
-    """确保 rcParams 中存在可用颜色循环，避免 Matplotlib 内部取色时崩溃。"""
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
-    if not colors:
-        plt.rcParams["axes.prop_cycle"] = cycler(color=_FALLBACK_COLORS)
-
-
-def _get_cycle_colors() -> List[str]:
-    """获取当前颜色循环，空循环时回退到 Matplotlib 默认色。"""
-    _ensure_non_empty_prop_cycle()
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
-    if not colors:
-        colors = _FALLBACK_COLORS
-    return colors
+# _get_cycle_colors 和 _ensure_non_empty_prop_cycle 已从 sciplot._core.utils 导入
 
 
 def _try_import_scipy_stats() -> Any:

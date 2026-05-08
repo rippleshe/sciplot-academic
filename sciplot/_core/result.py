@@ -308,6 +308,7 @@ class PlotResult:
         bbox_inches: str = "tight",
         dir: Optional[str] = None,
         tight: bool = True,
+        close: bool = False,
         **kwargs: Any,
     ) -> List[Path]:
         """
@@ -320,6 +321,7 @@ class PlotResult:
             bbox_inches: 边界处理，默认 "tight"
             dir: 保存目录
             tight: 是否自动调整布局，默认 True
+            close: 保存后是否自动关闭图形释放内存，默认 False
 
         返回:
             保存的文件路径列表
@@ -336,7 +338,7 @@ class PlotResult:
             except Exception as exc:
                 warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
         return _save(self._fig, name, dpi=dpi, formats=formats,
-                     bbox_inches=bbox_inches, dir=dir, **kwargs)
+                     bbox_inches=bbox_inches, dir=dir, close=close, **kwargs)
 
     def show(self) -> None:
         """显示图形"""
@@ -555,9 +557,14 @@ class GridSpecResult:
         dpi: Optional[Union[int, float]] = None,
         formats: Optional[Union[str, Sequence[str]]] = None,
         tight: bool = True,
+        close: bool = False,
         **kwargs: Any,
     ) -> List[Path]:
-        """保存图形"""
+        """保存图形
+
+        参数:
+            close: 保存后是否自动关闭图形释放内存，默认 False
+        """
         if tight:
             try:
                 self._fig.tight_layout()
@@ -569,7 +576,7 @@ class GridSpecResult:
                 )
             except Exception as exc:
                 warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
-        return _save(self._fig, name, dpi=dpi, formats=formats, **kwargs)
+        return _save(self._fig, name, dpi=dpi, formats=formats, close=close, **kwargs)
 
     def show(self) -> None:
         """显示图形"""

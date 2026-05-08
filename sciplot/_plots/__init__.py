@@ -9,6 +9,8 @@ from sciplot._plots.basic import (
     plot_multi_line,
     plot_scatter,
     plot_step,
+    plot_area,
+    plot_multi_area,
     LINE_STYLES,
     MARKERS,
 )
@@ -50,13 +52,15 @@ from sciplot._plots.statistical import (
 )
 
 __all__ = [
-    # 折线 / 散点
+    # 折线 / 散点 / 面积
     "plot_line",
     "plot",
     "plot_multi",
     "plot_multi_line",
     "plot_scatter",
     "plot_step",
+    "plot_area",
+    "plot_multi_area",
     # 分布 / 统计
     "plot_bar",
     "plot_grouped_bar",

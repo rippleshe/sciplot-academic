@@ -2,7 +2,7 @@
 3D 可视化扩展
 
 用于绘制 3D 曲面、等高线图、3D 散点等。
-需要额外安装：uv add sciplot-academic[3d] 或 pip install sciplot-academic[3d]
+基于 matplotlib.mpl_toolkits.mplot3d，无需额外安装依赖。
 """
 
 from __future__ import annotations

@@ -480,6 +480,37 @@ def validate_dict_not_empty(
     return data
 
 
+# ═══════════════════════════════════════════════════════════════
+# 颜色循环工具（供绘图模块共享）
+# ═══════════════════════════════════════════════════════════════
+
+_FALLBACK_COLORS = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+
+def _ensure_non_empty_prop_cycle() -> None:
+    """确保 rcParams 中存在可用颜色循环，避免 Matplotlib 内部取色时崩溃。"""
+    import matplotlib.pyplot as plt
+
+    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
+    if not colors:
+        from cycler import cycler
+        plt.rcParams["axes.prop_cycle"] = cycler(color=_FALLBACK_COLORS)
+
+
+def get_cycle_colors() -> List[str]:
+    """获取当前颜色循环列表，空循环时回退到默认色。
+
+    供各绘图模块共享使用，避免重复定义。
+    """
+    import matplotlib.pyplot as plt
+
+    _ensure_non_empty_prop_cycle()
+    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
+    if not colors:
+        colors = list(_FALLBACK_COLORS)
+    return colors
+
+
 __all__ = [
     "resolve_style_venue",
     "apply_resolved_style",
@@ -489,5 +520,6 @@ __all__ = [
     "validate_positive_number",
     "validate_choice",
     "validate_dict_not_empty",
+    "get_cycle_colors",
 ]
 

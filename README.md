@@ -20,7 +20,7 @@
 
 | 特性 | 说明 |
 |------|------|
-| **🎨 全内置配色** | 9 套专业配色系统（pastel/ocean/forest/sunset 等），零外部依赖 |
+| **🎨 全内置配色** | 5 大基础色系 + 6 个人民币主题 + 2 个发散配色，零外部依赖 |
 | **🀄 中文优化** | 默认宋体中文环境，IEEE 中文字号自动调优 |
 | **📄 论文级输出** | Nature/IEEE/APS/Springer/Thesis 预置尺寸，Word/LaTeX 一键切换 |
 | **🧠 智能配色** | ≤6 条线自动选择最优子集，支持自定义配色方案 |
@@ -164,7 +164,7 @@ with sp.style_context("ieee", palette="forest"):
 
 ## 🎨 配色系统
 
-### 九大内置色系
+### 内置色系总览
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -172,9 +172,9 @@ with sp.style_context("ieee", palette="forest"):
 │  ocean      → 海洋蓝绿（6 色）                                       │
 │  forest     → 森林渐变（6 色）                                       │
 │  sunset     → 日落暖色（5 色）                                       │
-│  earth      → 地形配色（6 色）                                       │
-│  rmb        → 人民币配色（5 色）                                     │
-│  diverging  → 发散配色（8 色）                                       │
+│  earth      → 大地色系（5 色）                                       │
+│  rmb        → 人民币配色（6 个面额主题）                              │
+│  diverging  → 发散配色（rdbu / coolwarm）                             │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -199,7 +199,7 @@ sp.register_color_scheme("mytheme", scheme)
 | `aps` | 3.4 × 2.8 | APS Physical Review |
 | `springer` | 6.0 × 4.5 | Springer 期刊 |
 | `thesis` | 6.1 × 4.3 | 学位论文 |
-| `presentation` | 13.3 × 7.5 | 16:9 演示文稿 |
+| `presentation` | 8.0 × 5.5 | 16:9 演示文稿 |
 
 ---
 

@@ -20,6 +20,7 @@ from sciplot._core.utils import (
     validate_dict_not_empty,
     validate_array_like,
     validate_positive_number,
+    get_cycle_colors as _get_cycle_colors,
 )
 from sciplot._core.result import PlotResult, ComboPlotResult
 
@@ -865,17 +866,7 @@ def annotate_significance(
 # 内部工具
 # ============================================================================
 
-def _get_cycle_colors() -> List[str]:
-    """从当前 rcParams 的 prop_cycle 中提取颜色列表"""
-    prop_cycle = plt.rcParams["axes.prop_cycle"]
-    colors = []
-    for c in prop_cycle:
-        if "color" in c:
-            colors.append(c["color"])
-    # 如果没有找到颜色，使用默认颜色
-    if not colors:
-        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
-    return colors
+# _get_cycle_colors 已从 sciplot._core.utils.get_cycle_colors 导入
 
 
 def _is_dark_color(color: str) -> bool:

@@ -216,7 +216,7 @@ def setup_style(
     effective_fontsize = fontsize
     # IEEE + 中文：中文在相同 pt 下视觉偏大，自动下调 1pt
     if venue == "ieee" and lang in {"zh", "zh-cn"}:
-        effective_fontsize = max(7, fontsize - 1)
+        effective_fontsize = max(5, fontsize - 1)
 
     plt.rcParams["font.size"]       = effective_fontsize
     plt.rcParams["axes.labelsize"]  = effective_fontsize

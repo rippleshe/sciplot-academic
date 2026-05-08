@@ -183,6 +183,7 @@ EARTH_PALETTE: Dict[str, List[str]] = {
     "earth-2": ["#264653", "#2a9d8f"],
     "earth-3": ["#264653", "#2a9d8f", "#e9c46a"],
     "earth-4": ["#264653", "#2a9d8f", "#e9c46a", "#f4a261"],
+    "earth-5": ["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"],
 }
 
 # 3. Ocean 海洋蓝绿
@@ -423,8 +424,17 @@ def get_palette(name: str) -> List[str]:
 
 
 def list_palettes() -> List[str]:
-    """列出所有可用配色方案名称（含用户自定义）"""
-    return ALL_BUILTIN_PALETTES + _UserPaletteStore.get_all_names()
+    """列出所有可用配色方案名称（含用户自定义，自动去重）"""
+    builtin = ALL_BUILTIN_PALETTES
+    user = _UserPaletteStore.get_all_names()
+    # 去重：用户自定义配色可能覆盖内置名称
+    seen = set(builtin)
+    result = list(builtin)
+    for name in user:
+        if name not in seen:
+            result.append(name)
+            seen.add(name)
+    return result
 
 
 def list_all_palettes() -> List[str]:

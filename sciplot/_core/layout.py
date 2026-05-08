@@ -437,6 +437,7 @@ def save(
     formats: Optional[Union[str, Sequence[str]]] = None,
     bbox_inches: str = "tight",
     dir: Optional[str] = None,
+    close: bool = False,
     **kwargs: Any,
 ) -> List[Path]:
     """
@@ -450,6 +451,7 @@ def save(
                      支持："pdf" | "png" | "svg" | "eps"
         bbox_inches: 默认 "tight"，自动裁剪多余白边
         dir        : 保存目录；为 None 则保存到当前工作目录
+        close      : 保存后是否自动关闭图形释放内存，默认 False
 
     返回:
         List[Path]: 已保存文件的路径列表
@@ -460,6 +462,7 @@ def save(
         >>> sp.save(fig, "投稿", formats=("pdf",))             # 仅 PDF
         >>> sp.save(fig, "fig", dir="outputs/figures")        # 保存到指定目录
         >>> sp.save(fig, "nested/dir/fig")                    # 自动创建嵌套目录
+        >>> sp.save(fig, "batch", close=True)                 # 保存后自动关闭
     """
     from sciplot._core.config import get_config
 
@@ -511,6 +514,10 @@ def save(
         extra = {} if fmt in VECTOR_FORMATS else {"dpi": resolved_dpi}
         fig.savefig(path, bbox_inches=bbox_inches, format=fmt, **extra, **kwargs)
         saved_paths.append(path)
+
+    if close:
+        plt.close(fig)
+
     return saved_paths
 
 
