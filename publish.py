@@ -9,7 +9,9 @@ SciPlot Academic — PyPI 发布脚本
 步骤：
   1. 修改 pyproject.toml 中的 version
   2. 运行本脚本：python publish.py
-  3. 按提示输入 PyPI token（前缀 __token__）
+     - 交互模式：直接运行 python publish.py
+     - 一键发布：python publish.py --token <your-pypi-token> --yes
+  3. 如果是交互模式，按提示输入 PyPI token（前缀 __token__）
 
 首次发布前确认：
   - pyproject.toml 中 [project.urls] 填写正确的 GitHub 地址
@@ -17,10 +19,12 @@ SciPlot Academic — PyPI 发布脚本
   - 创建 API Token：https://pypi.org/manage/account/token/
 """
 
+import argparse
 import glob
+import os
+import shutil
 import subprocess
 import sys
-import shutil
 from pathlib import Path
 
 
@@ -30,6 +34,11 @@ def run(cmd: list[str]) -> None:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="SciPlot Academic — PyPI 发布脚本")
+    parser.add_argument("--token", help="PyPI API Token (前缀 pypi-)")
+    parser.add_argument("--yes", "-y", action="store_true", help="跳过确认步骤，直接发布")
+    args = parser.parse_args()
+
     # 清理旧构建产物
     for d in ["dist", "build"]:
         if Path(d).exists():
@@ -47,10 +56,22 @@ def main():
         print("❌ dist/ 目录为空，构建可能失败")
         sys.exit(1)
 
-    # 上传到 PyPI（输入 __token__ + API Token）
-    answer = input("\n是否上传到 PyPI？(y/N): ").strip().lower()
-    if answer == "y":
-        run([sys.executable, "-m", "twine", "upload", *dist_files])
+    # 准备上传指令
+    upload_cmd = [sys.executable, "-m", "twine", "upload"]
+    if args.token:
+        upload_cmd.extend(["-u", "__token__", "-p", args.token])
+    
+    upload_cmd.extend(dist_files)
+
+    # 确认发布
+    if args.yes:
+        do_upload = True
+    else:
+        answer = input("\n是否上传到 PyPI？(y/N): ").strip().lower()
+        do_upload = (answer == "y")
+
+    if do_upload:
+        run(upload_cmd)
         print("\n✅ 发布成功！")
         print("查看：https://pypi.org/project/sciplot-academic/")
     else:
