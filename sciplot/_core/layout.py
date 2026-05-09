@@ -145,20 +145,20 @@ def create_subplots(
         >>> fig, axes = sp.create_subplots(2, 2, venue="ieee", sharex=True)
         >>> axes[0, 0].plot(x, y)
     """
-    from sciplot._core.style import setup_style
-    from sciplot._core.style import get_current_lang, VALID_LANGS
+    from sciplot._core.utils import apply_resolved_style
     from sciplot._core.config import get_config
 
-    current_lang = get_current_lang()
-    effective_lang = lang if lang is not None else (
-        current_lang if current_lang in VALID_LANGS else "zh"
-    )
-    effective_palette = palette if palette is not None else get_config("palette")
-    if not isinstance(effective_palette, str) or not effective_palette:
-        effective_palette = DEFAULT_PALETTE
-    setup_style(venue, effective_palette, effective_lang)
+    # 当 palette 未显式传入时，读取配置默认值
+    if palette is None:
+        cfg_palette = get_config("palette")
+        if isinstance(cfg_palette, str) and cfg_palette:
+            palette = cfg_palette
 
-    base_figsize = VENUES[venue].figsize
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    # 回退为指定的 venue（apply_resolved_style 在上下文中可能返回 None）
+    resolved_venue = effective_venue or venue
+
+    base_figsize = VENUES[resolved_venue].figsize
     figsize = (base_figsize[0] * ncols * 0.85, base_figsize[1] * nrows * 0.85)
 
     fig, axes = plt.subplots(
@@ -201,28 +201,26 @@ def paper_subplots(
         >>> # IEEE 2×2 子图
         >>> fig, axes = sp.paper_subplots(2, 2, venue="ieee")
     """
-    from sciplot._core.style import setup_style
-    from sciplot._core.style import get_current_lang, VALID_LANGS
+    from sciplot._core.utils import apply_resolved_style
     from sciplot._core.config import get_config
 
-    current_lang = get_current_lang()
-    effective_lang = lang if lang is not None else (
-        current_lang if current_lang in VALID_LANGS else "zh"
-    )
-    effective_palette = palette if palette is not None else get_config("palette")
-    if not isinstance(effective_palette, str) or not effective_palette:
-        effective_palette = DEFAULT_PALETTE
-    setup_style(venue, effective_palette, effective_lang)
+    if palette is None:
+        cfg_palette = get_config("palette")
+        if isinstance(cfg_palette, str) and cfg_palette:
+            palette = cfg_palette
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    resolved_venue = effective_venue or venue
 
     if figsize is not None:
         final_figsize: Tuple[float, float] = figsize
     else:
         layout_key = f"{nrows}x{ncols}"
-        venue_layouts = PAPER_LAYOUTS.get(venue, {})
+        venue_layouts = PAPER_LAYOUTS.get(resolved_venue, {})
         layout_figsize = venue_layouts.get(layout_key)
         if layout_figsize is None:
             # 回退：基于 venue 默认尺寸等比缩放
-            base_fs = VENUES.get(venue, VENUES["nature"]).figsize
+            base_fs = VENUES.get(resolved_venue, VENUES["nature"]).figsize
             final_figsize = (base_fs[0] * ncols * 0.85, base_fs[1] * nrows * 0.85)
         else:
             final_figsize = layout_figsize
@@ -258,20 +256,19 @@ def create_gridspec(
         >>> for ax in fig.axes: ax.tick_params(direction="in")
         >>> sp.save(fig, "gridspec")
     """
-    from sciplot._core.style import setup_style
+    from sciplot._core.utils import apply_resolved_style
     from sciplot._core.result import GridSpecResult
-    from sciplot._core.style import get_current_lang, VALID_LANGS
     from sciplot._core.config import get_config
 
-    current_lang = get_current_lang()
-    effective_lang = lang if lang is not None else (
-        current_lang if current_lang in VALID_LANGS else "zh"
-    )
-    effective_palette = palette if palette is not None else get_config("palette")
-    if not isinstance(effective_palette, str) or not effective_palette:
-        effective_palette = DEFAULT_PALETTE
-    setup_style(venue, effective_palette, effective_lang)
-    figsize = VENUES[venue].figsize
+    if palette is None:
+        cfg_palette = get_config("palette")
+        if isinstance(cfg_palette, str) and cfg_palette:
+            palette = cfg_palette
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    resolved_venue = effective_venue or venue
+
+    figsize = VENUES[resolved_venue].figsize
     fig = plt.figure(figsize=figsize)
     gs = GridSpec(nrows, ncols, figure=fig, **kwargs)
     return GridSpecResult(fig, gs)

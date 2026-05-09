@@ -176,14 +176,19 @@ def plot_multi_line(
 
     labels = validate_labels_match_data(labels, y_list)
 
-    if isinstance(x, list) and len(x) != len(y_list):
+    # 标准化 x：普通 list（元素非 array）视为共享 X 轴数据
+    x_is_multi = isinstance(x, list) and all(isinstance(xi, np.ndarray) for xi in x)
+    if isinstance(x, list) and not x_is_multi:
+        x = np.asarray(x)
+
+    if x_is_multi and len(x) != len(y_list):
         raise ValueError(
             f"x 列表长度 ({len(x)}) 与 y_list 长度 ({len(y_list)}) 不一致"
         )
 
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
-        xi = x if isinstance(x, np.ndarray) else x[i]
-        _validate_xy_lengths(xi, y, x_name=("x" if isinstance(x, np.ndarray) else f"x[{i}]"), y_name=f"y_list[{i}]")
+        xi = x[i] if x_is_multi else x
+        _validate_xy_lengths(xi, y, x_name=("x" if not x_is_multi else f"x[{i}]"), y_name=f"y_list[{i}]")  # type: ignore
         ls = LINE_STYLES[i % len(LINE_STYLES)] if use_linestyles else "-"
         ax.plot(xi, y, label=lbl, linestyle=ls, **kwargs)
 
@@ -274,7 +279,7 @@ def plot_step(
 
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
-    ax.step(x, y, where=where, label=label, **kwargs)
+    ax.step(x, y, where=where, label=label, **kwargs)  # type: ignore
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -416,7 +421,17 @@ def plot_multi_area(
             line_kwargs.setdefault("color", color)
             (line,) = ax.plot(x, y, **line_kwargs)
 
-            fill_kwargs = dict(kwargs)
+            # 排除 fill_between 不支持的 Line2D 专属参数（marker/linestyle 等）
+            _fill_incompatible = {
+                "marker", "markerfacecolor", "markeredgecolor", "markeredgewidth",
+                "markersize", "markevery", "linestyle", "ls", "linewidth", "lw",
+                "dash_capstyle", "dash_joinstyle", "solid_capstyle", "solid_joinstyle",
+                "drawstyle", "ds", "fillstyle", "picker", "pickradius",
+            }
+            # linewidth/edgecolor 对 PolyCollection 有效，需保留
+            _fill_compatible_overrides = {"linewidth", "lw", "edgecolor"}
+            _exclude = _fill_incompatible - _fill_compatible_overrides
+            fill_kwargs = {k: v for k, v in kwargs.items() if k not in _exclude}
             fill_kwargs.pop("label", None)
             fill_kwargs["alpha"] = alpha
             fill_kwargs.setdefault("color", line.get_color())

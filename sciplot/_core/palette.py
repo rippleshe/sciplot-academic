@@ -28,7 +28,7 @@ import logging
 from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
-from matplotlib import cycler
+from cycler import cycler
 from matplotlib.colors import LinearSegmentedColormap
 import warnings
 
@@ -276,22 +276,26 @@ def _register_diverging_cmaps() -> None:
         except AttributeError:
             # 低版本matplotlib可能没有register方法
             try:
-                import matplotlib
-                matplotlib.cm.register_cmap(name=name, cmap=cmap)
+                import matplotlib.cm as cm
+                cm.register_cmap(name=name, cmap=cmap)
             except Exception as exc:
                 _logger.warning("colormap '%s' 注册失败: %s", name, exc)
 
 
-# 延迟注册标志
+# 延迟注册标志（使用锁保护线程安全）
 _diverging_cmaps_registered = False
+_diverging_cmaps_lock = threading.Lock()
 
 
 def _ensure_diverging_cmaps() -> None:
-    """确保发散型 colormap 已注册（延迟执行）。"""
+    """确保发散型 colormap 已注册（延迟执行，线程安全）。"""
     global _diverging_cmaps_registered
-    if not _diverging_cmaps_registered:
-        _register_diverging_cmaps()
-        _diverging_cmaps_registered = True
+    if _diverging_cmaps_registered:
+        return
+    with _diverging_cmaps_lock:
+        if not _diverging_cmaps_registered:
+            _register_diverging_cmaps()
+            _diverging_cmaps_registered = True
 
 
 # 所有内置配色名（不含用户自定义）

@@ -47,7 +47,7 @@ from __future__ import annotations
 from pathlib import Path as _Path
 from threading import Lock as _Lock
 from types import MappingProxyType as _MappingProxyType
-from typing import Any, Mapping, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, List, Mapping, Sequence, Tuple
 
 
 def _read_local_version() -> str:
@@ -60,7 +60,7 @@ def _read_local_version() -> str:
         import tomllib as _toml
     except ImportError:
         try:
-            import tomli as _toml
+            import tomli as _toml  # type: ignore
         except ImportError:
             return ""
 
@@ -491,22 +491,32 @@ def inspect() -> None:
 
 
 def _freeze_palette_mapping(data: Mapping[str, Sequence[str]]) -> _MappingProxyType:
-    """导出层提供只读映射，值保持 List 类型不变（与 get_palette() 一致）。"""
+    """导出层提供只读映射，防止外层字典被修改。值保持 List 类型与 get_palette() 一致。"""
     return _MappingProxyType(data)
 
 
 # 对外公开常量使用只读视图；如需可变副本请使用 get_palette()。
-PASTEL_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(PASTEL_PALETTE)
-EARTH_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(EARTH_PALETTE)
-OCEAN_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(OCEAN_PALETTE)
-FOREST_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(FOREST_PALETTE)
-SUNSET_PALETTE: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(SUNSET_PALETTE)
-RMB_PALETTES: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(RMB_PALETTES)
-DIVERGING_PALETTES: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(DIVERGING_PALETTES)
-RESIDENT_PALETTES: Mapping[str, Tuple[str, ...]] = _freeze_palette_mapping(RESIDENT_PALETTES)
+PASTEL_PALETTE: Mapping[str, List[str]] = _freeze_palette_mapping(PASTEL_PALETTE)
+EARTH_PALETTE: Mapping[str, List[str]] = _freeze_palette_mapping(EARTH_PALETTE)
+OCEAN_PALETTE: Mapping[str, List[str]] = _freeze_palette_mapping(OCEAN_PALETTE)
+FOREST_PALETTE: Mapping[str, List[str]] = _freeze_palette_mapping(FOREST_PALETTE)
+SUNSET_PALETTE: Mapping[str, List[str]] = _freeze_palette_mapping(SUNSET_PALETTE)
+RMB_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(RMB_PALETTES)
+DIVERGING_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(DIVERGING_PALETTES)
+RESIDENT_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(RESIDENT_PALETTES)
 ALL_PALETTES = tuple(ALL_PALETTES)
 LINE_STYLES = tuple(LINE_STYLES)
 MARKERS = tuple(MARKERS)
+
+
+if TYPE_CHECKING:
+    def plot_network(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_network_from_matrix(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_network_communities(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_dendrogram(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_clustermap(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_venn2(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_venn3(*args: Any, **kwargs: Any) -> Any: ...
 
 
 __all__ = [

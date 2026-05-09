@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 
 _thread_local = threading.local()
 
+# LaTeX 可用性缓存（None = 未检测）
+_latex_available: Optional[bool] = None
+
 
 def _ensure_thread_local_initialized() -> None:
     """确保线程局部状态已初始化。"""
@@ -173,11 +176,13 @@ def setup_style(
     # 中文模式下禁用 LaTeX（LaTeX 不支持中文）
     # 英文模式下可启用 LaTeX 以获得更好的数学公式渲染
     if lang == "en":
-        # 英文模式：检测系统是否安装 LaTeX，有则启用，无则静默降级
-        if shutil.which("latex") or shutil.which("xelatex") or shutil.which("pdflatex"):
-            plt.rcParams["text.usetex"] = True
-        else:
-            plt.rcParams["text.usetex"] = False
+        # 英文模式：检测系统是否安装 LaTeX（结果缓存，避免重复调用 shutil.which）
+        global _latex_available
+        if _latex_available is None:
+            _latex_available = bool(
+                shutil.which("latex") or shutil.which("xelatex") or shutil.which("pdflatex")
+            )
+        plt.rcParams["text.usetex"] = _latex_available
     else:
         # 中文模式：禁用 LaTeX，确保中文正常渲染
         plt.rcParams["text.usetex"] = False

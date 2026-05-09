@@ -316,7 +316,7 @@ def validate_array_like(
         result = list(data)
     else:
         try:
-            result = list(data)
+            result = list(data)  # type: ignore
         except TypeError:
             raise TypeError(
                 f"参数 '{name}' 必须是数组类型，实际类型: {type(data).__name__}"
