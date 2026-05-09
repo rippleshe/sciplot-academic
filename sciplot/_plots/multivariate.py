@@ -338,6 +338,7 @@ def plot_scatter_matrix(
                 ax.set_yticklabels([])
 
             ax.tick_params(direction="in")
+            ax.grid(False)
 
     fig.tight_layout()
     return PlotResult(fig, axes, metadata={"venue": effective_venue, "palette": palette})

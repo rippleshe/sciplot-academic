@@ -104,8 +104,10 @@ from sciplot._core.style import (
     get_venue_info,
     list_venues,
     list_languages,
+    list_themes,
     VENUES,
     LANGUAGES,
+    THEMES,
 )
 from sciplot._core.palette import (
     apply_palette as _apply_palette,   # 内部用，不直接暴露
@@ -312,6 +314,16 @@ from sciplot._plots.aliases import (
     confidence,
     heatmap,
     combo,
+    # 极坐标 / 时序 / 统计别名
+    radar,
+    timeseries,
+    multi_timeseries,
+    density,
+    multi_density,
+    residuals,
+    qq,
+    bland_altman,
+    lollipop,
 )
 
 # ── 工具 ──────────────────────────────────────────────────────
@@ -524,7 +536,7 @@ __all__ = [
 
     # ── 样式 ──
     "setup_style", "reset_style", "get_venue_info",
-    "list_venues", "list_languages",
+    "list_venues", "list_languages", "list_themes",
 
     # ── 配色 ──
     "set_custom_palette", "register_color_scheme",
@@ -576,7 +588,12 @@ __all__ = [
     # ── 分布 / 统计（简洁别名）──
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin",
-    "combo",
+    "combo", "lollipop",
+
+    # ── 极坐标 / 时序 / 统计（简洁别名）──
+    "radar", "timeseries", "multi_timeseries",
+    "density", "multi_density",
+    "residuals", "qq", "bland_altman",
 
     # ── 高级（完整名称）──
     "plot_errorbar", "plot_confidence", "plot_heatmap",
@@ -613,7 +630,7 @@ __all__ = [
     "suggest_figsize", "check_color_contrast",
 
     # ── 常量 ──
-    "VENUES", "PAPER_LAYOUTS", "LANGUAGES",
+    "VENUES", "PAPER_LAYOUTS", "LANGUAGES", "THEMES",
     "RESIDENT_PALETTES",
     "PASTEL_PALETTE", "EARTH_PALETTE", "OCEAN_PALETTE",
     "FOREST_PALETTE", "SUNSET_PALETTE", "RMB_PALETTES", "DIVERGING_PALETTES",

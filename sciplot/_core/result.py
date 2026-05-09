@@ -141,15 +141,18 @@ class PlotResult:
     def __getitem__(self, index: slice) -> Tuple[Any, ...]: ...
 
     def __getitem__(self, index: Union[int, slice]) -> Union[Figure, Union[Axes, np.ndarray], Tuple[Any, ...]]:
-        """支持索引访问: result[0], result[1]"""
-        if index == 0:
-            return self._fig
-        elif index == 1:
-            return self._ax
+        """支持索引访问: result[0], result[1], result[-1]"""
+        items = (self._fig, self._ax)
+        if isinstance(index, int):
+            if index < 0:
+                index += len(items)
+            if index < 0 or index >= len(items):
+                raise IndexError(f"PlotResult 索引 {index} 超出范围 [0, {len(items) - 1}]")
+            return items[index]
         elif isinstance(index, slice):
-            return (self._fig, self._ax)[index]
+            return items[index]
         else:
-            raise IndexError("PlotResult 只支持索引 0 (fig) 和 1 (ax)")
+            raise TypeError(f"索引类型必须是 int 或 slice，实际类型: {type(index).__name__}")
 
     # ═══════════════════════════════════════════════════════════════
     # 链式调用方法（单个子图时）
@@ -465,11 +468,15 @@ class ComboPlotResult(PlotResult):
 
     def __getitem__(self, index: Union[int, slice]) -> Union[Figure, Optional[Axes], Tuple[Any, ...]]:
         values: Tuple[Figure, Axes, Optional[Axes]] = (self._fig, self.ax_bar, self.ax_line)
-        if isinstance(index, slice):
+        if isinstance(index, int):
+            if index < 0:
+                index += len(values)
+            if index < 0 or index >= len(values):
+                raise IndexError(f"ComboPlotResult 索引 {index} 超出范围 [0, {len(values) - 1}]")
             return values[index]
-        if index in (0, 1, 2):
+        elif isinstance(index, slice):
             return values[index]
-        raise IndexError("ComboPlotResult 只支持索引 0 (fig)、1 (ax_bar)、2 (ax_line)")
+        raise TypeError(f"索引类型必须是 int 或 slice，实际类型: {type(index).__name__}")
 
     def ylabel_left(self, label: str, **kwargs: Any) -> ComboPlotResult:
         """设置左 Y 轴标签。"""
@@ -534,15 +541,18 @@ class GridSpecResult:
     def __getitem__(self, index: slice) -> Tuple[Any, ...]: ...
 
     def __getitem__(self, index: Union[int, slice]) -> Union[Figure, GridSpec, Tuple[Any, ...]]:
-        """支持索引访问"""
-        if index == 0:
-            return self._fig
-        elif index == 1:
-            return self._gridspec
+        """支持索引访问（含负索引）"""
+        items = (self._fig, self._gridspec)
+        if isinstance(index, int):
+            if index < 0:
+                index += len(items)
+            if index < 0 or index >= len(items):
+                raise IndexError(f"GridSpecResult 索引 {index} 超出范围 [0, {len(items) - 1}]")
+            return items[index]
         elif isinstance(index, slice):
-            return (self._fig, self._gridspec)[index]
+            return items[index]
         else:
-            raise IndexError("GridSpecResult 只支持索引 0 (fig) 和 1 (gridspec)")
+            raise TypeError(f"索引类型必须是 int 或 slice，实际类型: {type(index).__name__}")
 
     def add_panel_labels(self, **kwargs: Any) -> GridSpecResult:
         """对当前 figure 的全部子图添加面板标签。"""

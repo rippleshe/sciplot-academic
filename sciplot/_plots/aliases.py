@@ -3,11 +3,15 @@
 
 提供常用绘图函数的简短别名，使代码更简洁。
 所有别名都保持与原函数完全相同的参数和行为。
+
+使用 functools.wraps 自动保持原函数的签名、文档和类型提示，
+无需手动维护参数列表。
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+import functools
+from typing import Any, Callable, TypeVar
 
 from sciplot._plots.basic import (
     plot_line,
@@ -24,6 +28,7 @@ from sciplot._plots.distribution import (
     plot_grouped_bar,
     plot_stacked_bar,
     plot_horizontal_bar,
+    plot_lollipop,
     plot_box,
     plot_violin,
     plot_histogram,
@@ -34,577 +39,95 @@ from sciplot._plots.advanced import (
     plot_confidence,
     plot_heatmap,
 )
+from sciplot._plots.polar import (
+    plot_radar,
+)
+from sciplot._plots.timeseries import (
+    plot_timeseries,
+    plot_multi_timeseries,
+)
+from sciplot._plots.statistical import (
+    plot_density,
+    plot_multi_density,
+    plot_residuals,
+    plot_qq,
+    plot_bland_altman,
+)
 from sciplot._core.result import PlotResult, ComboPlotResult
 
-
-def line(
-    x,
-    y,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    label: str = "",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制折线图（plot_line 的别名）"""
-    return plot_line(
-        x,
-        y,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        label=label,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
+F = TypeVar("F", bound=Callable[..., Any])
 
 
-def scatter(
-    x,
-    y,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    label: str = "",
-    s: float = 20,
-    alpha: float = 0.7,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制散点图（plot_scatter 的别名）"""
-    return plot_scatter(
-        x,
-        y,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        label=label,
-        s=s,
-        alpha=alpha,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
+def _make_alias(func: F) -> F:
+    """创建函数别名，自动转发所有参数并保留原函数签名/文档/类型提示。
+
+    使用 functools.wraps 确保：
+    - IDE 自动补全显示原函数的参数列表
+    - help() 显示原函数的文档
+    - mypy/pyright 类型检查正常
+    """
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+    wrapper.__qualname__ = wrapper.__qualname__.replace(func.__name__, f"<alias of {func.__name__}>")
+    return wrapper  # type: ignore[return-value]
 
 
-def step(
-    x,
-    y,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    label: str = "",
-    where: str = "mid",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制阶梯图（plot_step 的别名）"""
-    return plot_step(
-        x,
-        y,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        label=label,
-        where=where,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
+# ═══════════════════════════════════════════════════════════════
+# 基础图表
+# ═══════════════════════════════════════════════════════════════
+line = _make_alias(plot_line)
+scatter = _make_alias(plot_scatter)
+step = _make_alias(plot_step)
+area = _make_alias(plot_area)
 
+# ═══════════════════════════════════════════════════════════════
+# 多系列图表
+# ═══════════════════════════════════════════════════════════════
+multi = _make_alias(plot_multi)
+multi_line = _make_alias(plot_multi_line)
+multi_area = _make_alias(plot_multi_area)
 
-def area(
-    x,
-    y,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    label: str = "",
-    alpha: float = 0.3,
-    fill: bool = True,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制面积图（plot_area 的别名）"""
-    return plot_area(
-        x,
-        y,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        label=label,
-        alpha=alpha,
-        fill=fill,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
+# ═══════════════════════════════════════════════════════════════
+# 分布统计图表
+# ═══════════════════════════════════════════════════════════════
+bar = _make_alias(plot_bar)
+grouped_bar = _make_alias(plot_grouped_bar)
+stacked_bar = _make_alias(plot_stacked_bar)
+hbar = _make_alias(plot_horizontal_bar)
+hist = _make_alias(plot_histogram)
+box = _make_alias(plot_box)
+violin = _make_alias(plot_violin)
+lollipop = _make_alias(plot_lollipop)
 
+# ═══════════════════════════════════════════════════════════════
+# 高级图表
+# ═══════════════════════════════════════════════════════════════
+errorbar = _make_alias(plot_errorbar)
+confidence = _make_alias(plot_confidence)
+heatmap = _make_alias(plot_heatmap)
+combo = _make_alias(plot_combo)
 
-def multi(
-    x,
-    y_list: Sequence,
-    labels: Optional[Sequence[str]] = None,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制多线折线图（plot_multi 的别名）"""
-    return plot_multi(
-        x,
-        y_list,
-        labels=labels,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def multi_line(
-    x,
-    y_list: Sequence,
-    labels: Optional[Sequence[str]] = None,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    use_linestyles: bool = False,
-    show_legend: bool = True,
-    **kwargs,
-) -> PlotResult:
-    """绘制多线折线图（plot_multi_line 的别名）"""
-    return plot_multi_line(
-        x,
-        y_list,
-        labels=labels,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        use_linestyles=use_linestyles,
-        show_legend=show_legend,
-        **kwargs,
-    )
-
-
-def multi_area(
-    x,
-    y_list: Sequence,
-    labels: Optional[Sequence[str]] = None,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    stacked: bool = False,
-    alpha: float = 0.3,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制多系列面积图（plot_multi_area 的别名）"""
-    return plot_multi_area(
-        x,
-        y_list,
-        labels=labels,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        stacked=stacked,
-        alpha=alpha,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def bar(
-    categories,
-    values,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    width: float = 0.6,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制柱状图（plot_bar 的别名）"""
-    return plot_bar(
-        categories,
-        values,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        width=width,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def grouped_bar(
-    groups: List[str],
-    data: Dict[str, Sequence],
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    width: float = 0.8,
-    gap: float = 0.05,
-    show_values: bool = False,
-    value_fmt: str = ".1f",
-    legend_loc: str = "best",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制分组柱状图（plot_grouped_bar 的别名）"""
-    return plot_grouped_bar(
-        groups,
-        data,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        width=width,
-        gap=gap,
-        show_values=show_values,
-        value_fmt=value_fmt,
-        legend_loc=legend_loc,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def stacked_bar(
-    categories: List[str],
-    data: Dict[str, Sequence],
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    width: float = 0.6,
-    show_values: bool = False,
-    value_fmt: str = ".1f",
-    legend_loc: str = "best",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制堆叠柱状图（plot_stacked_bar 的别名）"""
-    return plot_stacked_bar(
-        categories,
-        data,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        width=width,
-        show_values=show_values,
-        value_fmt=value_fmt,
-        legend_loc=legend_loc,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def hbar(
-    categories: List[str],
-    values,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    height: float = 0.6,
-    show_values: bool = False,
-    value_fmt: str = ".1f",
-    sort: bool = False,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制水平柱状图（plot_horizontal_bar 的别名）"""
-    return plot_horizontal_bar(
-        categories,
-        values,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        height=height,
-        show_values=show_values,
-        value_fmt=value_fmt,
-        sort=sort,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def hist(
-    data,
-    bins: int = 30,
-    xlabel: str = "",
-    ylabel: str = "Frequency",
-    title: str = "",
-    density: bool = False,
-    alpha: float = 0.75,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制直方图（plot_histogram 的别名）"""
-    return plot_histogram(
-        data,
-        bins=bins,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        density=density,
-        alpha=alpha,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def box(
-    data,
-    labels: Optional[Sequence[str]] = None,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    showfliers: bool = True,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制箱线图（plot_box 的别名）"""
-    return plot_box(
-        data,
-        labels=labels,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        showfliers=showfliers,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def violin(
-    data,
-    labels: Optional[Sequence[str]] = None,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    showmeans: bool = False,
-    showmedians: bool = True,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制小提琴图（plot_violin 的别名）"""
-    return plot_violin(
-        data,
-        labels=labels,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        showmeans=showmeans,
-        showmedians=showmedians,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def errorbar(
-    x,
-    y,
-    yerr,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    label: str = "",
-    fmt: str = "o",
-    capsize: float = 4,
-    markersize: float = 5,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制误差线图（plot_errorbar 的别名）"""
-    return plot_errorbar(
-        x,
-        y,
-        yerr,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        label=label,
-        fmt=fmt,
-        capsize=capsize,
-        markersize=markersize,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def confidence(
-    x,
-    y_mean,
-    y_std,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    label_mean: str = "Mean",
-    label_std: Optional[str] = None,
-    n_std: float = 1.0,
-    alpha: float = 0.25,
-    fill_kwargs: Optional[Dict[str, Any]] = None,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制置信区间图（plot_confidence 的别名）"""
-    return plot_confidence(
-        x,
-        y_mean,
-        y_std,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        label_mean=label_mean,
-        label_std=label_std,
-        n_std=n_std,
-        alpha=alpha,
-        fill_kwargs=fill_kwargs,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def heatmap(
-    data,
-    row_labels: Optional[List[str]] = None,
-    col_labels: Optional[List[str]] = None,
-    xlabel: str = "",
-    ylabel: str = "",
-    title: str = "",
-    cmap: str = "Blues",
-    show_values: bool = False,
-    fmt: str = ".2f",
-    colorbar_label: str = "",
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    aspect: str = "auto",
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> PlotResult:
-    """绘制热力图（plot_heatmap 的别名）"""
-    return plot_heatmap(
-        data,
-        row_labels=row_labels,
-        col_labels=col_labels,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        title=title,
-        cmap=cmap,
-        show_values=show_values,
-        fmt=fmt,
-        colorbar_label=colorbar_label,
-        vmin=vmin,
-        vmax=vmax,
-        aspect=aspect,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
-
-
-def combo(
-    x,
-    bar_data: Dict[str, Sequence],
-    line_data: Optional[Dict[str, Sequence]] = None,
-    xlabel: str = "",
-    ylabel_left: str = "",
-    ylabel_right: str = "",
-    title: str = "",
-    bar_width: float = 0.35,
-    venue: Optional[str] = None,
-    palette: Optional[str] = None,
-    lang: Optional[str] = None,
-    **kwargs,
-) -> ComboPlotResult:
-    """绘制组合图（plot_combo 的别名）"""
-    return plot_combo(
-        x,
-        bar_data,
-        line_data=line_data,
-        xlabel=xlabel,
-        ylabel_left=ylabel_left,
-        ylabel_right=ylabel_right,
-        title=title,
-        bar_width=bar_width,
-        venue=venue,
-        palette=palette,
-        lang=lang,
-        **kwargs,
-    )
+# ═══════════════════════════════════════════════════════════════
+# 极坐标 / 时序 / 统计图表
+# ═══════════════════════════════════════════════════════════════
+radar = _make_alias(plot_radar)
+timeseries = _make_alias(plot_timeseries)
+multi_timeseries = _make_alias(plot_multi_timeseries)
+density = _make_alias(plot_density)
+multi_density = _make_alias(plot_multi_density)
+residuals = _make_alias(plot_residuals)
+qq = _make_alias(plot_qq)
+bland_altman = _make_alias(plot_bland_altman)
 
 
 __all__ = [
     "line", "scatter", "step", "area",
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin",
+    "hist", "box", "violin", "lollipop",
     "errorbar", "confidence", "heatmap", "combo",
+    "radar", "timeseries", "multi_timeseries",
+    "density", "multi_density",
+    "residuals", "qq", "bland_altman",
 ]

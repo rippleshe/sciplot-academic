@@ -167,22 +167,19 @@ class TestDefaultValues:
     """测试默认值一致性"""
     
     def test_default_venue_is_nature(self):
-        """默认 venue 应该是 nature"""
-        sig = inspect.signature(sp.setup_style)
-        venue_default = sig.parameters["venue"].default
-        assert venue_default == "nature"
-        
+        """默认 venue 应该是 nature（通过 Config 回退）"""
+        from sciplot._core.config import get_config
+        assert get_config("venue") == "nature"
+
     def test_default_palette_is_pastel(self):
-        """默认 palette 应该是 pastel"""
-        sig = inspect.signature(sp.setup_style)
-        palette_default = sig.parameters["palette"].default
-        assert palette_default == "pastel"
-        
+        """默认 palette 应该是 pastel（通过 Config 回退）"""
+        from sciplot._core.config import get_config
+        assert get_config("palette") == "pastel"
+
     def test_default_lang_is_zh(self):
-        """默认 lang 应该是 zh"""
-        sig = inspect.signature(sp.setup_style)
-        lang_default = sig.parameters["lang"].default
-        assert lang_default == "zh"
+        """默认 lang 应该是 zh（通过 Config 回退）"""
+        from sciplot._core.config import get_config
+        assert get_config("lang") == "zh"
 
 
 class TestErrorHandling:

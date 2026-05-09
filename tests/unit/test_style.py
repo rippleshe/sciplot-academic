@@ -147,10 +147,11 @@ class TestEdgeCases:
             sp.setup_style(palette="invalid_palette_xyz")
             
     def test_none_values(self, reset_style):
-        """测试 None 值处理"""
-        # venue=None 应该报错，因为 None 不在 VENUES 中
-        with pytest.raises(ValueError):
-            sp.setup_style(venue=None, palette=None, lang=None)
+        """测试 None 值处理 — None 表示从 Config 读取默认值，不应报错"""
+        # venue=None 现在表示"从 Config 读取"，回退到 "nature"
+        sp.setup_style(venue=None, palette=None, lang=None)
+        from sciplot._core.style import get_current_venue
+        assert get_current_venue() == "nature"
 
 
 class TestStyleContextBasics:

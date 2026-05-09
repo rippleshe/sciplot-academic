@@ -28,6 +28,8 @@
 | **✨ 智能辅助** | 自动标签旋转、智能图例、布局优化、颜色对比度检查 |
 | **🔌 扩展模块** | ML 可视化（PCA/混淆矩阵）+ 3D 可视化（曲面/等高线/散点） |
 | **🚀 增强 API** | `PlotResult` 链式调用、语法糖别名、上下文管理器 |
+| **🌙 暗色主题** | `theme="dark"` 一键切换深色背景，适合演示与屏幕展示 |
+| **⚙️ 配置系统** | `set_defaults()` 持久化默认值，`setup_style()` 自动读取 |
 
 ---
 
@@ -40,7 +42,10 @@ uv pip install sciplot-academic
 # 机器学习扩展
 uv pip install sciplot-academic[ml]
 
-# 全部扩展（ML + 3D）
+# 统计图表扩展（Q-Q 图、Bland-Altman、核密度等）
+uv pip install sciplot-academic[stats]
+
+# 全部扩展（ML + 统计 + 网络 + 维恩图）
 uv pip install sciplot-academic[all]
 ```
 
@@ -94,6 +99,13 @@ result.xlabel("时间 (s)").ylabel("电压 (V)").save("PlotResult 示例")
 with sp.style_context("ieee", palette="forest"):
     fig, ax = sp.plot(x, np.sin(x))
     sp.save(fig, "ieee_fig")
+
+# ─────────────────────────────────────────────────────────────────────
+# 风格 6: 暗色主题（演示/屏幕展示）
+# ─────────────────────────────────────────────────────────────────────
+with sp.style_context("presentation", theme="dark"):
+    fig, ax = sp.plot(x, np.sin(x), xlabel="时间", ylabel="幅度")
+    sp.save(fig, "dark_fig")
 ```
 
 ---
@@ -113,10 +125,11 @@ with sp.style_context("ieee", palette="forest"):
 | 函数 | 用途 | 别名 |
 |------|------|------|
 | `plot_bar()` | 单组柱状图 | `bar()` |
-| `plot_grouped_bar()` | **分组柱状图**（论文最常用） | — |
-| `plot_stacked_bar()` | 堆叠柱状图 | — |
+| `plot_grouped_bar()` | **分组柱状图**（论文最常用） | `grouped_bar()` |
+| `plot_stacked_bar()` | 堆叠柱状图 | `stacked_bar()` |
 | `plot_horizontal_bar()` | 水平柱状图 | `hbar()` |
-| `plot_combo()` | 组合图（柱状 + 折线，双 Y 轴） | — |
+| `plot_lollipop()` | 棒棒糖图（排名/重要性） | `lollipop()` |
+| `plot_combo()` | 组合图（柱状 + 折线，双 Y 轴） | `combo()` |
 
 ### 分布图表
 | 函数 | 用途 | 别名 |
@@ -136,7 +149,17 @@ with sp.style_context("ieee", palette="forest"):
 | 函数 | 用途 | 别名 |
 |------|------|------|
 | `plot_timeseries()` | 时间序列图 | `timeseries()` |
+| `plot_multi_timeseries()` | 多条时序曲线 | `multi_timeseries()` |
 | `plot_slope()` | 斜率图 | — |
+
+### 统计诊断
+| 函数 | 用途 | 别名 |
+|------|------|------|
+| `plot_residuals()` | 残差图（模型诊断） | `residuals()` |
+| `plot_qq()` | Q-Q 图（正态性检验） | `qq()` |
+| `plot_bland_altman()` | Bland-Altman 图（一致性分析） | `bland_altman()` |
+| `plot_density()` | 核密度估计曲线 | `density()` |
+| `plot_multi_density()` | 多组核密度对比 | `multi_density()` |
 
 ### 多维/进阶图表
 | 函数 | 用途 | 别名 |

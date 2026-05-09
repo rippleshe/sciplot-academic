@@ -101,33 +101,79 @@ LANGUAGES: Dict[str, Tuple[Optional[str], str]] = {
 VALID_LANGS = set(LANGUAGES.keys())
 
 
+# ============================================================================
+# Themes — 主题预设
+# ============================================================================
+
+THEMES: Dict[str, Dict[str, Any]] = {
+    "light": {},  # 默认浅色，无需额外 rcParams
+    "dark": {
+        "figure.facecolor": "#1a1a2e",
+        "axes.facecolor": "#16213e",
+        "axes.edgecolor": "#e0e0e0",
+        "axes.labelcolor": "#e0e0e0",
+        "text.color": "#e0e0e0",
+        "xtick.color": "#b0b0b0",
+        "ytick.color": "#b0b0b0",
+        "xtick.labelcolor": "#b0b0b0",
+        "ytick.labelcolor": "#b0b0b0",
+        "axes.titlecolor": "#e0e0e0",
+        "legend.facecolor": "#16213e",
+        "legend.edgecolor": "#404060",
+        "legend.labelcolor": "#e0e0e0",
+        "figure.edgecolor": "#1a1a2e",
+        "savefig.facecolor": "#1a1a2e",
+        "grid.color": "#303050",
+    },
+}
+
+
 def setup_style(
-    venue: str = "nature",
-    palette: str = "pastel",
-    lang: Optional[str] = "zh",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    theme: Optional[str] = None,
 ) -> None:
     """
     配置 Matplotlib 绘图样式（每次绘图前调用一次，或通过各绘图函数的 venue/palette 参数自动调用）
 
     参数:
-        venue  : 期刊/场合预设，默认 'nature'
+        venue  : 期刊/场合预设，默认从 Config 读取（回退 'nature'）
                  'nature' | 'ieee' | 'aps' | 'springer' | 'thesis' | 'presentation'
-        palette: 配色方案，默认 'pastel'
+        palette: 配色方案，默认从 Config 读取（回退 'pastel'）
                  三大常驻系列（含 -1/-2/-3/-4 子集）：pastel / earth / ocean
                  人民币系列：100yuan / 50yuan / 20yuan / 10yuan / 5yuan / 1yuan
                  用户自定义：set_custom_palette() 注册后按名称使用
-        lang   : 语言/字体，默认 'zh'（中文宋体）
+        lang   : 语言/字体，默认从 Config 读取（回退 'zh'，中文宋体）
                  'zh' | 'zh-cn' → 中文宋体 + CJK 布局
                  'en'           → Times New Roman
+        theme  : 主题模式，默认 'light'
+                 'light' → 浅色背景（默认）
+                 'dark'  → 深色背景（适合演示/屏幕展示）
 
     示例:
         >>> import sciplot as sp
-        >>> sp.setup_style()                          # 默认：nature + pastel + 中文
-        >>> sp.setup_style("ieee", "pastel-2")        # IEEE + pastel 前 2 色
-        >>> sp.setup_style("ieee", "earth-3")         # IEEE + earth 前 3 色
+        >>> sp.setup_style()                          # 从 Config 读取（默认 nature + pastel + 中文）
+        >>> sp.set_defaults(venue="ieee")
+        >>> sp.setup_style()                          # 使用 Config 中的 ieee
+        >>> sp.setup_style("ieee", "pastel-2")        # 显式指定：IEEE + pastel 前 2 色
         >>> sp.setup_style("thesis", "100yuan")       # 学位论文 + 人民币红
         >>> sp.setup_style(lang="en")                 # 英文模式
+        >>> sp.setup_style("presentation", theme="dark")  # 演示文稿 + 深色主题
     """
+    # 从 Config 读取默认值（仅在参数未显式传入时）
+    if venue is None or palette is None or lang is None:
+        from sciplot._core.config import get_config as _get_config
+        if venue is None:
+            cfg_venue = _get_config("venue")
+            venue = cfg_venue if isinstance(cfg_venue, str) and cfg_venue else "nature"
+        if palette is None:
+            cfg_palette = _get_config("palette")
+            palette = cfg_palette if isinstance(cfg_palette, str) and cfg_palette else "pastel"
+        if lang is None:
+            cfg_lang = _get_config("lang")
+            lang = cfg_lang if isinstance(cfg_lang, str) and cfg_lang else "zh"
+
     if venue not in VENUES:
         raise ValueError(
             f"未知 venue '{venue}'，可用选项: {list(VENUES.keys())}"
@@ -233,6 +279,16 @@ def setup_style(
     # ── 其他规范 ──
     plt.rcParams["axes.grid"] = False   # 科研图默认不加网格
 
+    # ── 主题 ──
+    effective_theme = theme if theme is not None else "light"
+    if effective_theme not in THEMES:
+        raise ValueError(
+            f"未知主题 '{effective_theme}'，可用选项: {list(THEMES.keys())}"
+        )
+    theme_rc = THEMES[effective_theme]
+    if theme_rc:  # "light" 是空字典，无需更新
+        plt.rcParams.update(theme_rc)
+
     # 所有样式应用成功后再写入线程局部状态，避免异常路径污染状态。
     set_current_lang(lang)
     set_current_venue(venue)
@@ -278,4 +334,9 @@ def list_venues() -> List[str]:
 def list_languages() -> List[str]:
     """列出所有可用语言代码"""
     return list(LANGUAGES.keys())
+
+
+def list_themes() -> List[str]:
+    """列出所有可用主题名称"""
+    return list(THEMES.keys())
 

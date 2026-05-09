@@ -545,15 +545,18 @@ def list_paper_layouts(
 # ============================================================================
 
 def _set_ticks_inward(axes: Union[Axes, np.ndarray, Sequence[Axes]]) -> None:
-    """将所有子图的刻度设为朝内"""
+    """将所有子图的刻度设为朝内，并显式关闭网格线。"""
     if isinstance(axes, np.ndarray):
         for ax in axes.flat:
             if isinstance(ax, Axes):
                 ax.tick_params(direction="in")
+                ax.grid(False)
     elif isinstance(axes, Axes):
         axes.tick_params(direction="in")
+        axes.grid(False)
     elif hasattr(axes, "__iter__"):
         for ax in axes:
             if isinstance(ax, Axes):
                 ax.tick_params(direction="in")
+                ax.grid(False)
 

@@ -72,6 +72,7 @@ class StyleContext:
         venue: Optional[str] = None,
         palette: Optional[str] = None,
         lang: Optional[str] = None,
+        theme: Optional[str] = None,
         **rc_params: Any,
     ):
         """
@@ -81,15 +82,19 @@ class StyleContext:
             venue: 期刊样式，如 "nature", "ieee", "thesis" 等
             palette: 配色方案，如 "pastel", "earth", "100yuan" 等
             lang: 语言设置，"zh" 或 "en"
+            theme: 主题模式，"light" 或 "dark"
             **rc_params: 其他 matplotlib rcParams 参数
 
         示例:
             >>> with StyleContext("ieee", palette="earth"):
             ...     fig, ax = sp.plot(x, y)
+            >>> with StyleContext("presentation", theme="dark"):
+            ...     fig, ax = sp.plot(x, y)
         """
         self.venue = venue
         self.palette = palette
         self.lang = lang
+        self.theme = theme
         self.rc_params = rc_params
 
         # 保存进入上下文前的状态
@@ -112,10 +117,10 @@ class StyleContext:
 
         try:
             # 应用新样式
-            has_explicit_style = any(v is not None for v in (self.venue, self.palette, self.lang))
+            has_explicit_style = any(v is not None for v in (self.venue, self.palette, self.lang, self.theme))
             if has_explicit_style:
-                # 仅指定了 palette：不重置 venue/lang，只覆盖颜色循环
-                if self.venue is None and self.lang is None and self.palette is not None:
+                # 仅指定了 palette 且无 theme：不重置 venue/lang，只覆盖颜色循环
+                if self.venue is None and self.lang is None and self.palette is not None and self.theme is None:
                     apply_palette(self.palette)
                     set_current_palette(self.palette)
                 else:
@@ -128,6 +133,7 @@ class StyleContext:
                         venue=effective_venue,
                         palette=effective_palette,
                         lang=effective_lang,
+                        theme=self.theme,
                     )
 
             # 应用额外的 rcParams
@@ -211,6 +217,7 @@ def style_context(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str] = None,
     **rc_params: Any,
 ) -> StyleContext:
     """
@@ -222,6 +229,7 @@ def style_context(
         venue: 期刊样式，如 "nature", "ieee", "thesis" 等
         palette: 配色方案，如 "pastel", "earth", "100yuan" 等
         lang: 语言设置，"zh" 或 "en"
+        theme: 主题模式，"light" 或 "dark"
         **rc_params: 其他 matplotlib rcParams 参数
 
     返回:
@@ -235,6 +243,10 @@ def style_context(
         ...     fig, ax = sp.plot(x, y)
         >>> # 退出后恢复默认
 
+        >>> # 深色主题
+        >>> with sp.style_context("presentation", theme="dark"):
+        ...     fig, ax = sp.plot(x, y)
+
         >>> # 只修改配色
         >>> with sp.style_context(palette="100yuan"):
         ...     fig, ax = sp.plot(x, y)
@@ -243,7 +255,7 @@ def style_context(
         >>> with sp.style_context(fontsize=14, linewidth=2):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext(venue, palette, lang, **rc_params)
+    return StyleContext(venue, palette, lang, theme=theme, **rc_params)
 
 
 # 别名，更短的名称
@@ -251,6 +263,7 @@ def context(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str] = None,
     **rc_params: Any,
 ) -> StyleContext:
     """
@@ -260,7 +273,7 @@ def context(
         >>> with sp.context("ieee"):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext(venue, palette, lang, **rc_params)
+    return StyleContext(venue, palette, lang, theme=theme, **rc_params)
 
 
 # 特定场景的便捷上下文
@@ -268,6 +281,7 @@ def context(
 def ieee_context(
     palette: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str] = None,
     **kwargs: Any,
 ) -> StyleContext:
     """
@@ -276,6 +290,7 @@ def ieee_context(
     参数:
         palette: 配色方案，默认 "pastel"
         lang: 语言设置，"zh" 或 "en"
+        theme: 主题模式，"light" 或 "dark"
         **kwargs: 其他 matplotlib rcParams 参数
 
     返回:
@@ -284,13 +299,16 @@ def ieee_context(
     示例:
         >>> with sp.ieee_context("earth"):
         ...     fig, ax = sp.plot(x, y)
+        >>> with sp.ieee_context(theme="dark"):
+        ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext("ieee", palette or DEFAULT_PALETTE, lang=lang, **kwargs)
+    return StyleContext("ieee", palette or DEFAULT_PALETTE, lang=lang, theme=theme, **kwargs)
 
 
 def nature_context(
     palette: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str] = None,
     **kwargs: Any,
 ) -> StyleContext:
     """
@@ -299,6 +317,7 @@ def nature_context(
     参数:
         palette: 配色方案，默认 "pastel"
         lang: 语言设置，"zh" 或 "en"
+        theme: 主题模式，"light" 或 "dark"
         **kwargs: 其他 matplotlib rcParams 参数
 
     返回:
@@ -308,12 +327,13 @@ def nature_context(
         >>> with sp.nature_context("earth"):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext("nature", palette or DEFAULT_PALETTE, lang=lang, **kwargs)
+    return StyleContext("nature", palette or DEFAULT_PALETTE, lang=lang, theme=theme, **kwargs)
 
 
 def thesis_context(
     palette: Optional[str] = None,
     lang: Optional[str] = None,
+    theme: Optional[str] = None,
     **kwargs: Any,
 ) -> StyleContext:
     """
@@ -322,6 +342,7 @@ def thesis_context(
     参数:
         palette: 配色方案，默认 "pastel"
         lang: 语言设置，"zh" 或 "en"
+        theme: 主题模式，"light" 或 "dark"
         **kwargs: 其他 matplotlib rcParams 参数
 
     返回:
@@ -331,7 +352,7 @@ def thesis_context(
         >>> with sp.thesis_context("earth"):
         ...     fig, ax = sp.plot(x, y)
     """
-    return StyleContext("thesis", palette or DEFAULT_PALETTE, lang=lang, **kwargs)
+    return StyleContext("thesis", palette or DEFAULT_PALETTE, lang=lang, theme=theme, **kwargs)
 
 
 __all__ = [

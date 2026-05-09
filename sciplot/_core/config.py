@@ -89,6 +89,7 @@ _CONFIG_TYPES: Dict[str, Tuple[Type[Any], ...]] = {
     "lang": (str,),
     "dpi": (int,),
     "formats": (tuple, list),
+    "theme": (str,),
 }
 
 _DEFAULTS_TEMPLATE: Dict[str, Any] = {
@@ -97,6 +98,7 @@ _DEFAULTS_TEMPLATE: Dict[str, Any] = {
     "lang": "zh",
     "dpi": 1200,
     "formats": ("pdf", "png"),
+    "theme": "light",
 }
 
 
@@ -163,6 +165,14 @@ def _normalize_config_value(key: str, value: Any) -> Any:
         if value not in LANGUAGES:
             raise ValueError(
                 f"配置项 'lang' 取值无效: {value!r}，可用选项: {list(LANGUAGES.keys())}"
+            )
+        return value
+
+    if key == "theme":
+        from sciplot._core.style import THEMES
+        if value not in THEMES:
+            raise ValueError(
+                f"配置项 'theme' 取值无效: {value!r}，可用选项: {list(THEMES.keys())}"
             )
         return value
 

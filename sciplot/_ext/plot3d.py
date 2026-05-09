@@ -113,6 +113,7 @@ def plot_surface(
         ax.set_title(title)
 
     ax.view_init(elev=elev, azim=azim)
+    ax.grid(False)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -290,6 +291,7 @@ def plot_3d_scatter(
         ax.set_title(title)
 
     ax.view_init(elev=elev, azim=azim)
+    ax.grid(False)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -364,6 +366,7 @@ def plot_wireframe(
         ax.set_title(title)
 
     ax.view_init(elev=elev, azim=azim)
+    ax.grid(False)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
