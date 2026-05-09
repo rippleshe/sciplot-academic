@@ -277,7 +277,7 @@ def _register_diverging_cmaps() -> None:
             # 低版本matplotlib可能没有register方法
             try:
                 import matplotlib.cm as cm
-                cm.register_cmap(name=name, cmap=cmap)
+                cm.register_cmap(name=name, cmap=cmap)  # type: ignore
             except Exception as exc:
                 _logger.warning("colormap '%s' 注册失败: %s", name, exc)
 
