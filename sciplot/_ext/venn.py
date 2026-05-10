@@ -67,8 +67,14 @@ def plot_venn2(
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
+    # 确保 dict 类型的 subsets 值为 float（venn2 stubs 要求 Dict[str, float]）
+    _subsets = (
+        {k: float(v) for k, v in subsets.items()}  # type: ignore[union-attr]
+        if isinstance(subsets, dict) else subsets
+    )
+
     v = venn2(
-        subsets=subsets,
+        subsets=_subsets,
         set_labels=set_labels,
         ax=ax,
         **kwargs,
@@ -133,8 +139,13 @@ def plot_venn3(
 
     colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
 
+    _subsets = (
+        {k: float(v) for k, v in subsets.items()}  # type: ignore[union-attr]
+        if isinstance(subsets, dict) else subsets
+    )
+
     v = venn3(
-        subsets=subsets,
+        subsets=_subsets,
         set_labels=set_labels,
         ax=ax,
         **kwargs,

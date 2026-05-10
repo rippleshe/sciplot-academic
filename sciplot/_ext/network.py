@@ -11,8 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+from matplotlib.colors import Normalize
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import apply_resolved_style
@@ -125,7 +124,7 @@ def plot_network(
                 color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
                 node_colors = [color_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
             else:
-                norm = plt.Normalize(min(color_values.values()), max(color_values.values()))
+                norm = Normalize(min(color_values.values()), max(color_values.values()))
                 try:
                     cmap = plt.colormaps.get_cmap("viridis")
                 except AttributeError:

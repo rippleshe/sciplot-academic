@@ -221,14 +221,14 @@ def plot_clustermap(
     heatmap_scale = max(base_figsize)
     fig = plt.figure(figsize=(heatmap_scale, heatmap_scale))
 
-    if row_cluster:
+    if row_cluster and hierarchy is not None:
         row_Z = hierarchy.linkage(data, method='ward')
         row_order = hierarchy.leaves_list(row_Z)
         data = data[row_order, :]
         if row_labels is not None:
             row_labels = [row_labels[i] for i in row_order]
 
-    if col_cluster:
+    if col_cluster and hierarchy is not None:
         col_Z = hierarchy.linkage(data.T, method='ward')
         col_order = hierarchy.leaves_list(col_Z)
         data = data[:, col_order]
@@ -240,12 +240,12 @@ def plot_clustermap(
     heatmap_width = 6
     heatmap_height = 6
 
-    ax_heatmap = fig.add_axes([
+    ax_heatmap = fig.add_axes((
         dendro_width / 10,
         dendro_height / 10,
         heatmap_width / 10,
         heatmap_height / 10,
-    ])
+    ))
 
     im = ax_heatmap.imshow(data, cmap=cmap, aspect="auto", **kwargs)
 
@@ -260,23 +260,23 @@ def plot_clustermap(
 
     fig.colorbar(im, ax=ax_heatmap, fraction=0.046, pad=0.04)
 
-    if row_cluster:
-        ax_row = fig.add_axes([
+    if row_cluster and hierarchy is not None:
+        ax_row = fig.add_axes((
             0.05,
             dendro_height / 10,
             dendro_width / 10 - 0.1,
             heatmap_height / 10,
-        ])
+        ))
         hierarchy.dendrogram(row_Z, orientation="left", no_labels=True, ax=ax_row)
         ax_row.set_axis_off()
 
-    if col_cluster:
-        ax_col = fig.add_axes([
+    if col_cluster and hierarchy is not None:
+        ax_col = fig.add_axes((
             dendro_width / 10,
             (dendro_height + heatmap_height) / 10 + 0.05,
             heatmap_width / 10,
             dendro_height / 10 - 0.1,
-        ])
+        ))
         hierarchy.dendrogram(col_Z, no_labels=True, ax=ax_col)
         ax_col.set_axis_off()
 

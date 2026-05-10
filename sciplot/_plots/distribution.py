@@ -323,7 +323,7 @@ def plot_violin(
     parts = ax.violinplot(
         data, showmeans=showmeans, showmedians=showmedians, **kwargs
     )
-    bodies = parts["bodies"]  # type: ignore[index]
+    bodies: list = parts["bodies"]  # type: ignore[assignment]
     for i, pc in enumerate(bodies):
         pc.set_facecolor(colors[i % len(colors)])
         pc.set_alpha(0.75)

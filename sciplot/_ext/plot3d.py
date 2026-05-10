@@ -171,7 +171,7 @@ def plot_contour(
             raise ValueError("levels 序列不能为空")
         if not np.all(np.isfinite(levels_arr)):
             raise ValueError("levels 序列不能包含 NaN 或 Inf")
-        levels = levels_arr
+        levels = levels_arr.tolist()
     else:
         raise ValueError(
             f"levels 必须是正整数或数值序列，实际类型: {type(levels).__name__}"
@@ -279,7 +279,7 @@ def plot_3d_scatter(
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection="3d")
 
-    scatter = ax.scatter(x_arr, y_arr, z_arr, c=c_arr, s=s_arr, alpha=alpha, cmap=cmap, **kwargs)
+    scatter = ax.scatter(x_arr, y_arr, z_arr, c=c_arr, s=s_arr, alpha=alpha, cmap=cmap, **kwargs)  # type: ignore[arg-type]
 
     if c is not None:
         fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=10)
