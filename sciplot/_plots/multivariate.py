@@ -6,10 +6,11 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 
 from sciplot._core.layout import new_figure
@@ -87,11 +88,12 @@ def plot_parallel(
         ... )
     """
     if hasattr(data, "iloc"):
+        df = cast(Any, data)
         if columns is None:
-            columns = list(data.columns)
-        if labels is None and hasattr(data, "index"):
-            labels = [str(idx) for idx in data.index]
-        data = data.values
+            columns = list(df.columns)
+        if labels is None and hasattr(df, "index"):
+            labels = [str(idx) for idx in df.index]
+        data = df.values
 
     data = np.asarray(data)
 
@@ -173,7 +175,7 @@ def plot_parallel(
             except AttributeError:
                 # 低版本matplotlib兼容
                 cmap = plt.cm.get_cmap("viridis")
-            norm = plt.Normalize(vmin=finite_values.min(), vmax=finite_values.max())
+            norm = Normalize(vmin=float(finite_values.min()), vmax=float(finite_values.max()))
 
             for i in range(n_samples):
                 val = color_values[i]

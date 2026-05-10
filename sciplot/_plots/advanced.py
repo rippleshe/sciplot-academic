@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -161,7 +161,7 @@ def plot_heatmap(
     colorbar_label: str = "",
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
-    aspect: str = "auto",
+    aspect: Union[Literal["auto", "equal"], float, None] = "auto",
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,

@@ -130,7 +130,7 @@ def plot_residuals(
 
     if show_loess and len(y_pred) > 5:
         try:
-            from statsmodels.nonparametric.smoothers_lowess import lowess
+            from statsmodels.nonparametric.smoothers_lowess import lowess  # type: ignore[import-untyped]
             sorted_idx = np.argsort(y_pred)
             smoothed = lowess(residuals[sorted_idx], y_pred[sorted_idx], frac=0.6)
             ax.plot(smoothed[:, 0], smoothed[:, 1], color=colors[1 % len(colors)],
@@ -291,8 +291,8 @@ def plot_bland_altman(
     mean_vals = (y1 + y2) / 2
     diff_vals = y1 - y2
 
-    mean_diff = np.mean(diff_vals)
-    std_diff = np.std(diff_vals, ddof=1)
+    mean_diff = float(np.mean(diff_vals))
+    std_diff = float(np.std(diff_vals, ddof=1))
 
     upper_loa = mean_diff + 1.96 * std_diff
     lower_loa = mean_diff - 1.96 * std_diff

@@ -244,9 +244,11 @@ def plot_box(
     colors = _get_cycle_colors()
 
     bp = ax.boxplot(
-        data, labels=labels, showfliers=showfliers,
+        data, showfliers=showfliers,
         patch_artist=True, **kwargs
     )
+    if labels is not None:
+        ax.set_xticklabels(labels)
     for i, patch in enumerate(bp["boxes"]):
         patch.set_facecolor(colors[i % len(colors)])
         patch.set_alpha(0.75)
@@ -321,7 +323,8 @@ def plot_violin(
     parts = ax.violinplot(
         data, showmeans=showmeans, showmedians=showmedians, **kwargs
     )
-    for i, pc in enumerate(parts["bodies"]):
+    bodies = parts["bodies"]  # type: ignore[index]
+    for i, pc in enumerate(bodies):
         pc.set_facecolor(colors[i % len(colors)])
         pc.set_alpha(0.75)
 
