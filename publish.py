@@ -28,6 +28,24 @@ import sys
 from pathlib import Path
 
 
+def _load_env_token() -> str:
+    """从 .env 文件或环境变量读取 PYPI_TOKEN。"""
+    # 1. 环境变量
+    env_token = os.environ.get("PYPI_TOKEN", "").strip()
+    if env_token:
+        return env_token
+
+    # 2. .env 文件
+    env_path = Path(__file__).resolve().parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("PYPI_TOKEN="):
+                return line[len("PYPI_TOKEN="):].strip().strip('"').strip("'")
+
+    return ""
+
+
 def run(cmd: list[str]) -> None:
     print(f"\n>>> {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
@@ -35,9 +53,12 @@ def run(cmd: list[str]) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="SciPlot Academic — PyPI 发布脚本")
-    parser.add_argument("--token", help="PyPI API Token (前缀 pypi-)")
+    parser.add_argument("--token", help="PyPI API Token (前缀 pypi-)，也可通过 .env 或 PYPI_TOKEN 环境变量提供")
     parser.add_argument("--yes", "-y", action="store_true", help="跳过确认步骤，直接发布")
     args = parser.parse_args()
+
+    # 优先级: --token > 环境变量 > .env 文件
+    token = args.token or _load_env_token()
 
     # 清理旧构建产物
     for d in ["dist", "build"]:
@@ -58,9 +79,9 @@ def main():
 
     # 准备上传指令
     upload_cmd = [sys.executable, "-m", "twine", "upload"]
-    if args.token:
-        upload_cmd.extend(["-u", "__token__", "-p", args.token])
-    
+    if token:
+        upload_cmd.extend(["-u", "__token__", "-p", token])
+
     upload_cmd.extend(dist_files)
 
     # 确认发布
