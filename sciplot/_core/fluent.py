@@ -75,6 +75,7 @@ class PlotChain:
                 self._fig, self._ax = plt.subplots(figsize=self._figsize)
             else:
                 self._fig, self._ax = new_figure(self._venue)
+        assert self._fig is not None and self._ax is not None
         return self._fig, self._ax
 
     # ═══════════════════════════════════════════════════════════════
