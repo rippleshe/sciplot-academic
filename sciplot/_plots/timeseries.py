@@ -12,8 +12,6 @@ import warnings
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from datetime import date, datetime
 
 from sciplot._core.layout import new_figure

@@ -7,8 +7,6 @@ from __future__ import annotations
 from typing import Any, List, Optional, Union
 
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
 from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES

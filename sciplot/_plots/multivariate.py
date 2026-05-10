@@ -10,8 +10,6 @@ from typing import Any, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
 from sciplot._core.layout import new_figure

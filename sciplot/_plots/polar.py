@@ -10,10 +10,7 @@ from typing import Any, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
-from sciplot._core.layout import new_figure
 from sciplot._core.utils import apply_resolved_style
 from sciplot._core.result import PlotResult
 

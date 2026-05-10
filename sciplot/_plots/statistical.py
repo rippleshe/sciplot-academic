@@ -10,10 +10,7 @@ import warnings
 from typing import Any, List, Optional
 from statistics import NormalDist
 
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import (

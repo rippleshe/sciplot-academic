@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
