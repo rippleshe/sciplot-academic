@@ -14,7 +14,6 @@ from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 
 from sciplot._core.style import VENUES
-from sciplot._core.palette import DEFAULT_PALETTE
 
 if TYPE_CHECKING:
     from sciplot._core.result import GridSpecResult

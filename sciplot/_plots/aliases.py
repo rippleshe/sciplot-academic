@@ -15,7 +15,6 @@ from typing import Any, Callable, TypeVar
 
 from sciplot._plots.basic import (
     plot_line,
-    plot,
     plot_multi,
     plot_multi_line,
     plot_scatter,
@@ -53,7 +52,6 @@ from sciplot._plots.statistical import (
     plot_qq,
     plot_bland_altman,
 )
-from sciplot._core.result import PlotResult, ComboPlotResult
 
 F = TypeVar("F", bound=Callable[..., Any])
 
