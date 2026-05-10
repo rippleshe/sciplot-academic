@@ -71,7 +71,7 @@ def _load_toml_module() -> Any:
         pass
 
     try:
-        import tomli as toml_module
+        import tomli as toml_module  # type: ignore[import-untyped]
         return toml_module
     except ImportError:
         if not _TOML_IMPORT_WARNED:

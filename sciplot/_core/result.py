@@ -155,25 +155,29 @@ class PlotResult:
             raise TypeError(f"索引类型必须是 int 或 slice，实际类型: {type(index).__name__}")
 
     # ═══════════════════════════════════════════════════════════════
-    # 链式调用方法（单个子图时）
+    # 内部辅助
+    # ═══════════════════════════════════════════════════════════════
+
+    def _iter_axes(self) -> List[Axes]:
+        """返回扁平化的 Axes 列表，统一处理单子图和多子图。"""
+        if self._is_array:
+            return list(cast(np.ndarray, self._ax).flat)
+        return [cast(Axes, self._ax)]
+
+    # ═══════════════════════════════════════════════════════════════
+    # 链式调用方法
     # ═══════════════════════════════════════════════════════════════
 
     def xlabel(self, label: str, **kwargs: Any) -> PlotResult:
         """设置 X 轴标签"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.set_xlabel(label, **kwargs)
-        else:
-            self._ax.set_xlabel(label, **kwargs)
+        for ax in self._iter_axes():
+            ax.set_xlabel(label, **kwargs)
         return self
 
     def ylabel(self, label: str, **kwargs: Any) -> PlotResult:
         """设置 Y 轴标签"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.set_ylabel(label, **kwargs)
-        else:
-            self._ax.set_ylabel(label, **kwargs)
+        for ax in self._iter_axes():
+            ax.set_ylabel(label, **kwargs)
         return self
 
     def title(self, title: str, **kwargs: Any) -> PlotResult:
@@ -181,7 +185,7 @@ class PlotResult:
         if self._is_array:
             self._fig.suptitle(title, **kwargs)
         else:
-            self._ax.set_title(title, **kwargs)
+            cast(Axes, self._ax).set_title(title, **kwargs)
         return self
 
     def suptitle(self, title: str, **kwargs: Any) -> PlotResult:
@@ -191,49 +195,34 @@ class PlotResult:
 
     def xlim(self, left: Optional[float] = None, right: Optional[float] = None) -> PlotResult:
         """设置 X 轴范围"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.set_xlim(left, right)
-        else:
-            self._ax.set_xlim(left, right)
+        for ax in self._iter_axes():
+            ax.set_xlim(left, right)
         return self
 
     def ylim(self, bottom: Optional[float] = None, top: Optional[float] = None) -> PlotResult:
         """设置 Y 轴范围"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.set_ylim(bottom, top)
-        else:
-            self._ax.set_ylim(bottom, top)
+        for ax in self._iter_axes():
+            ax.set_ylim(bottom, top)
         return self
 
     def legend(self, **kwargs: Any) -> PlotResult:
         """添加图例"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                if ax.get_legend_handles_labels()[0]:
-                    ax.legend(**kwargs)
-        else:
-            self._ax.legend(**kwargs)
+        for ax in self._iter_axes():
+            if ax.get_legend_handles_labels()[0]:
+                ax.legend(**kwargs)
         return self
 
     def grid(self, visible: bool = True, **kwargs: Any) -> PlotResult:
         """设置网格"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.grid(visible, **kwargs)
-        else:
-            self._ax.grid(visible, **kwargs)
+        for ax in self._iter_axes():
+            ax.grid(visible, **kwargs)
         return self
 
     def tick_params(self, **kwargs: Any) -> PlotResult:
         """设置刻度参数，默认刻度朝内。"""
         kwargs.setdefault("direction", "in")
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.tick_params(**kwargs)
-        else:
-            self._ax.tick_params(**kwargs)
+        for ax in self._iter_axes():
+            ax.tick_params(**kwargs)
         return self
 
     def tight_layout(self, **kwargs: Any) -> PlotResult:
@@ -271,20 +260,14 @@ class PlotResult:
 
     def axhline(self, y: float, **kwargs: Any) -> PlotResult:
         """添加水平线"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.axhline(y, **kwargs)
-        else:
-            self._ax.axhline(y, **kwargs)
+        for ax in self._iter_axes():
+            ax.axhline(y, **kwargs)
         return self
 
     def axvline(self, x: float, **kwargs: Any) -> PlotResult:
         """添加垂直线"""
-        if self._is_array:
-            for ax in self._ax.flat:
-                ax.axvline(x, **kwargs)
-        else:
-            self._ax.axvline(x, **kwargs)
+        for ax in self._iter_axes():
+            ax.axvline(x, **kwargs)
         return self
 
     def annotate(
@@ -393,10 +376,7 @@ class PlotResult:
         """
         from sciplot._core.layout import add_panel_labels
 
-        if self._is_array:
-            add_panel_labels(self._ax, labels=labels, style=style, x=x, y=y, **kwargs)
-        else:
-            add_panel_labels([self._ax], labels=labels, style=style, x=x, y=y, **kwargs)
+        add_panel_labels(self._iter_axes(), labels=labels, style=style, x=x, y=y, **kwargs)
         return self
 
     # ═══════════════════════════════════════════════════════════════
@@ -406,7 +386,7 @@ class PlotResult:
     def __repr__(self) -> str:
         """字符串表示"""
         if self._is_array:
-            return f"PlotResult(fig={self._fig!r}, axes=array{self._ax.shape})"
+            return f"PlotResult(fig={self._fig!r}, axes=array{cast(np.ndarray, self._ax).shape})"
         return f"PlotResult(fig={self._fig!r}, ax={self._ax!r})"
 
     def __enter__(self) -> PlotResult:

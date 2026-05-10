@@ -170,35 +170,41 @@ class PlotChain:
     # 绘图方法（返回 FigureWrapper 支持继续操作）
     # ═══════════════════════════════════════════════════════════════
 
+    def _get_fig_ax(self) -> Tuple[Figure, Axes]:
+        """确保图形已创建并返回非 None 的 (fig, ax)。"""
+        self._ensure_figure()
+        assert self._fig is not None and self._ax is not None
+        return self._fig, self._ax
+
     def plot(self, x: ArrayLike, y: ArrayLike, **kwargs: Any) -> FigureWrapper:
         """绘制折线图"""
-        self._ensure_figure()
-        self._ax.plot(x, y, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        fig, ax = self._get_fig_ax()
+        ax.plot(x, y, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def scatter(self, x: ArrayLike, y: ArrayLike, **kwargs: Any) -> FigureWrapper:
         """绘制散点图"""
-        self._ensure_figure()
-        self._ax.scatter(x, y, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        fig, ax = self._get_fig_ax()
+        ax.scatter(x, y, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def bar(self, x: ArrayLike, height: ArrayLike, **kwargs: Any) -> FigureWrapper:
         """绘制柱状图"""
-        self._ensure_figure()
-        self._ax.bar(x, height, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        fig, ax = self._get_fig_ax()
+        ax.bar(x, height, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def hist(self, x: ArrayLike, **kwargs: Any) -> FigureWrapper:
         """绘制直方图"""
-        self._ensure_figure()
-        self._ax.hist(x, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        fig, ax = self._get_fig_ax()
+        ax.hist(x, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def boxplot(self, data: ArrayLike, **kwargs: Any) -> FigureWrapper:
         """绘制箱线图"""
-        self._ensure_figure()
-        self._ax.boxplot(data, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        fig, ax = self._get_fig_ax()
+        ax.boxplot(data, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def fill_between(
         self,
@@ -208,11 +214,11 @@ class PlotChain:
         **kwargs: Any,
     ) -> FigureWrapper:
         """填充区域"""
-        self._ensure_figure()
+        fig, ax = self._get_fig_ax()
         if y2 is None:
             y2 = 0
-        self._ax.fill_between(x, y1, y2, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        ax.fill_between(x, y1, y2, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def errorbar(
         self,
@@ -223,18 +229,18 @@ class PlotChain:
         **kwargs: Any,
     ) -> FigureWrapper:
         """绘制误差线图"""
-        self._ensure_figure()
-        self._ax.errorbar(x, y, yerr=yerr, xerr=xerr, **kwargs)
-        return FigureWrapper(self._fig, self._ax, self)
+        fig, ax = self._get_fig_ax()
+        ax.errorbar(x, y, yerr=yerr, xerr=xerr, **kwargs)
+        return FigureWrapper(fig, ax, self)
 
     def area(self, x: ArrayLike, y: ArrayLike, **kwargs: Any) -> FigureWrapper:
         """绘制面积图"""
-        self._ensure_figure()
+        fig, ax = self._get_fig_ax()
         alpha = kwargs.pop('alpha', 0.3)
-        (line,) = self._ax.plot(x, y, **kwargs)
+        (line,) = ax.plot(x, y, **kwargs)
         color = line.get_color()
-        self._ax.fill_between(x, y, alpha=alpha, color=color)
-        return FigureWrapper(self._fig, self._ax, self)
+        ax.fill_between(x, y, alpha=alpha, color=color)
+        return FigureWrapper(fig, ax, self)
 
 
 class FigureWrapper(PlotResult):
