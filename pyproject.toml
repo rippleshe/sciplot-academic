@@ -96,6 +96,7 @@ exclude = ["tests*", "examples*", "dist*"]
 sciplot = ["py.typed"]
 
 [tool.setuptools_scm]
+fallback_version = "0.0.0+unknown"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
