@@ -194,9 +194,20 @@ def plot_network(
     )
 
     if labels:
+        # 获取字体设置，确保中文正常显示
+        font_family = plt.rcParams.get("font.family", "serif")
+        if isinstance(font_family, list):
+            font_family = font_family[0]
+        # 如果是 serif，尝试获取具体的 serif 字体列表中的第一个
+        if font_family == "serif":
+            serif_fonts = plt.rcParams.get("font.serif", [])
+            if serif_fonts:
+                font_family = serif_fonts[0]
+
         nx.draw_networkx_labels(
             G, pos, ax=ax,
             font_size=plt.rcParams.get("font.size", 9) - 1,
+            font_family=font_family,
         )
 
     ax.set_axis_off()
@@ -311,9 +322,20 @@ def plot_network_communities(
         alpha=0.8,
     )
 
+    # 获取字体设置，确保中文正常显示
+    font_family = plt.rcParams.get("font.family", "serif")
+    if isinstance(font_family, list):
+        font_family = font_family[0]
+    # 如果是 serif，尝试获取具体的 serif 字体列表中的第一个
+    if font_family == "serif":
+        serif_fonts = plt.rcParams.get("font.serif", [])
+        if serif_fonts:
+            font_family = serif_fonts[0]
+
     nx.draw_networkx_labels(
         G, pos, ax=ax,
         font_size=plt.rcParams.get("font.size", 9) - 1,
+        font_family=font_family,
     )
 
     ax.set_axis_off()
