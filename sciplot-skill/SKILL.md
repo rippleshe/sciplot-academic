@@ -77,6 +77,150 @@ description: >
 
 ---
 
+## 最佳实践骨架（必备设置）
+
+> **核心思想**：SciPlot 的设计哲学是"一次设置，全局生效"。正确的起手骨架能让后续代码更简洁、更专业。
+
+### 三种入口模式
+
+| 模式 | 适用场景 | 示例 |
+|------|---------|------|
+| **`setup_style()`** | 脚本开头，一次性设置 | `sp.setup_style("nature", "pastel", lang="zh")` |
+| **`set_defaults()`** | 项目级持久化配置 | `sp.set_defaults(venue="ieee", palette="earth")` |
+| **`style_context()`** | 临时切换样式 | `with sp.style_context("ieee"): ...` |
+
+### 配置优先级（高→低）
+
+```
+函数参数 > 代码设置(set_defaults) > 配置文件 > 内置默认
+```
+
+### 起手骨架模板
+
+#### 模式 A：单图脚本（最常用）
+
+```python
+"""
+科研绘图脚本
+依赖: pip install sciplot-academic
+"""
+import numpy as np
+import sciplot as sp
+
+# ═══════════════════════════════════════════════════════════════
+# 1️⃣ 起手设置（必须在绘图前）
+# ═══════════════════════════════════════════════════════════════
+sp.setup_style("thesis", "pastel-2", lang="zh")
+#             ─┬─────  ─┬────────  ─┬────
+#              │        │           └── 语言：zh=中文, en=英文
+#              │        └── 配色：pastel/ocean/forest/sunset/earth/rmb + 子集
+#              └── 期刊：nature/ieee/aps/springer/thesis/presentation
+
+# ═══════════════════════════════════════════════════════════════
+# 2️⃣ 数据准备
+# ═══════════════════════════════════════════════════════════════
+x = np.linspace(0, 10, 200)
+y = np.sin(x)
+
+# ═══════════════════════════════════════════════════════════════
+# 3️⃣ 绘图（setup_style 已自动设置 figsize/fontsize/字体/刻度）
+# ═══════════════════════════════════════════════════════════════
+fig, ax = sp.plot(x, y, xlabel="时间 (s)", ylabel="幅度 (V)")
+
+# ═══════════════════════════════════════════════════════════════
+# 4️⃣ 保存（Word=PNG 1200dpi, LaTeX=PDF）
+# ═══════════════════════════════════════════════════════════════
+sp.save(fig, "结果图", formats=("png",), dpi=1200)
+```
+
+#### 模式 B：多子图脚本
+
+```python
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("thesis", "pastel-3", lang="zh")
+
+# ═══════════════════════════════════════════════════════════════
+# 用 paper_subplots() 锁定版心尺寸（不要用 plt.subplots）
+# ═══════════════════════════════════════════════════════════════
+fig, axes = sp.paper_subplots(1, 2, venue="thesis")
+#                             ─┬  ─┬
+#                              │   └── 列数
+#                              └── 行数
+
+# 子图 (a)
+axes[0].plot(x, y1, label="方法A")
+axes[0].plot(x, y2, label="方法B")
+axes[0].set_xlabel("X")
+axes[0].set_ylabel("Y")
+axes[0].legend()
+
+# 子图 (b)
+axes[1].scatter(x[::10], y1[::10], label="数据")
+axes[1].set_xlabel("X")
+axes[1].set_ylabel("Y")
+axes[1].legend()
+
+# ═══════════════════════════════════════════════════════════════
+# 添加 (a)(b) 面板标签
+# ═══════════════════════════════════════════════════════════════
+sp.add_panel_labels(axes)
+sp.save(fig, "多子图", formats=("png",), dpi=1200)
+```
+
+#### 模式 C：链式调用（快速出图）
+
+```python
+import numpy as np
+import sciplot as sp
+
+x = np.linspace(0, 10, 200)
+
+# 一行搞定：设置样式 → 配色 → 绘图 → 保存
+sp.style("nature").palette("ocean").plot(x, np.sin(x), xlabel="X", ylabel="Y").save("快速出图")
+```
+
+#### 模式 D：项目级配置（推荐用于大型项目）
+
+```python
+# 在项目入口文件（如 main.py）中设置一次
+import sciplot as sp
+
+# 设置项目级默认值（所有后续脚本自动继承）
+sp.set_defaults(venue="thesis", palette="pastel", lang="zh")
+
+# 或者通过配置文件（pyproject.toml）
+# [tool.sciplot]
+# venue = "thesis"
+# palette = "pastel"
+# lang = "zh"
+```
+
+### 必备设置清单
+
+| 设置项 | 说明 | 默认值 | 何时修改 |
+|--------|------|--------|---------|
+| `venue` | 期刊样式 | `nature` | 投稿 IEEE/APS/Springer 时 |
+| `palette` | 配色方案 | `pastel` | 需要不同风格时 |
+| `lang` | 语言 | `zh` | 英文投稿改为 `en` |
+| `theme` | 主题 | `light` | 演示/PPT 改为 `dark` |
+
+### 自动化行为（无需手动设置）
+
+SciPlot 已内置以下行为，**不要重复设置**：
+
+| 行为 | 说明 | 代码 |
+|------|------|------|
+| ✅ 无网格 | 科研图默认无网格 | `ax.grid(False)` 已内置 |
+| ✅ 刻度朝内 | 专业感 | `tick_params(direction="in")` 已内置 |
+| ✅ 自动 figsize | 根据 venue 设定 | nature=7×5, ieee=3.5×3, thesis=6.1×4.3 |
+| ✅ 自动 fontsize | 根据 venue 设定 | nature=8pt, ieee=6pt, thesis=8pt |
+| ✅ 自动字体 | 中文=宋体, 英文=Times New Roman | 根据 lang 自动切换 |
+| ✅ 负号修复 | 避免 Unicode 负号 | `axes.unicode_minus=False` 已内置 |
+
+---
+
 ## 代码生成规则
 
 ### 必须遵守
