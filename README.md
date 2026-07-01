@@ -19,15 +19,15 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/01_multi_line.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/01_multi_line.png" width="100%">
       <br><b>多线对比图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/02_grouped_bar.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/02_grouped_bar.png" width="100%">
       <br><b>分组柱状图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/03_scatter_regression.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/03_scatter_regression.png" width="100%">
       <br><b>散点回归图</b>
     </td>
   </tr>
@@ -38,15 +38,15 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/04_violin_box.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/04_violin_box.png" width="100%">
       <br><b>小提琴图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/05_heatmap.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/05_heatmap.png" width="100%">
       <br><b>热力图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/06_timeseries.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/06_timeseries.png" width="100%">
       <br><b>时间序列图</b>
     </td>
   </tr>
@@ -57,15 +57,15 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/07_radar.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/07_radar.png" width="100%">
       <br><b>雷达图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/08_density.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/08_density.png" width="100%">
       <br><b>核密度图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/09_pca.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/09_pca.png" width="100%">
       <br><b>PCA 降维可视化</b>
     </td>
   </tr>
@@ -76,15 +76,15 @@
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/10_3d_surface.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/10_3d_surface.png" width="100%">
       <br><b>3D 曲面图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/11_network.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/11_network.png" width="100%">
       <br><b>网络社区图</b>
     </td>
     <td align="center" width="33%">
-      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/main/showcase/12_multi_panel.png" width="100%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/12_multi_panel.png" width="100%">
       <br><b>多面板组合图</b>
     </td>
   </tr>
