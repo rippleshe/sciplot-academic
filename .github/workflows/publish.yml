@@ -25,7 +25,7 @@ jobs:
     
     - name: Install build dependencies
       run: |
-        uv pip install --system build twine
+        uv pip install --system build twine setuptools-scm
     
     - name: Build package
       run: |

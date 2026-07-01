@@ -60,7 +60,17 @@ doc = [
 dev = [
     "build",
     "twine",
-    "sciplot-academic[test,lint,typing,doc]",
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "pytest-xdist>=3.5",
+    "coverage[toml]",
+    "ruff>=0.5",
+    "pre-commit",
+    "mypy>=1.10",
+    "sphinx>=7.0",
+    "pydata-sphinx-theme>=0.14",
+    "numpydoc>=1.0",
+    "sphinx-gallery>=0.17",
 ]
 ml = [
     "scikit-learn>=1.0.0",
