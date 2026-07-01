@@ -59,6 +59,7 @@ def plot_dendrogram(
     leaf_font_size: Optional[float] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -77,6 +78,7 @@ def plot_dendrogram(
         leaf_font_size: 叶标签字体大小
         venue         : 期刊样式
         palette       : 配色方案
+        lang          : 语言代码（如 "zh", "en"），用于控制标签文本语言
 
     返回:
         PlotResult: 包含 fig 和 ax 的绘图结果对象
@@ -112,7 +114,7 @@ def plot_dendrogram(
                 f"实际收到: type={type(data_or_linkage).__name__}"
             )
 
-    effective_venue = apply_resolved_style(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette, lang=lang)
     fig, ax = new_figure(effective_venue)
 
     if leaf_font_size is None:
@@ -154,6 +156,7 @@ def plot_clustermap(
     title: str = "",
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -169,6 +172,7 @@ def plot_clustermap(
         title      : 图表标题
         venue      : 期刊样式
         palette    : 配色方案
+        lang       : 语言代码（如 "zh", "en"），用于控制标签文本语言
 
     返回:
         PlotResult: 包含 fig 和 ax 的绘图结果对象
@@ -216,8 +220,9 @@ def plot_clustermap(
             row_cluster = False
             col_cluster = False
 
-    effective_venue = apply_resolved_style(venue, palette)
-    _, base_figsize, _ = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    effective_venue = apply_resolved_style(venue, palette, lang=lang)
+    venue_cfg = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    base_figsize = venue_cfg.figsize
     heatmap_scale = max(base_figsize)
     fig = plt.figure(figsize=(heatmap_scale, heatmap_scale))
 

@@ -11,7 +11,7 @@ from typing import Any, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -89,7 +89,7 @@ def plot_radar(
     angles = np.linspace(0, 2 * np.pi, n_cats, endpoint=False).tolist()
     angles += angles[:1]
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     all_values = np.concatenate([np.asarray(values, dtype=float) for values in values_list])
     data_span = float(np.nanmax(all_values) - np.nanmin(all_values)) if all_values.size else 0.0

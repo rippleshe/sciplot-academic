@@ -14,6 +14,8 @@ from matplotlib.axes import Axes
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
     apply_resolved_style,
+    create_sciplot_figure,
+    create_plot_result,
     validate_dict_not_empty,
     validate_array_like,
     validate_positive_number,
@@ -68,8 +70,7 @@ def plot_bar(
     except TypeError as e:
         raise ValueError(f"参数类型错误: {e}") from e
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
     colors = _get_cycle_colors()
     bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
     ax.bar(categories, values_arr, width=width, color=bar_colors, **kwargs)
@@ -77,8 +78,7 @@ def plot_bar(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
-    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+    return create_plot_result(fig, ax, venue, palette, lang)
 
 
 # ============================================================================

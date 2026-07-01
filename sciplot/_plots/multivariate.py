@@ -15,7 +15,7 @@ from matplotlib.lines import Line2D
 
 from sciplot._core.layout import new_figure
 from sciplot._core.style import VENUES, get_current_venue
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -150,7 +150,7 @@ def plot_parallel(
         color_values = np.asarray(data[:, color_idx])
         unique_values = np.unique(color_values)
         is_numeric_color = np.issubdtype(color_values.dtype, np.number)
-        colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+        colors = get_cycle_colors()
 
         if (not is_numeric_color) or len(unique_values) <= 10:
             color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
@@ -287,7 +287,7 @@ def plot_scatter_matrix(
         is_numeric = np.issubdtype(color_values.dtype, np.number)
         unique_vals = np.unique(color_values)
         if (not is_numeric) or len(unique_vals) <= 10:
-            colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+            colors = get_cycle_colors()
             color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_vals)}
             scatter_colors = [color_map[v] for v in color_values]
             cmap = None

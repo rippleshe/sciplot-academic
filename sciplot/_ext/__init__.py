@@ -8,12 +8,12 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-__all__ = ["ml", "plot3d"]
+__all__ = ["ml", "plot3d", "network", "hierarchical", "venn"]
 
 
 def __getattr__(name: str) -> Any:
     """延迟导入扩展模块"""
-    if name in {"ml", "plot3d"}:
+    if name in {"ml", "plot3d", "network", "hierarchical", "venn"}:
         try:
             return importlib.import_module(f"{__name__}.{name}")
         except ImportError as exc:

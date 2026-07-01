@@ -7,14 +7,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -77,6 +77,7 @@ def plot_network(
     title: str = "",
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -97,6 +98,7 @@ def plot_network(
         labels       : 是否显示节点标签
         node_size    : 基础节点大小，默认 300
         with_arrows  : 有向图是否显示箭头
+        lang         : 语言设置（如 "zh", "en"），用于中文字体支持
 
     示例:
         >>> import networkx as nx
@@ -107,10 +109,10 @@ def plot_network(
     nx = _check_networkx()
     pos = _get_layout(G, layout, seed=42)
 
-    effective_venue = apply_resolved_style(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     if node_color_by is not None:
         if node_color_by == "degree":
@@ -224,6 +226,7 @@ def plot_network_from_matrix(
     layout: str = "spring",
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -234,6 +237,7 @@ def plot_network_from_matrix(
         threshold  : 边权重阈值，低于此值的边不绘制
         labels     : 节点标签列表
         layout     : 布局算法
+        lang       : 语言设置（如 "zh", "en"），用于中文字体支持
 
     示例:
         >>> adj = np.random.rand(10, 10)
@@ -267,7 +271,7 @@ def plot_network_from_matrix(
         mapping = {i: labels[i] for i in range(n)}
         G = nx.relabel_nodes(G, mapping)
 
-    return plot_network(G, layout=layout, venue=venue, palette=palette, **kwargs)
+    return plot_network(G, layout=layout, venue=venue, palette=palette, lang=lang, **kwargs)
 
 
 def plot_network_communities(
@@ -277,6 +281,7 @@ def plot_network_communities(
     title: str = "",
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -286,6 +291,7 @@ def plot_network_communities(
         G          : networkx Graph 对象
         communities: 社区列表，每个社区是节点列表
         layout     : 布局算法
+        lang       : 语言设置（如 "zh", "en"），用于中文字体支持
 
     示例:
         >>> import networkx as nx
@@ -297,10 +303,10 @@ def plot_network_communities(
     nx = _check_networkx()
     pos = _get_layout(G, layout, seed=42)
 
-    effective_venue = apply_resolved_style(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     node_to_community = {}
     for i, community in enumerate(communities):

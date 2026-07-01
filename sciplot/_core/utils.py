@@ -8,7 +8,12 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Sequence
-from typing import Optional, Tuple, Union, List, Any, overload, TypeVar, Dict, Callable
+from typing import TYPE_CHECKING, Optional, Tuple, Union, List, Any, overload, TypeVar, Dict, Callable
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+    from sciplot._core.result import PlotResult
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -116,46 +121,6 @@ def validate_params(
             return func(*args, **kwargs)
         return wrapper  # type: ignore[return-value]
     return decorator
-
-
-def resolve_style_venue(
-    venue: Optional[str],
-    palette: Optional[str],
-    lang: Optional[str] = None,
-    default_venue: str = "nature",
-    default_palette: str = "pastel",
-) -> Tuple[Optional[str], bool]:
-    """
-    解析并应用样式参数。
-
-    此函数用于统一处理各绘图函数的 venue/palette/lang 参数，
-    决定是否需要应用新样式或复用当前 rcParams。
-
-    参数:
-        venue: 期刊样式，如 "nature", "ieee", "thesis" 等
-        palette: 配色方案，如 "pastel", "earth", "100yuan" 等
-        lang: 语言设置，如 "zh", "en" 等
-        default_venue: 默认期刊样式
-        default_palette: 默认配色方案
-
-    返回:
-        Tuple[Optional[str], bool]:
-            - 第一个元素：应使用的 venue（None 表示复用当前样式）
-            - 第二个元素：是否需要应用样式
-
-    使用示例:
-        >>> effective_venue, should_apply = resolve_style_venue(venue, palette, lang)
-        >>> if should_apply:
-        ...     setup_style(effective_venue, effective_palette, effective_lang)
-        >>> fig, ax = new_figure(effective_venue)
-    """
-    if venue is None and palette is None and lang is None:
-        from sciplot._core.context import StyleContext
-        if StyleContext.is_in_context():
-            return None, False
-
-    effective_venue = venue or default_venue
-    return effective_venue, True
 
 
 def apply_resolved_style(
@@ -273,6 +238,64 @@ def apply_resolved_style(
 
     setup_style(effective_venue, effective_palette, lang=effective_lang)
     return effective_venue
+
+
+def create_sciplot_figure(
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> Tuple[Optional[str], "Figure", "Axes"]:
+    """
+    创建 SciPlot 样式的图表（内部辅助函数）
+
+    处理样式应用、图表创建、刻度设置等公共逻辑，减少各绘图函数的样板代码。
+
+    参数:
+        venue: 期刊样式，如 "nature", "ieee", "thesis" 等
+        palette: 配色方案，如 "pastel", "earth", "100yuan" 等
+        lang: 语言设置，如 "zh", "en" 等
+
+    返回:
+        (effective_venue, fig, ax) 元组
+
+    示例:
+        >>> effective_venue, fig, ax = create_sciplot_figure("nature", "pastel")
+        >>> ax.plot([1, 2, 3], [1, 4, 9])
+        >>> result = create_plot_result(fig, ax, venue="nature", palette="pastel")
+    """
+    from sciplot._core.layout import new_figure
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+    ax.tick_params(direction="in")
+    return effective_venue, fig, ax
+
+
+def create_plot_result(
+    fig: "Figure",
+    ax: "Axes",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> "PlotResult":
+    """
+    创建 PlotResult 返回对象（内部辅助函数）
+
+    封装 PlotResult 的创建，统一附带 venue/palette/lang 元数据。
+
+    参数:
+        fig: matplotlib Figure 对象
+        ax: matplotlib Axes 对象
+        venue: 期刊样式
+        palette: 配色方案
+        lang: 语言设置
+
+    返回:
+        PlotResult 实例
+    """
+    from sciplot._core.result import PlotResult
+
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette, "lang": lang})
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -512,8 +535,9 @@ def get_cycle_colors() -> List[str]:
 
 
 __all__ = [
-    "resolve_style_venue",
     "apply_resolved_style",
+    "create_sciplot_figure",
+    "create_plot_result",
     "validate_params",
     "validate_array_like",
     "validate_labels_match_data",

@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 from typing import Any, List, Optional, Tuple
 
 from sciplot._core.result import PlotResult
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.layout import new_figure
 
 
@@ -261,7 +261,7 @@ def plot_feature_importance(
     sorted_features = [features[i] for i in indices]
     sorted_importance = importance[indices]
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
     ax.barh(range(len(indices)), sorted_importance, color=colors[0], **kwargs)
     ax.set_yticks(range(len(indices)))
     ax.set_yticklabels(sorted_features)

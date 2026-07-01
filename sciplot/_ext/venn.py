@@ -15,7 +15,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -39,6 +39,7 @@ def plot_venn2(
     show_counts: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -52,6 +53,7 @@ def plot_venn2(
         title      : 图标题
         alpha      : 填充透明度
         show_counts: 是否显示计数
+        lang       : 语言设置，用于国际化文本
 
     示例:
         >>> # 元组形式
@@ -62,10 +64,10 @@ def plot_venn2(
     """
     venn2, _ = _check_venn()
 
-    effective_venue = apply_resolved_style(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette, lang=lang)
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     # 确保 dict 类型的 subsets 值为 float（venn2 stubs 要求 Dict[str, float]）
     _subsets = (
@@ -94,7 +96,7 @@ def plot_venn2(
     ax.set_title(title)
     ax.set_axis_off()
 
-    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette, "lang": lang})
 
 
 def plot_venn3(
@@ -105,6 +107,7 @@ def plot_venn3(
     show_counts: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
+    lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -118,6 +121,7 @@ def plot_venn3(
         title      : 图标题
         alpha      : 填充透明度
         show_counts: 是否显示计数
+        lang       : 语言设置，用于国际化文本
 
     示例:
         >>> # 元组形式
@@ -134,10 +138,10 @@ def plot_venn3(
     """
     _, venn3 = _check_venn()
 
-    effective_venue = apply_resolved_style(venue, palette)
+    effective_venue = apply_resolved_style(venue, palette, lang=lang)
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     _subsets = (
         {k: float(v) for k, v in subsets.items()}  # type: ignore[union-attr]
@@ -165,7 +169,7 @@ def plot_venn3(
     ax.set_title(title)
     ax.set_axis_off()
 
-    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette, "lang": lang})
 
 
 __all__ = ["plot_venn2", "plot_venn3"]

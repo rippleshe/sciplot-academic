@@ -11,7 +11,7 @@ from matplotlib.lines import Line2D
 
 from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, validate_labels_match_data
+from sciplot._core.utils import apply_resolved_style, create_sciplot_figure, create_plot_result, get_cycle_colors, validate_labels_match_data
 from sciplot._core.result import PlotResult
 
 
@@ -68,8 +68,7 @@ def plot_line(
     """
     _validate_xy_lengths(x, y)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
     ax.plot(x, y, label=label, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -77,8 +76,7 @@ def plot_line(
         ax.set_title(title)
     if label:
         ax.legend()
-    ax.tick_params(direction="in")
-    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+    return create_plot_result(fig, ax, venue, palette, lang)
 
 
 # 简化别名
@@ -228,17 +226,15 @@ def plot_scatter(
     """
     _validate_xy_lengths(x, y)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
-    sc = ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
+    effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
+    ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label:
         ax.legend()
-    ax.tick_params(direction="in")
-    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+    return create_plot_result(fig, ax, venue, palette, lang)
 
 
 def plot_step(
@@ -374,7 +370,6 @@ def plot_multi_area(
         ...     labels=["A", "B", "C"], stacked=True, alpha=0.5)
         >>> sp.save(fig, "stacked_area")
     """
-    import matplotlib.pyplot as plt
 
     if not y_list:
         raise ValueError("参数 'y_list' 不能为空列表")
@@ -395,7 +390,7 @@ def plot_multi_area(
                 f"y_list[{i}] 长度 ({len(y)}) 与 x 长度 ({x_len}) 不一致"
             )
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     if stacked:
         # 堆叠面积图

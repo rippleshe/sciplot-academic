@@ -29,7 +29,6 @@ from typing import Dict, List, Optional, Any, Literal, cast
 from contextlib import contextmanager
 from types import TracebackType
 import threading
-import logging
 
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -45,8 +44,6 @@ from sciplot._core.style import (
     VALID_LANGS,
 )
 from sciplot._core.palette import apply_palette, DEFAULT_PALETTE
-
-_logger = logging.getLogger(__name__)
 
 
 class StyleContext:

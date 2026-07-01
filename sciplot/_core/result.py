@@ -24,6 +24,22 @@ import numpy as np
 from sciplot._core.layout import save as _save
 
 
+def _safe_tight_layout(fig: Figure, stacklevel: int = 2) -> None:
+    """
+    安全调用 tight_layout()，捕获并警告异常。
+
+    参数:
+        fig: matplotlib Figure 对象
+        stacklevel: 警告堆栈级别
+    """
+    try:
+        fig.tight_layout()
+    except ValueError as exc:
+        warnings.warn(f"tight_layout() 跳过: {exc}", UserWarning, stacklevel=stacklevel)
+    except Exception as exc:
+        warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=stacklevel)
+
+
 class PlotResult:
     """
     绘图结果封装类
@@ -313,31 +329,13 @@ class PlotResult:
             保存的文件路径列表
         """
         if tight:
-            try:
-                self._fig.tight_layout()
-            except ValueError as exc:
-                warnings.warn(
-                    f"tight_layout() 跳过: {exc}",
-                    UserWarning,
-                    stacklevel=2,
-                )
-            except Exception as exc:
-                warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
+            _safe_tight_layout(self._fig)
         return _save(self._fig, name, dpi=dpi, formats=formats,
                      bbox_inches=bbox_inches, dir=dir, close=close, **kwargs)
 
     def show(self) -> None:
         """显示图形"""
-        try:
-            self._fig.tight_layout()
-        except ValueError as exc:
-            warnings.warn(
-                f"tight_layout() 跳过: {exc}",
-                UserWarning,
-                stacklevel=2,
-            )
-        except Exception as exc:
-            warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
+        _safe_tight_layout(self._fig)
         plt.show()
 
     def close(self) -> None:
@@ -556,30 +554,12 @@ class GridSpecResult:
             close: 保存后是否自动关闭图形释放内存，默认 False
         """
         if tight:
-            try:
-                self._fig.tight_layout()
-            except ValueError as exc:
-                warnings.warn(
-                    f"tight_layout() 跳过: {exc}",
-                    UserWarning,
-                    stacklevel=2,
-                )
-            except Exception as exc:
-                warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
+            _safe_tight_layout(self._fig)
         return _save(self._fig, name, dpi=dpi, formats=formats, close=close, **kwargs)
 
     def show(self) -> None:
         """显示图形"""
-        try:
-            self._fig.tight_layout()
-        except ValueError as exc:
-            warnings.warn(
-                f"tight_layout() 跳过: {exc}",
-                UserWarning,
-                stacklevel=2,
-            )
-        except Exception as exc:
-            warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=2)
+        _safe_tight_layout(self._fig)
         plt.show()
 
     def __repr__(self) -> str:

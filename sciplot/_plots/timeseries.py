@@ -15,7 +15,7 @@ import numpy as np
 from datetime import date, datetime
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -203,7 +203,7 @@ def plot_timeseries(
     x_type = _detect_x_type(t)
     _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
     main_color = colors[0]
 
     for region in regions_normalized:
@@ -314,7 +314,7 @@ def plot_multi_timeseries(
     x_type = _detect_x_type(t)
     _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
 
     for region in regions_normalized:
         ax.axvspan(
@@ -400,7 +400,7 @@ def plot_slope(
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
 
-    colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"]]
+    colors = get_cycle_colors()
     if not colors:
         colors = ["#1f77b4", "#ff7f0e"]
 
