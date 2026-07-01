@@ -401,11 +401,11 @@ def __getattr__(name: str) -> Any:
     """
     if name not in _LAZY_EXT:
         raise AttributeError(f"module 'sciplot' has no attribute {name!r}")
-    
+
     with _LAZY_EXT_LOCK:
         if name in globals():
             return globals()[name]
-        
+
         import importlib
 
         module_path, dep_name = _LAZY_EXT[name]
