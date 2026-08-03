@@ -33,6 +33,8 @@ from sciplot._plots.distribution import (
     plot_histogram,
     plot_combo,
     plot_beeswarm,
+    plot_dumbbell,
+    plot_diverging_bar,
 )
 from sciplot._plots.advanced import (
     plot_errorbar,
@@ -107,6 +109,8 @@ hist = _make_alias(plot_histogram)
 box = _make_alias(plot_box)
 violin = _make_alias(plot_violin)
 beeswarm = _make_alias(plot_beeswarm)
+dumbbell = _make_alias(plot_dumbbell)
+diverging_bar = _make_alias(plot_diverging_bar)
 lollipop = _make_alias(plot_lollipop)
 
 # ═══════════════════════════════════════════════════════════════
@@ -141,7 +145,7 @@ __all__ = [
     "line", "scatter", "step", "area",
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "beeswarm", "lollipop",
+    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",

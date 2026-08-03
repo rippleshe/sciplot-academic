@@ -1008,6 +1008,208 @@ def plot_beeswarm(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_dumbbell(
+    categories: List[str],
+    start: np.ndarray,
+    end: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    start_label: str = "Before",
+    end_label: str = "After",
+    show_values: bool = False,
+    fmt: str = ".1f",
+    sort_by: Optional[str] = "delta",
+    line_alpha: float = 0.5,
+    marker_size: float = 8.0,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制哑铃图（Dumbbell，两时点/两条件前后对比）
+
+    每个类别一行，起点与终点以圆点标记、中间连线，直观展示
+    变化幅度与方向，适合前后测对比、干预效果等场景。
+
+    参数:
+        categories : 类别标签列表
+        start      : 起点数值（等长）
+        end        : 终点数值（等长）
+        start_label: 起点图例标签
+        end_label  : 终点图例标签
+        show_values: 是否在终点旁显示数值与变化量
+        fmt        : 数值格式
+        sort_by    : 排序方式："delta" 按变化量 | "start" | "end" | None 保持原序
+        line_alpha : 连线透明度
+        marker_size: 圆点大小
+
+    示例:
+        >>> fig, ax = sp.plot_dumbbell(
+        ...     ["方法A", "方法B", "方法C"],
+        ...     before_scores, after_scores,
+        ...     xlabel="得分", start_label="训练前", end_label="训练后",
+        ...     show_values=True,
+        ... )
+        >>> sp.save(fig, "dumbbell")
+    """
+    if not categories:
+        raise ValueError("参数 'categories' 不能为空列表")
+
+    start_arr = np.asarray(start, dtype=float).ravel()
+    end_arr = np.asarray(end, dtype=float).ravel()
+    if len(start_arr) != len(categories) or len(end_arr) != len(categories):
+        raise ValueError(
+            "categories、start、end 长度必须一致"
+        )
+    if not np.all(np.isfinite(start_arr)) or not np.all(np.isfinite(end_arr)):
+        raise ValueError("start 和 end 不能包含 NaN 或 Inf")
+
+    if sort_by is not None and sort_by not in {"delta", "start", "end"}:
+        raise ValueError(
+            f"sort_by 仅支持 'delta' / 'start' / 'end' / None，实际值: {sort_by!r}"
+        )
+
+    if sort_by == "delta":
+        order = np.argsort(end_arr - start_arr)
+    elif sort_by == "start":
+        order = np.argsort(start_arr)
+    elif sort_by == "end":
+        order = np.argsort(end_arr)
+    else:
+        order = np.arange(len(categories))
+
+    cats = [categories[i] for i in order]
+    starts = start_arr[order]
+    ends = end_arr[order]
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+    colors = _get_cycle_colors()
+
+    y = np.arange(len(cats))
+    for yi, (s_val, e_val) in zip(y, zip(starts, ends)):
+        ax.plot([s_val, e_val], [yi, yi], color="#999999",
+                linewidth=1.5, alpha=line_alpha, zorder=1)
+
+    ax.scatter(starts, y, s=marker_size**2, color=colors[0],
+               label=start_label, zorder=2)
+    ax.scatter(ends, y, s=marker_size**2, color=colors[1 % len(colors)],
+               label=end_label, zorder=2)
+
+    if show_values:
+        fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
+        for yi, (s_val, e_val) in enumerate(zip(starts, ends)):
+            delta = e_val - s_val
+            ax.text(
+                e_val, yi, f"  {e_val:{fmt}} ({delta:+.1f})",
+                ha="left", va="center", fontsize=fontsize, color="#333333",
+            )
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(cats)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.legend(loc="best", frameon=False)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+def plot_diverging_bar(
+    categories: List[str],
+    values: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    threshold: float = 0.0,
+    positive_color: Optional[str] = None,
+    negative_color: Optional[str] = None,
+    show_values: bool = False,
+    fmt: str = ".1f",
+    sort: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制发散条形图（Diverging Bar，正负对比水平条形）
+
+    以 threshold 为分界向两侧发散：正值一侧一种颜色、负值另一侧
+    另一种颜色，适合满意度、净变化、效应量等正负双向数据。
+
+    参数:
+        categories    : 类别标签列表
+        values        : 数值（等长，可正可负）
+        threshold     : 发散分界值，默认 0
+        positive_color: 正值条形颜色；None 取配色第一色
+        negative_color: 负值条形颜色；None 取配色第二色
+        show_values   : 是否在条尾显示数值
+        sort          : 是否按数值排序（默认 True，便于阅读）
+
+    示例:
+        >>> # 满意度净推荐值（NPS）
+        >>> fig, ax = sp.plot_diverging_bar(
+        ...     ["功能A", "功能B", "功能C"],
+        ...     np.array([42, -18, 35]),
+        ...     xlabel="净推荐值", show_values=True,
+        ... )
+        >>> sp.save(fig, "diverging")
+    """
+    if not categories:
+        raise ValueError("参数 'categories' 不能为空列表")
+
+    values_arr = np.asarray(values, dtype=float).ravel()
+    if len(values_arr) != len(categories):
+        raise ValueError(
+            f"categories 长度 ({len(categories)}) 与 values 长度 ({len(values_arr)}) 不一致"
+        )
+    if not np.all(np.isfinite(values_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+    colors = _get_cycle_colors()
+
+    pos_color = positive_color if positive_color is not None else colors[0]
+    neg_color = negative_color if negative_color is not None else colors[1 % len(colors)]
+
+    if sort:
+        order = np.argsort(values_arr)
+        cats = [categories[i] for i in order]
+        vals = values_arr[order]
+    else:
+        cats = list(categories)
+        vals = values_arr
+
+    y = np.arange(len(cats))
+    bar_colors = [pos_color if v >= threshold else neg_color for v in vals]
+    ax.barh(y, vals - threshold, left=threshold, color=bar_colors, **kwargs)
+    ax.axvline(x=threshold, color="#888888", linestyle="--", linewidth=1.0)
+
+    if show_values:
+        fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
+        for yi, v in enumerate(vals):
+            if v >= threshold:
+                ax.text(v + abs(v) * 0.02 + 0.01, yi, f"{v:{fmt}}",
+                        ha="left", va="center", fontsize=fontsize)
+            else:
+                ax.text(v - abs(v) * 0.02 - 0.01, yi, f"{v:{fmt}}",
+                        ha="right", va="center", fontsize=fontsize)
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(cats)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 # ============================================================================
 # 内部工具
 # ============================================================================
