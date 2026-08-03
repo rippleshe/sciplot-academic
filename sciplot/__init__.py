@@ -289,6 +289,7 @@ from sciplot._ext.plot3d import (
     plot_contour,
     plot_3d_scatter,
     plot_wireframe,
+    plot_waterfall3d,
 )
 
 # ── 简洁别名 (Aliases) ────────────────────────────────────────
@@ -326,6 +327,7 @@ from sciplot._plots.aliases import (
     qq,
     bland_altman,
     lollipop,
+    waterfall3d,
 )
 
 # ── 工具 ──────────────────────────────────────────────────────
@@ -595,7 +597,7 @@ __all__ = [
     # ── 极坐标 / 时序 / 统计（简洁别名）──
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman",
+    "residuals", "qq", "bland_altman", "waterfall3d",
 
     # ── 高级（完整名称）──
     "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap",
@@ -620,7 +622,7 @@ __all__ = [
     "plot_feature_importance", "plot_learning_curve",
 
     # ── 3D 扩展 ──
-    "plot_surface", "plot_contour", "plot_3d_scatter", "plot_wireframe",
+    "plot_surface", "plot_contour", "plot_3d_scatter", "plot_wireframe", "plot_waterfall3d",
 
     # ── 颜色工具 ──
     "hex_to_rgb", "rgb_to_hex",

@@ -53,6 +53,9 @@ from sciplot._plots.statistical import (
     plot_qq,
     plot_bland_altman,
 )
+from sciplot._ext.plot3d import (
+    plot_waterfall3d,
+)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -119,6 +122,7 @@ multi_density = _make_alias(plot_multi_density)
 residuals = _make_alias(plot_residuals)
 qq = _make_alias(plot_qq)
 bland_altman = _make_alias(plot_bland_altman)
+waterfall3d = _make_alias(plot_waterfall3d)
 
 
 __all__ = [
@@ -129,5 +133,5 @@ __all__ = [
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman",
+    "residuals", "qq", "bland_altman", "waterfall3d",
 ]

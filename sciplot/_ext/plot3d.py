@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union, Tuple, Sequence
+from typing import Any, Dict, List, Optional, Union, Tuple, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +15,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.result import PlotResult
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.layout import new_figure
 from sciplot._core.style import VENUES
 
@@ -396,10 +396,152 @@ def plot_wireframe(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_waterfall3d(
+    x: np.ndarray,
+    y_list: List[np.ndarray],
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    zlabel: str = "",
+    title: str = "",
+    fill: bool = True,
+    fill_alpha: float = 0.3,
+    linewidth: float = 1.2,
+    spacing: float = 1.0,
+    baseline: float = 0.0,
+    elev: float = 25,
+    azim: float = -60,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制 3D 瀑布图（多组曲线沿第三轴堆叠，光谱/频谱经典展示方式）
+
+    每组曲线沿 Y 轴按 spacing 间隔摆放，Z 轴为数值；
+    可选在曲线与 baseline 之间填充半透明色带，适合对比多组信号的
+    形状变化（如拉曼光谱、色谱、时频分布）。
+
+    参数:
+        x          : 共享的 X 轴数据（一维）
+        y_list     : 多组 Y 轴数值列表，每组长度与 x 一致
+        labels     : 各组标签；None 则自动生成 "Series N"
+        xlabel     : X 轴标签
+        ylabel     : Y 轴标签（组轴，建议如 "组序号" / "样本"）
+        zlabel     : Z 轴标签（数值轴）
+        fill       : 是否在曲线与 baseline 之间填充色带，默认 True
+        fill_alpha : 填充透明度，默认 0.3
+        linewidth  : 曲线线宽，默认 1.2
+        spacing    : 相邻组的 Y 轴间隔，默认 1.0
+        baseline   : 填充色带的下边界，默认 0.0
+        elev / azim: 3D 视角
+        **kwargs   : 传递给 ax.plot() 的额外参数（如 marker）
+
+    示例:
+        >>> # 多组光谱堆叠对比
+        >>> x = np.linspace(400, 4000, 500)  # 波数
+        >>> spectra = [
+        ...     np.exp(-((x - 1200) / 150) ** 2) + 0.05 * np.random.randn(500),
+        ...     np.exp(-((x - 1600) / 150) ** 2) + 0.05 * np.random.randn(500),
+        ...     np.exp(-((x - 2000) / 150) ** 2) + 0.05 * np.random.randn(500),
+        ... ]
+        >>> fig, ax = sp.plot_waterfall3d(
+        ...     x, spectra, labels=["样品A", "样品B", "样品C"],
+        ...     xlabel="波数 (cm⁻¹)", ylabel="样品", zlabel="强度",
+        ...     fill=True, fill_alpha=0.25,
+        ... )
+        >>> sp.save(fig, "waterfall3d")
+    """
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+    x_arr = np.asarray(x, dtype=float)
+    if x_arr.ndim != 1:
+        raise ValueError(f"x 必须是一维数组，当前维度: {x_arr.ndim}")
+    if x_arr.size == 0:
+        raise ValueError("x 不能为空")
+    if not np.all(np.isfinite(x_arr)):
+        raise ValueError("x 不能包含 NaN 或 Inf")
+
+    if not y_list:
+        raise ValueError("参数 'y_list' 不能为空列表")
+
+    if labels is None:
+        labels = [f"Series {i + 1}" for i in range(len(y_list))]
+    elif len(labels) != len(y_list):
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与 y_list 长度 ({len(y_list)}) 不一致"
+        )
+
+    if not isinstance(spacing, (int, float)) or spacing <= 0:
+        raise ValueError(f"spacing 必须为正数，实际值: {spacing!r}")
+
+    normalized: List[np.ndarray] = []
+    for i, y in enumerate(y_list):
+        y_arr = np.asarray(y, dtype=float)
+        if y_arr.ndim != 1:
+            raise ValueError(f"y_list[{i}] 必须是一维数组，当前维度: {y_arr.ndim}")
+        if len(y_arr) != len(x_arr):
+            raise ValueError(
+                f"y_list[{i}] 长度 ({len(y_arr)}) 与 x 长度 ({len(x_arr)}) 不一致"
+            )
+        if not np.all(np.isfinite(y_arr)):
+            raise ValueError(f"y_list[{i}] 不能包含 NaN 或 Inf")
+        normalized.append(y_arr)
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    figsize = _get_3d_figsize(effective_venue)
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, projection="3d")
+
+    colors = get_cycle_colors()
+    if not colors:
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+
+    for i, (y_arr, label) in enumerate(zip(normalized, labels)):
+        group_pos = i * float(spacing)
+        color = colors[i % len(colors)]
+
+        ax.plot(
+            x_arr,
+            np.full_like(x_arr, group_pos),
+            y_arr,
+            color=color,
+            linewidth=linewidth,
+            label=label,
+            **kwargs,
+        )
+
+        if fill:
+            # 曲线与 baseline 之间的填充带
+            verts = [
+                list(zip(x_arr, np.full_like(x_arr, group_pos), y_arr)),
+                list(zip(x_arr[::-1], np.full_like(x_arr, group_pos), np.full_like(x_arr, baseline))),
+            ]
+            poly = Poly3DCollection(
+                verts, alpha=fill_alpha, facecolor=color, linewidths=0.0
+            )
+            ax.add_collection3d(poly)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_zlabel(zlabel)
+    if title:
+        ax.set_title(title)
+
+    ax.view_init(elev=elev, azim=azim)
+    ax.grid(False)
+    if labels:
+        ax.legend(loc="upper right", fontsize=plt.rcParams.get("font.size", 9) - 1)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_surface",
     "plot_contour",
     "plot_3d_scatter",
     "plot_wireframe",
+    "plot_waterfall3d",
 ]
 
