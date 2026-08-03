@@ -597,6 +597,155 @@ def plot_packed_bubble(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_chord(
+    matrix: np.ndarray,
+    labels: Optional[List[str]] = None,
+    title: str = "",
+    width: float = 0.07,
+    gap: float = 0.01,
+    alpha: float = 0.55,
+    show_values: bool = False,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制弦图（Chord Diagram，节点间流量/共现关系）
+
+    节点沿圆周排列，弧长编码节点总流量；节点间连线（贝塞尔曲线）
+    宽度编码双向流量，适合展示转移矩阵、共现关系、资源流向。
+
+    参数:
+        matrix     : 流量/共现矩阵 (n, n)，要求非负
+        labels     : 节点标签（等长）；None 则用序号
+        width      : 外圈弧宽（占单位半径比例），默认 0.07
+        gap        : 弧段间最小间隙（弧度），默认 0.01
+        alpha      : 弦线透明度
+        show_values: 是否在弧外显示各节点总量
+
+    示例:
+        >>> # 城市间迁移流量
+        >>> fig, ax = sp.plot_chord(
+        ...     flow_matrix, labels=["北京", "上海", "广州", "深圳"],
+        ... )
+        >>> sp.save(fig, "chord")
+    """
+    mat = np.asarray(matrix, dtype=float)
+    if mat.ndim != 2 or mat.shape[0] != mat.shape[1]:
+        raise ValueError(f"matrix 必须是方阵，当前形状: {mat.shape}")
+    n = mat.shape[0]
+    if n < 2:
+        raise ValueError(f"matrix 至少需要 2 个节点，当前: {n}")
+    if not np.all(np.isfinite(mat)):
+        raise ValueError("matrix 不能包含 NaN 或 Inf")
+    if np.any(mat < 0):
+        raise ValueError("matrix 不能包含负值（弦图只支持非负流量）")
+    if labels is not None:
+        if len(labels) != n:
+            raise ValueError(
+                f"labels 长度 ({len(labels)}) 与矩阵维度 ({n}) 不一致"
+            )
+    else:
+        labels = [str(i + 1) for i in range(n)]
+    if not 0 < width < 1:
+        raise ValueError(f"width 必须在 (0, 1) 范围内，实际值: {width!r}")
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    from sciplot._core.style import VENUES
+
+    venue_cfg = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    size = max(venue_cfg.figsize) * 1.25
+    fig, ax = plt.subplots(figsize=(size, size))
+
+    colors = get_cycle_colors()
+
+    # 节点总流量（行 + 列）
+    totals = mat.sum(axis=1) + mat.sum(axis=0)
+    total_flow = float(totals.sum())
+    if total_flow <= 0:
+        raise ValueError("matrix 总流量为零，无法绘制弦图")
+
+    # 弧段角度分配（从 -90° 顺时针）
+    arc_starts: List[float] = []
+    arc_ends: List[float] = []
+    angle = -np.pi / 2
+    for i in range(n):
+        frac = float(totals[i]) / total_flow
+        arc_len = frac * 2 * np.pi
+        # 预留 gap
+        if i > 0:
+            angle += gap
+        arc_starts.append(angle)
+        arc_ends.append(angle + arc_len)
+        angle += arc_len
+
+    def _polar_to_cart(theta: float, r: float) -> Tuple[float, float]:
+        return r * np.cos(theta), r * np.sin(theta)
+
+    # ── 外圈弧段 ──
+    theta_grid = np.linspace(0, 2 * np.pi, 720)
+    for i in range(n):
+        start, end = arc_starts[i], arc_ends[i]
+        color = colors[i % len(colors)]
+        seg = np.linspace(start, end, 100)
+        r_in = 1.0
+        r_out = 1.0 + width
+        xs = np.concatenate([r_out * np.cos(seg), r_in * np.cos(seg[::-1])])
+        ys = np.concatenate([r_out * np.sin(seg), r_in * np.sin(seg[::-1])])
+        ax.fill(xs, ys, color=color, alpha=0.9, edgecolor="none")
+        ax.plot(r_out * np.cos(seg), r_out * np.sin(seg),
+                color=color, linewidth=1.2)
+
+    # ── 弦线（贝塞尔） ──
+    max_flow = float(mat.max()) if mat.size else 1.0
+    if max_flow <= 0:
+        max_flow = 1.0
+    for i in range(n):
+        for j in range(n):
+            flow = float(mat[i, j])
+            if flow <= 0 or i == j:
+                continue
+            # 源点：i 弧段内按流量比例取位置；终点：j 弧段起始段
+            src_theta = arc_starts[i] + (arc_ends[i] - arc_starts[i]) * 0.5
+            tgt_theta = arc_starts[j] + (arc_ends[j] - arc_starts[j]) * 0.3
+            p0 = _polar_to_cart(src_theta, 1.0)
+            p3 = _polar_to_cart(tgt_theta, 1.0)
+            p1 = _polar_to_cart(src_theta, 0.5)
+            p2 = _polar_to_cart(tgt_theta, 0.5)
+            t = np.linspace(0, 1, 60)
+            bx = ((1 - t) ** 3 * p0[0] + 3 * (1 - t) ** 2 * t * p1[0]
+                  + 3 * (1 - t) * t**2 * p2[0] + t**3 * p3[0])
+            by = ((1 - t) ** 3 * p0[1] + 3 * (1 - t) ** 2 * t * p1[1]
+                  + 3 * (1 - t) * t**2 * p2[1] + t**3 * p3[1])
+            lw = max(0.5, flow / max_flow * 6.0)
+            ax.plot(bx, by, color=colors[i % len(colors)],
+                    alpha=alpha, linewidth=lw, zorder=2)
+
+    # ── 标签与数值 ──
+    label_r = 1.0 + width + 0.06
+    fontsize = max(7, plt.rcParams.get("font.size", 9) - 1)
+    for i in range(n):
+        mid = (arc_starts[i] + arc_ends[i]) / 2
+        x, y = _polar_to_cart(mid, label_r)
+        ha = "left" if np.cos(mid) >= 0 else "right"
+        va = "bottom" if np.sin(mid) >= 0 else "top"
+        ax.text(x, y, labels[i], ha=ha, va=va, fontsize=fontsize,
+                color=colors[i % len(colors)], fontweight="bold")
+        if show_values:
+            ax.text(x, y - (0.06 if np.sin(mid) >= 0 else -0.06),
+                    f"{totals[i]:.0f}", ha=ha, va=va,
+                    fontsize=max(6, fontsize - 2), color="#555555")
+
+    ax.set_xlim(-1.35, 1.35)
+    ax.set_ylim(-1.35, 1.35)
+    ax.set_aspect("equal")
+    ax.set_axis_off()
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_errorbar",
     "plot_confidence",
@@ -606,6 +755,7 @@ __all__ = [
     "plot_hexbin",
     "plot_marginal",
     "plot_packed_bubble",
+    "plot_chord",
 ]
 
 
