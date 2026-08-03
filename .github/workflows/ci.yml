@@ -22,11 +22,11 @@ jobs:
       with:
         version: "latest"
 
-    - name: Install dependencies
-      run: uv pip install --system -e ".[dev]"
+    - name: Sync locked dependencies
+      run: uv sync --frozen --extra dev
 
     - name: Run ruff check
-      run: ruff check sciplot/
+      run: uv run ruff check sciplot/
 
   typecheck:
     runs-on: ubuntu-latest
@@ -43,11 +43,11 @@ jobs:
       with:
         version: "latest"
 
-    - name: Install dependencies
-      run: uv pip install --system -e ".[dev,all]"
+    - name: Sync locked dependencies
+      run: uv sync --frozen --extra dev --extra all
 
     - name: Run mypy
-      run: mypy sciplot/ --ignore-missing-imports
+      run: uv run mypy sciplot/ --ignore-missing-imports
 
   test:
     runs-on: ${{ matrix.os }}
@@ -70,11 +70,11 @@ jobs:
       with:
         version: "latest"
 
-    - name: Install dependencies
-      run: uv pip install --system -e ".[dev,all]"
+    - name: Sync locked dependencies
+      run: uv sync --frozen --extra dev --extra all
 
     - name: Run tests with coverage
-      run: pytest tests/ -v --tb=short --cov=sciplot --cov-report=xml --cov-report=term-missing
+      run: uv run pytest tests/ -v --tb=short --cov=sciplot --cov-report=xml --cov-report=term-missing
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -102,11 +102,11 @@ jobs:
       with:
         version: "latest"
 
-    - name: Install build dependencies
-      run: uv pip install --system build twine setuptools-scm
+    - name: Sync locked dependencies
+      run: uv sync --frozen --extra dev
 
     - name: Build package
-      run: python -m build
+      run: uv run python -m build
 
     - name: Check package
-      run: twine check dist/*
+      run: uv run twine check dist/*

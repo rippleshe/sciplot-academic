@@ -22,14 +22,12 @@ jobs:
       uses: astral-sh/setup-uv@v5
       with:
         version: "latest"
-    
-    - name: Install build dependencies
-      run: |
-        uv pip install --system build twine setuptools-scm
-    
+
+    - name: Sync locked dependencies
+      run: uv sync --frozen --extra dev
+
     - name: Build package
-      run: |
-        uv run python -m build
+      run: uv run python -m build
     
     - name: Publish to PyPI
       env:

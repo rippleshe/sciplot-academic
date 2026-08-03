@@ -863,6 +863,7 @@ def plot_marginal(
             patch.set_facecolor(main_color)
             patch.set_alpha(0.6)
     else:
+        assert kde_module is not None  # marginal="kde" 时已确保导入
         x_kde = kde_module.gaussian_kde(x_arr)
         x_eval = np.linspace(x_arr.min(), x_arr.max(), 200)
         ax_x.plot(x_eval, x_kde(x_eval), color=main_color)
@@ -879,6 +880,7 @@ def plot_marginal(
             patch.set_facecolor(main_color)
             patch.set_alpha(0.6)
     else:
+        assert kde_module is not None  # marginal="kde" 时已确保导入
         y_kde = kde_module.gaussian_kde(y_arr)
         y_eval = np.linspace(y_arr.min(), y_arr.max(), 200)
         ax_y.plot(y_kde(y_eval), y_eval, color=main_color)
@@ -1128,7 +1130,8 @@ def plot_bubble(
                 lbl: colors[i % len(colors)]
                 for i, lbl in enumerate(unique_labels)
             }
-            scatter.set_facecolors([label_colors[l] for l in labels])
+            # set_facecolors 仅存在于 PathCollection 子类，scatter 返回类型按基类标注
+            scatter.set_facecolors([label_colors[l] for l in labels])  # type: ignore[attr-defined]
             handles = [
                 _Line2D([0], [0], marker="o", linestyle="",
                         markerfacecolor=label_colors[l], markersize=8, label=str(l))

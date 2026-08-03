@@ -199,7 +199,7 @@ def plot_taylor(
     if obs_std == 0:
         raise ValueError("observations 方差为零，无法计算相关系数与标准差比")
 
-    stats_list: List[Dict[str, float]] = []
+    stats_list: List[Dict[str, Any]] = []
     for name, pred in models.items():
         pred_arr = np.asarray(pred, dtype=float).ravel()
         if len(pred_arr) != len(obs):
@@ -287,10 +287,10 @@ def plot_taylor(
             color=color,
         )
 
-    ax.set_rmax(plot_radius)
-    ax.set_thetamin(0)
-    ax.set_thetamax(90)
-    ax.set_rticks([])
+    ax.set_rmax(plot_radius)  # type: ignore[attr-defined]
+    ax.set_thetamin(0)  # type: ignore[attr-defined]
+    ax.set_thetamax(90)  # type: ignore[attr-defined]
+    ax.set_rticks([])  # type: ignore[attr-defined]
     ax.set_xticks([])
     ax.grid(False)
     if title:
