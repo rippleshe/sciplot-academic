@@ -1,6 +1,6 @@
 # SciPlot Academic — 科研绘图 Skill (v1.10.0)
 
-name: sciplot
+name: sciplot-skill
 description: >
   SciPlot Academic 科研绘图技能。本仓库默认绘图入口。
 

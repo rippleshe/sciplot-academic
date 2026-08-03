@@ -56,6 +56,7 @@ from sciplot._plots.statistical import (
     plot_qq,
     plot_bland_altman,
     plot_ridgeline,
+    plot_raincloud,
 )
 from sciplot._ext.plot3d import (
     plot_waterfall3d,
@@ -130,6 +131,7 @@ residuals = _make_alias(plot_residuals)
 qq = _make_alias(plot_qq)
 bland_altman = _make_alias(plot_bland_altman)
 ridgeline = _make_alias(plot_ridgeline)
+raincloud = _make_alias(plot_raincloud)
 waterfall3d = _make_alias(plot_waterfall3d)
 
 
@@ -141,5 +143,5 @@ __all__ = [
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "ridgeline", "waterfall3d",
+    "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "waterfall3d",
 ]

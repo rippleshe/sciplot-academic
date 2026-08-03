@@ -589,6 +589,183 @@ def plot_ridgeline(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_raincloud(
+    data_list: List[np.ndarray],
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    orientation: str = "h",
+    show_points: bool = True,
+    show_box: bool = True,
+    show_violin: bool = True,
+    show_median: bool = True,
+    point_alpha: float = 0.35,
+    point_size: float = 4.0,
+    point_jitter: float = 0.08,
+    box_width: float = 0.15,
+    violin_scale: float = 0.35,
+    violin_alpha: float = 0.45,
+    bw_method: Optional[float] = None,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制雨云图（Raincloud：原始数据点 + 箱线 + 半小提琴三合一）
+
+    每个分组同时展示：原始数据点（左侧“雨滴”）、箱线（中部摘要）、
+    半小提琴（右侧分布形状），兼顾原始数据透明度与统计摘要，
+    是现代论文高频的分布对比方式（Allen et al., 2021）。
+
+    参数:
+        data_list   : 多组数据列表，每组至少 2 个有限数值
+        labels      : 各组标签；None 则自动生成 "Series N"
+        orientation : "h" 分组沿 Y 轴（水平），"v" 分组沿 X 轴（垂直）
+        show_points : 是否显示原始数据点
+        show_box    : 是否显示箱线
+        show_violin : 是否显示半小提琴
+        show_median : 是否显示中位数刻度线
+        point_alpha : 数据点透明度
+        point_size  : 数据点大小
+        point_jitter: 数据点抖动幅度（分组方向）
+        box_width   : 箱线宽度
+        violin_scale: 半小提琴高度（相对组距），默认 0.35
+        violin_alpha: 半小提琴透明度
+        bw_method   : KDE 带宽参数
+
+    示例:
+        >>> fig, ax = sp.plot_raincloud(
+        ...     [ctrl, drug_a, drug_b], labels=["对照", "药物A", "药物B"],
+        ...     xlabel="响应值", ylabel="组",
+        ... )
+        >>> sp.save(fig, "raincloud")
+    """
+    stats = _check_scipy_stats()
+    if not data_list:
+        raise ValueError("data_list 不能为空")
+    if orientation not in {"h", "v"}:
+        raise ValueError(f"orientation 仅支持 'h' / 'v'，实际值: {orientation!r}")
+
+    normalized_data: List[np.ndarray] = []
+    for i, values in enumerate(data_list):
+        arr = np.asarray(values, dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if arr.size < 2:
+            raise ValueError(f"data_list[{i}] 至少需要 2 个有效数据点")
+        normalized_data.append(arr)
+
+    if labels is None:
+        labels = [f"Series {i + 1}" for i in range(len(normalized_data))]
+    elif len(labels) != len(normalized_data):
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
+        )
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
+    fig, ax = new_figure(effective_venue)
+
+    colors = _get_cycle_colors()
+    rng = np.random.default_rng(42)
+
+    for i, (values, label) in enumerate(zip(normalized_data, labels)):
+        color = colors[i % len(colors)]
+        pos = float(i)
+
+        if orientation == "h":
+            # ── 原始数据点（左侧） ──
+            if show_points:
+                jitter = rng.uniform(-point_jitter, point_jitter, len(values))
+                ax.scatter(
+                    values, pos - 0.28 + jitter,
+                    s=point_size, alpha=point_alpha, color=color,
+                    edgecolors="none",
+                )
+
+            # ── 箱线（中部） ──
+            if show_box:
+                ax.boxplot(
+                    values, positions=[pos], vert=False, widths=box_width,
+                    patch_artist=True, showfliers=False,
+                )
+                for patch in ax.patches[-1:]:
+                    patch.set_facecolor(color)
+                    patch.set_alpha(0.35)
+
+            # ── 半小提琴（右侧） ──
+            if show_violin:
+                if values.min() == values.max():
+                    ax.plot([values[0], values[0]], [pos, pos + violin_scale * 2],
+                            color=color, linewidth=1.2)
+                else:
+                    kde = stats.gaussian_kde(values, bw_method=bw_method)
+                    x_eval = np.linspace(values.min(), values.max(), 200)
+                    d = kde(x_eval)
+                    d = d / d.max() * violin_scale
+                    ax.fill_between(x_eval, pos, pos + d, color=color, alpha=violin_alpha)
+                    ax.plot(x_eval, pos + d, color=color, linewidth=1.0)
+
+            # ── 中位数刻度 ──
+            if show_median:
+                median_val = float(np.median(values))
+                ax.plot([median_val, median_val], [pos + 0.02, pos + violin_scale * 2 - 0.02],
+                        color="#333333", linewidth=1.0, alpha=0.9)
+        else:
+            # 垂直版本：镜像布局（点在下、箱线居中、小提琴在上）
+            if show_points:
+                jitter = rng.uniform(-point_jitter, point_jitter, len(values))
+                ax.scatter(
+                    pos - 0.28 + jitter, values,
+                    s=point_size, alpha=point_alpha, color=color,
+                    edgecolors="none",
+                )
+
+            if show_box:
+                ax.boxplot(
+                    values, positions=[pos], vert=True, widths=box_width,
+                    patch_artist=True, showfliers=False,
+                )
+                for patch in ax.patches[-1:]:
+                    patch.set_facecolor(color)
+                    patch.set_alpha(0.35)
+
+            if show_violin:
+                if values.min() == values.max():
+                    ax.plot([pos, pos + violin_scale * 2], [values[0], values[0]],
+                            color=color, linewidth=1.2)
+                else:
+                    kde = stats.gaussian_kde(values, bw_method=bw_method)
+                    y_eval = np.linspace(values.min(), values.max(), 200)
+                    d = kde(y_eval)
+                    d = d / d.max() * violin_scale
+                    ax.fill_betweenx(y_eval, pos, pos + d, color=color, alpha=violin_alpha)
+                    ax.plot(pos + d, y_eval, color=color, linewidth=1.0)
+
+            if show_median:
+                median_val = float(np.median(values))
+                ax.plot([pos + 0.02, pos + violin_scale * 2 - 0.02], [median_val, median_val],
+                        color="#333333", linewidth=1.0, alpha=0.9)
+
+    # 坐标轴标签与范围
+    if orientation == "h":
+        ax.set_yticks(np.arange(len(normalized_data)))
+        ax.set_yticklabels(labels)
+        ax.set_ylim(-0.6, len(normalized_data) - 0.4)
+    else:
+        ax.set_xticks(np.arange(len(normalized_data)))
+        ax.set_xticklabels(labels)
+        ax.set_xlim(-0.6, len(normalized_data) - 0.4)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_residuals",
     "plot_qq",
@@ -596,4 +773,5 @@ __all__ = [
     "plot_density",
     "plot_multi_density",
     "plot_ridgeline",
+    "plot_raincloud",
 ]

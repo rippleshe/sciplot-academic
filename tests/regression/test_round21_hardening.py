@@ -132,3 +132,65 @@ def test_network_numeric_attrs_still_work(cleanup_figures):
         G, node_color_by="val", node_size_by="val", edge_weight_by="w"
     )
     assert result.fig is not None
+
+
+# ═══════════════════════════════════════════════════════════════
+# LaTeX 默认关闭（混排中文安全）
+# ═══════════════════════════════════════════════════════════════
+
+def test_usetex_disabled_by_default_in_en_mode(cleanup_figures):
+    """干净状态下 lang='en' 的 usetex 必须为 False（避免中文标签触发 latex 崩溃）。"""
+    sp.reset_style()
+    sp.setup_style("ieee", lang="en")
+    assert matplotlib.rcParams["text.usetex"] is False
+
+
+def test_usetex_persists_after_later_setup(cleanup_figures):
+    """显式开启 usetex 后，后续 setup_style 不得悄悄关闭它。"""
+    import shutil
+
+    if not (shutil.which("latex") or shutil.which("pdflatex")):
+        pytest.skip("系统未安装 LaTeX")
+    sp.reset_style()
+    sp.setup_style("ieee", lang="en", usetex=True)
+    assert matplotlib.rcParams["text.usetex"] is True
+    sp.setup_style("nature", lang="en")
+    assert matplotlib.rcParams["text.usetex"] is True  # 不被默认调用覆盖
+    sp.setup_style("ieee", lang="en", usetex=False)
+    assert matplotlib.rcParams["text.usetex"] is False  # 显式关闭生效
+
+
+def test_usetex_forced_off_in_zh_mode(cleanup_figures):
+    """中文模式下显式 usetex=True 必须警告并强制关闭。"""
+    sp.reset_style()
+    with pytest.warns(UserWarning, match="中文模式"):
+        sp.setup_style("thesis", lang="zh", usetex=True)
+    assert matplotlib.rcParams["text.usetex"] is False
+
+
+def test_en_mode_chinese_label_save_no_crash(tmp_path, cleanup_figures):
+    """lang='en' 后混排中文标签保存不得触发 latex 崩溃。"""
+    sp.setup_style("ieee", lang="en")
+    fig, ax = plt.subplots()
+    ax.plot([0, 1], [0, 1])
+    ax.set_xlabel("响应值")
+    ax.set_ylabel("强度")
+    paths = sp.save(fig, str(tmp_path / "en_zh_mix"), formats=("png",), dpi=100)
+    assert paths[0].exists()
+
+
+def test_usetex_explicit_true_works(cleanup_figures):
+    """显式 usetex=True 时启用 LaTeX（无 LaTeX 环境则警告回退）。"""
+    import shutil
+
+    has_latex = bool(shutil.which("latex") or shutil.which("pdflatex"))
+    try:
+        if has_latex:
+            sp.setup_style("ieee", lang="en", usetex=True)
+            assert matplotlib.rcParams["text.usetex"] is True
+        else:
+            with pytest.warns(UserWarning, match="LaTeX"):
+                sp.setup_style("ieee", lang="en", usetex=True)
+            assert matplotlib.rcParams["text.usetex"] is False
+    finally:
+        sp.reset_style()

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import shutil
 import threading
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, NamedTuple, cast
 
 import matplotlib.pyplot as plt
@@ -164,6 +165,7 @@ def setup_style(
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     theme: Optional[str] = None,
+    usetex: Optional[bool] = None,
 ) -> None:
     """
     配置 Matplotlib 绘图样式（每次绘图前调用一次，或通过各绘图函数的 venue/palette 参数自动调用）
@@ -181,6 +183,8 @@ def setup_style(
         theme  : 主题模式，默认 'light'
                  'light' → 浅色背景（默认）
                  'dark'  → 深色背景（适合演示/屏幕展示）
+        usetex : LaTeX 渲染开关；默认 False（防止中文混排时 latex 崩溃），
+                 显式 True 时启用（系统需安装 LaTeX，否则警告并回退）
 
     示例:
         >>> import sciplot as sp
@@ -191,6 +195,7 @@ def setup_style(
         >>> sp.setup_style("thesis", "100yuan")       # 学位论文 + 人民币红
         >>> sp.setup_style(lang="en")                 # 英文模式
         >>> sp.setup_style("presentation", theme="dark")  # 演示文稿 + 深色主题
+        >>> sp.setup_style("ieee", usetex=True)       # 纯英文场景启用 LaTeX 渲染
     """
     # 从 Config 读取默认值（仅在参数未显式传入时）
     if venue is None or palette is None or lang is None:
@@ -242,6 +247,8 @@ def setup_style(
 
     # ── 应用样式（优先 SciencePlots，缺失时自动降级） ──
     active_styles = styles + ([lang_style] if lang_style else [])
+    # 样式（如 no-latex）会重置 text.usetex，先记录以便继承时恢复
+    usetex_before = bool(plt.rcParams.get("text.usetex", False))
     try:
         # 若已安装则确保样式注册到 matplotlib
         import scienceplots  # noqa: F401
@@ -260,18 +267,36 @@ def setup_style(
     apply_palette(palette)
 
     # ── LaTeX 设置 ──
-    # 中文模式下禁用 LaTeX（LaTeX 不支持中文）
-    # 英文模式下可启用 LaTeX 以获得更好的数学公式渲染
-    if lang == "en":
-        # 英文模式：检测系统是否安装 LaTeX（结果缓存，避免重复调用 shutil.which）
-        global _latex_available
-        if _latex_available is None:
-            _latex_available = bool(
-                shutil.which("latex") or shutil.which("xelatex") or shutil.which("pdflatex")
+    # 中文模式强制禁用 LaTeX（LaTeX 不支持中文）。
+    # 英文模式默认继承当前状态：显式 usetex=True 开启后，不会被后续
+    # 默认调用悄悄关闭；scienceplots 的 no-latex 样式已用 mathtext 渲染公式。
+    if usetex is None:
+        # 继承样式应用前的状态：显式开启后不会被默认调用悄悄关闭
+        plt.rcParams["text.usetex"] = usetex_before
+    elif usetex:
+        if lang in {"zh", "zh-cn"}:
+            warnings.warn(
+                "中文模式（lang='zh'）不支持 LaTeX 渲染，text.usetex 已强制为 False。",
+                UserWarning,
+                stacklevel=2,
             )
-        plt.rcParams["text.usetex"] = _latex_available
+            plt.rcParams["text.usetex"] = False
+        else:
+            global _latex_available
+            if _latex_available is None:
+                _latex_available = bool(
+                    shutil.which("latex") or shutil.which("xelatex") or shutil.which("pdflatex")
+                )
+            if _latex_available:
+                plt.rcParams["text.usetex"] = True
+            else:
+                warnings.warn(
+                    "未检测到 LaTeX 可执行文件，text.usetex 已回退为 False。",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                plt.rcParams["text.usetex"] = False
     else:
-        # 中文模式：禁用 LaTeX，确保中文正常渲染
         plt.rcParams["text.usetex"] = False
 
     # ── 修复负号显示问题 ──
