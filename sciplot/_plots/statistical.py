@@ -856,13 +856,26 @@ def plot_volcano(
         score = neg_log10p + np.abs(fc) * 0.1
         top_idx = np.argsort(score)[::-1][:top_n]
         fontsize = max(6, plt.rcParams.get("font.size", 9) - 2)
-        for idx in top_idx:
+
+        # 智能避让：按 y 排序后，相邻标注间距过小时纵向错开，
+        # 避免多个 top 基因标签重叠
+        sorted_idx = sorted(top_idx, key=lambda i: -neg_log10p[i])
+        placed: List[Tuple[float, float]] = []
+        for rank, idx in enumerate(sorted_idx):
+            x0, y0 = float(fc[idx]), float(neg_log10p[idx])
+            # 找最近的已放置标签，若 y 距离 < 1.2 则错开
+            dy = 0.0
+            for px, py in placed:
+                if abs(py - y0) < 1.2 and abs(px - x0) < 0.5:
+                    dy = max(dy, 1.2 - abs(py - y0))
+            offset_y = dy * (1 if rank % 2 == 0 else -1) + 5
             ax.annotate(
                 str(labels[idx]),
-                xy=(fc[idx], neg_log10p[idx]),
-                xytext=(5, 5), textcoords="offset points",
+                xy=(x0, y0),
+                xytext=(5, offset_y), textcoords="offset points",
                 fontsize=fontsize,
             )
+            placed.append((x0, y0))
 
     # 图例（语言跟随当前设置）
     from matplotlib.patches import Patch

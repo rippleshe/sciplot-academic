@@ -126,3 +126,16 @@ def test_volcano_save_png(tmp_path, volcano_data, cleanup_figures):
     result = sp.plot_volcano(fc, p, labels=labels)
     paths = result.save(str(tmp_path / "volcano"), formats=("png",), dpi=100)
     assert paths[0].exists() and paths[0].stat().st_size > 0
+
+
+def test_volcano_annotation_stagger(cleanup_figures):
+    """近邻 top 基因标注应纵向错开避免重叠。"""
+    rng = np.random.default_rng(7)
+    fc = np.r_[rng.normal(0, 1, 300), 2.9, 3.0]
+    p = np.r_[rng.random(300) ** 3, 1e-7, 1e-7]
+    labels = [f"G{i}" for i in range(300)] + ["TOP_A", "TOP_B"]
+    result = sp.plot_volcano(fc, p, labels=labels, annotate_top=True, top_n=8)
+    texts = [t for t in result.ax.texts if t.get_text() in ("TOP_A", "TOP_B")]
+    assert len(texts) == 2
+    ys = [t.get_position()[1] for t in texts]
+    assert abs(ys[0] - ys[1]) > 0.5, "近邻标签未错开"
