@@ -15,6 +15,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.style import VENUES
 from sciplot._core.utils import apply_resolved_style, new_styled_figure, _try_import_optional, _require_optional
 from sciplot._core.result import PlotResult
@@ -246,7 +247,7 @@ def plot_clustermap(
 
     ax_heatmap.tick_params(direction="in")
 
-    fig.colorbar(im, ax=ax_heatmap, fraction=0.046, pad=0.04)
+    add_colorbar(fig, im, ax=ax_heatmap)
 
     if row_cluster and hierarchy is not None:
         ax_row = fig.add_axes((

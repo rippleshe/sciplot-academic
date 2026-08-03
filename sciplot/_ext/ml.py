@@ -13,6 +13,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from typing import Any, List, Optional, Tuple
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.result import PlotResult
 from sciplot._core.utils import get_cycle_colors, new_styled_figure
 
@@ -179,7 +180,7 @@ def plot_confusion_matrix(
         cm = cm.astype("float") / row_sums
 
     im = ax.imshow(cm, interpolation="nearest", cmap=cmap)
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    add_colorbar(fig, im, ax=ax)
 
     if labels is not None:
         ticks = np.arange(len(labels))

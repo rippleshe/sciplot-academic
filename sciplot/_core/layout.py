@@ -243,6 +243,26 @@ def paper_subplots(
     return fig, axes
 
 
+def add_colorbar(
+    fig: Figure,
+    mappable: Any,
+    label: str = "",
+    ax: Optional[Axes] = None,
+    fraction: float = 0.046,
+    pad: float = 0.04,
+    **kwargs: Any,
+):
+    """创建 colorbar 并设置标签（统一外观参数）。
+
+    默认使用期刊排版常用参数（fraction=0.046, pad=0.04）；3D 图可传
+    ``shrink=0.5, aspect=10`` 覆盖。
+    """
+    cbar = fig.colorbar(mappable, ax=ax, fraction=fraction, pad=pad, **kwargs)
+    if label:
+        cbar.set_label(label)
+    return cbar
+
+
 def create_gridspec(
     nrows: int = 1,
     ncols: int = 1,

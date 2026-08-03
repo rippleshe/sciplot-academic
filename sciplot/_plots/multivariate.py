@@ -13,6 +13,7 @@ import numpy as np
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.style import VENUES, get_current_venue
 from sciplot._core.utils import apply_resolved_style, cycle_color, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
@@ -226,7 +227,7 @@ def plot_parallel(
             if show_colorbar:
                 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
                 sm.set_array([])
-                cbar = fig.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+                cbar = add_colorbar(fig, sm, ax=ax)
                 cbar.set_label(columns[color_idx])
     else:
         for i in range(n_samples):
@@ -504,7 +505,7 @@ def plot_ternary(
         scatter = ax.scatter(xs, ys, c=color_arr, cmap=cmap, alpha=alpha,
                              edgecolors="none", zorder=3, **kwargs)
         if show_colorbar:
-            cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+            cbar = add_colorbar(fig, scatter, ax=ax)
             if colorbar_label:
                 cbar.set_label(colorbar_label)
     else:

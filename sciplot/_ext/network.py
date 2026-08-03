@@ -15,6 +15,7 @@ import numpy as np
 from matplotlib.colors import Normalize
 from matplotlib.patches import Patch
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.utils import apply_resolved_style, cycle_color, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
@@ -306,7 +307,7 @@ def plot_network(
 
     # ── 连续着色的颜色条 ──
     if continuous_mappable is not None:
-        cbar = fig.colorbar(continuous_mappable, ax=ax, fraction=0.046, pad=0.04)
+        cbar = add_colorbar(fig, continuous_mappable, ax=ax)
         if node_color_by is not None:
             cbar.set_label(node_color_by)
 
@@ -486,7 +487,7 @@ def plot_network3d(
         cmap, norm = continuous_info
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        cbar = fig.colorbar(sm, ax=ax, shrink=0.5, aspect=10)
+        cbar = add_colorbar(fig, sm, ax=ax, shrink=0.5, aspect=10)
         if node_color_by is not None:
             cbar.set_label(node_color_by)
 

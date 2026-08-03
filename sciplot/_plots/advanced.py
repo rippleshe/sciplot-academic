@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.utils import (
     apply_resolved_style,
     boxplot_with_orientation,
@@ -243,7 +244,7 @@ def plot_heatmap(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     im = ax.imshow(data, cmap=cmap, aspect=aspect, vmin=vmin, vmax=vmax, **kwargs)
-    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar = add_colorbar(fig, im, ax=ax)
     if colorbar_label:
         cbar.set_label(colorbar_label)
 
@@ -446,11 +447,11 @@ def plot_bubble_heatmap(
 
     # 颜色条：优先用背景层，否则用气泡 ScalarMappable
     if im is not None:
-        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar = add_colorbar(fig, im, ax=ax)
     else:
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        cbar = fig.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+        cbar = add_colorbar(fig, sm, ax=ax)
     if colorbar_label:
         cbar.set_label(colorbar_label)
 
@@ -1076,7 +1077,7 @@ def plot_hexbin(
         x_arr, y_arr, gridsize=gridsize, bins=bins, cmap=cmap,
         mincnt=mincnt, **kwargs,
     )
-    cbar = fig.colorbar(hb, ax=ax, fraction=0.046, pad=0.04)
+    cbar = add_colorbar(fig, hb, ax=ax)
     if colorbar_label:
         cbar.set_label(colorbar_label)
 
@@ -1202,7 +1203,7 @@ def plot_bubble(
             norm=norm, alpha=alpha, edgecolors=edgecolor,
             linewidths=linewidth, **kwargs,
         )
-        cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+        cbar = add_colorbar(fig, scatter, ax=ax)
         if colorbar_label:
             cbar.set_label(colorbar_label)
     else:

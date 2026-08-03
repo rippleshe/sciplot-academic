@@ -15,6 +15,7 @@ from matplotlib.patches import Patch
 import numpy as np
 from datetime import date, datetime, timedelta
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
@@ -799,7 +800,7 @@ def plot_calendar_heatmap(
         xs, ys, c=vals, cmap=cmap, vmin=vmin, vmax=vmax,
         marker="s", s=cell_size_pt2, edgecolors="none", **kwargs,
     )
-    cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+    cbar = add_colorbar(fig, scatter, ax=ax)
     if colorbar_label:
         cbar.set_label(colorbar_label)
 

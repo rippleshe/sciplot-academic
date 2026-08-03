@@ -14,6 +14,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from sciplot._core.layout import add_colorbar
 from sciplot._core.result import PlotResult
 from sciplot._core.utils import apply_resolved_style, cycle_color, get_cycle_colors, new_styled_figure
 from sciplot._core.style import VENUES
@@ -113,7 +114,7 @@ def plot_surface(
     fig, ax = _new_3d_figure(venue, palette, lang)
 
     surf = ax.plot_surface(X, Y, Z, cmap=cmap, alpha=alpha, **kwargs)
-    fig.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
+    add_colorbar(fig, surf, ax=ax, shrink=0.5, aspect=10)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -196,7 +197,7 @@ def plot_contour(
     if show_labels and not filled:
         ax.clabel(cs, inline=True, fontsize=8)
 
-    fig.colorbar(cs, ax=ax, fraction=0.046, pad=0.04)
+    add_colorbar(fig, cs, ax=ax)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -313,7 +314,7 @@ def plot_3d_scatter(
     scatter = ax.scatter(x_arr, y_arr, z_arr, c=c_arr, s=s_arr, **scatter_kwargs)
 
     if c_mappable:
-        fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=10)
+        add_colorbar(fig, scatter, ax=ax, shrink=0.5, aspect=10)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
