@@ -19,6 +19,24 @@ from sciplot._core.utils import get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
+def _coerce_to_date(value: Any, field_name: str = "dates") -> date:
+    """将 datetime/date/np.datetime64/str 统一转为 datetime.date。"""
+    if isinstance(value, np.datetime64):
+        return value.astype("M8[D]").astype(object)  # type: ignore[arg-type]
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError(f"无法解析日期字符串: {value!r}（需要 YYYY-MM-DD 格式）")
+    raise TypeError(
+        f"{field_name} 元素必须是 datetime/date/字符串，实际类型: {type(value).__name__}"
+    )
+
+
 def _is_datetime_value(value: Any) -> bool:
     """判断单个值是否为 datetime 类型（含 pandas 的 Timestamp 等带 dtype 的对象）。"""
     if isinstance(value, (datetime, date, np.datetime64)):
@@ -734,23 +752,7 @@ def plot_calendar_heatmap(
         raise ValueError(f"weekday_start 仅支持 0（周一）或 6（周日），实际值: {weekday_start!r}")
 
     # 统一转为 datetime.date
-    parsed_dates: List[date] = []
-    for d in dates_arr:
-        if isinstance(d, np.datetime64):
-            parsed_dates.append(d.astype("M8[D]").astype(object))  # type: ignore[arg-type]
-        elif isinstance(d, datetime):
-            parsed_dates.append(d.date())
-        elif isinstance(d, date):
-            parsed_dates.append(d)
-        elif isinstance(d, str):
-            try:
-                parsed_dates.append(datetime.strptime(d, "%Y-%m-%d").date())
-            except ValueError:
-                raise ValueError(f"无法解析日期字符串: {d!r}（需要 YYYY-MM-DD 格式）")
-        else:
-            raise TypeError(
-                f"dates 元素必须是 datetime/date/字符串，实际类型: {type(d).__name__}"
-            )
+    parsed_dates = [_coerce_to_date(d) for d in dates_arr]
 
     first_year = min(d.year for d in parsed_dates)
     last_year = max(d.year for d in parsed_dates)

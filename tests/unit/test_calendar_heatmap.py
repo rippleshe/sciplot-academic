@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import sciplot as sp
+from sciplot._plots.timeseries import _coerce_to_date
 
 
 @pytest.fixture()
@@ -117,6 +118,28 @@ def test_calendar_alias_and_export(calendar_data, cleanup_figures):
     dates, values = calendar_data
     assert callable(sp.plot_calendar_heatmap)
     assert callable(sp.calendar_heatmap)
+
+
+def test_coerce_to_date_conversion(cleanup_figures):
+    """_coerce_to_date 支持 datetime/date/np.datetime64/str 四类输入。"""
+    d = datetime.date(2024, 5, 6)
+    assert _coerce_to_date(datetime.datetime(2024, 5, 6, 12, 30)) == d
+    assert _coerce_to_date(d) == d
+    assert _coerce_to_date(np.datetime64("2024-05-06")) == d
+    assert _coerce_to_date("2024-05-06") == d
+
+
+def test_coerce_to_date_invalid(cleanup_figures):
+    """非法输入分别抛 ValueError（字符串格式错）与 TypeError（类型错）。"""
+    with pytest.raises(ValueError, match="无法解析日期字符串"):
+        _coerce_to_date("2024/05/06")
+    with pytest.raises(TypeError, match="元素必须是 datetime/date/字符串"):
+        _coerce_to_date(12345)
+
+
+def test_coerce_to_date_truncates_time(cleanup_figures):
+    """np.datetime64 带时间部分时截断为日期。"""
+    assert _coerce_to_date(np.datetime64("2024-05-06T23:59:59")) == datetime.date(2024, 5, 6)
     assert "plot_calendar_heatmap" in sp.__all__ and "calendar_heatmap" in sp.__all__
     result = sp.calendar_heatmap(dates, values)
     assert result.fig is not None
