@@ -418,22 +418,40 @@ def plot_network3d(
     )
     node_sizes = _resolve_node_sizes(G, node_size_by, node_size, node_size_range)
 
-    # 边：逐条半透明线段
+    # 边：逐条细而淡的线段（消除塑料感：低 alpha、浅色、细线）
     xyz = {n: (pos[n][0], pos[n][1], z_coords[n]) for n in G.nodes()}
     for u, v in G.edges():
         ax.plot(
             [xyz[u][0], xyz[v][0]],
             [xyz[u][1], xyz[v][1]],
             [xyz[u][2], xyz[v][2]],
-            color="#888888", alpha=edge_alpha, linewidth=edge_width,
+            color="#B8B8B8", alpha=min(edge_alpha, 0.3),
+            linewidth=min(edge_width, 0.9), zorder=1,
         )
 
     xs = [xyz[n][0] for n in G.nodes()]
     ys = [xyz[n][1] for n in G.nodes()]
     zs = [xyz[n][2] for n in G.nodes()]
 
+    # 节点：开启 depthshade（真实深度感），半透明 + 浅色描边
+    from matplotlib.colors import to_rgba, to_rgb
+
+    if isinstance(node_colors, str):
+        node_colors_list = [node_colors] * G.number_of_nodes()
+    else:
+        node_colors_list = list(node_colors)
+    edge_colors = []
+    for c in node_colors_list:
+        try:
+            r, g, b = to_rgb(c)
+        except (ValueError, TypeError):
+            r, g, b = to_rgb(to_rgba(c)[:3])
+        # 与白色混合 55%：柔和描边
+        edge_colors.append((0.55 + 0.45 * r, 0.55 + 0.45 * g, 0.55 + 0.45 * b, 0.9))
+
     scatter_kwargs: Dict[str, Any] = dict(
-        s=node_sizes, c=node_colors, alpha=node_alpha, depthshade=False,
+        s=node_sizes, c=node_colors, alpha=node_alpha, depthshade=True,
+        edgecolors=edge_colors, linewidths=0.5,
     )
     scatter_kwargs.update(kwargs)
     ax.scatter(xs, ys, zs, **scatter_kwargs)
@@ -463,6 +481,10 @@ def plot_network3d(
                 xyz[n][0], xyz[n][1], xyz[n][2], str(n),
                 fontsize=fontsize, fontfamily=font_family,
                 ha="center", va="center", zorder=5,
+                bbox=dict(
+                    boxstyle="round,pad=0.12", facecolor="white",
+                    edgecolor="none", alpha=0.6,
+                ),
             )
 
     # 连续着色 colorbar / 分类图例
