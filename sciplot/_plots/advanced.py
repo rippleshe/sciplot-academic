@@ -143,7 +143,8 @@ def plot_confidence(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend()
+    if label_mean or (label_std is not None and label_std):
+        ax.legend()
     ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -444,7 +445,84 @@ __all__ = [
     "plot_heatmap",
     "plot_bubble_heatmap",
     "plot_bubble",
+    "plot_hexbin",
 ]
+
+
+def plot_hexbin(
+    x: np.ndarray,
+    y: np.ndarray,
+    gridsize: int = 30,
+    bins: Optional[Union[str, int]] = None,
+    cmap: str = "viridis",
+    mincnt: int = 1,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    colorbar_label: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制六边形密度图（Hexbin，大样本散点密度可视化）
+
+    将二维平面划分为六边形网格，以颜色深浅编码落入每个格子的
+    样本数量，避免大样本散点图过度绘制的问题。
+
+    参数:
+        x, y          : 坐标数组（等长，不含 NaN/Inf）
+        gridsize      : 网格规模（单方向格数），默认 30
+        bins          : 计数变换：None 原始计数 | "log" 对数 | 整数分段
+        cmap          : 颜色映射，默认 "viridis"
+        mincnt        : 最少计数阈值，低于该值的格子不绘制
+        colorbar_label: 颜色条标签
+        **kwargs      : 传递给 ax.hexbin() 的额外参数
+
+    示例:
+        >>> # 十万个样本的二维密度
+        >>> x = np.random.randn(100000)
+        >>> y = np.random.randn(100000) * 0.8 + x * 0.5
+        >>> fig, ax = sp.plot_hexbin(
+        ...     x, y, gridsize=40, bins="log",
+        ...     xlabel="X", ylabel="Y",
+        ...     colorbar_label="样本数 (log)",
+        ... )
+        >>> sp.save(fig, "hexbin")
+    """
+    x_arr = np.asarray(x, dtype=float).ravel()
+    y_arr = np.asarray(y, dtype=float).ravel()
+
+    n_points = len(x_arr)
+    if len(y_arr) != n_points:
+        raise ValueError(f"x 长度 ({n_points}) 与 y 长度 ({len(y_arr)}) 不一致")
+    if n_points == 0:
+        raise ValueError("x/y 不能为空")
+    if not np.all(np.isfinite(x_arr)) or not np.all(np.isfinite(y_arr)):
+        raise ValueError("x 和 y 不能包含 NaN 或 Inf")
+    if not isinstance(gridsize, int) or gridsize <= 0:
+        raise ValueError(f"gridsize 必须为正整数，实际值: {gridsize!r}")
+    if not isinstance(mincnt, int) or mincnt < 0:
+        raise ValueError(f"mincnt 必须为非负整数，实际值: {mincnt!r}")
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    hb = ax.hexbin(
+        x_arr, y_arr, gridsize=gridsize, bins=bins, cmap=cmap,
+        mincnt=mincnt, **kwargs,
+    )
+    cbar = fig.colorbar(hb, ax=ax, fraction=0.046, pad=0.04)
+    if colorbar_label:
+        cbar.set_label(colorbar_label)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
 def plot_bubble(
@@ -482,7 +560,7 @@ def plot_bubble(
         x, y         : 坐标数组（等长）
         size         : 气泡面积编码值（等长，允许 0/负值按绝对值处理）
         color        : 颜色通道数组（等长，连续数值）；None 则全部同色
-        labels       : 分类标签列表（等长，用于图例，需与 x 等长）
+        labels       : 分类标签列表（等长，用于图例；仅当 color 为 None 时生效）
         cmap         : 颜色映射（color 不为 None 时生效）
         vmin / vmax  : 颜色映射范围
         size_scale   : 最大气泡面积（points²），默认 200
