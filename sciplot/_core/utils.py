@@ -270,7 +270,8 @@ def _apply_style_and_figure(
     from sciplot._core.layout import new_figure
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    return effective_venue, new_figure(effective_venue)
+    fig, ax = new_figure(effective_venue)
+    return effective_venue, fig, ax
 
 
 def new_styled_figure(
