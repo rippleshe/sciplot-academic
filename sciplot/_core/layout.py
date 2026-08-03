@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 
 from sciplot._core.style import VENUES
-from sciplot._core.utils import _ensure_non_empty_prop_cycle
+from sciplot._core.utils import _ensure_non_empty_prop_cycle, apply_resolved_style
 
 if TYPE_CHECKING:
     from sciplot._core.result import GridSpecResult
@@ -261,6 +261,82 @@ def add_colorbar(
     if label:
         cbar.set_label(label)
     return cbar
+
+
+def figure_panels(
+    nrows: int = 1,
+    ncols: int = 1,
+    venue: str = "nature",
+    widths: Optional[Sequence[float]] = None,
+    heights: Optional[Sequence[float]] = None,
+    hspace: float = 0.30,
+    wspace: float = 0.25,
+    panel_labels: bool = True,
+    label_style: str = "letter",
+    sharex: bool = False,
+    sharey: bool = False,
+    figsize: Optional[Tuple[float, float]] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> Tuple[Figure, np.ndarray]:
+    """创建 Nature 级多面板复合图布局（面板自动编号 a/b/c）。
+
+    设计规范（对齐 Nature 投稿惯例）：
+    - 面板按阅读顺序自动加粗标签 (a) (b) (c)…
+    - widths/heights 控制行列相对比例（如主面板 2/3、注释面板 1/3）
+    - hspace/wspace 控制面板间距，默认大于 Matplotlib 默认值以避免标签挤压
+    - venue 决定基准 figsize（nature 双栏 183mm 宽等）
+
+    参数:
+        nrows/ncols: 面板行列数
+        venue       : 期刊预设（默认 nature）
+        widths      : 各列相对宽度，如 [1, 1.5]；None 时等宽
+        heights     : 各行相对高度；None 时等高
+        hspace/wspace: 面板垂直/水平间距
+        panel_labels: 是否自动加面板标签
+        label_style : 标签样式（letter/LETTER/number/roman）
+        sharex/sharey: 面板间共享轴
+        figsize     : 自定义尺寸；None 用 venue 默认
+
+    示例:
+        >>> # 主图占 2/3 宽 + 右侧注释面板的 2 面板布局
+        >>> fig, axes = sp.figure_panels(1, 2, widths=[2, 1])
+        >>> sp.plot_scatter(x1, y1, ax=axes[0])
+        >>> sp.plot_box(data, ax=axes[1])
+        >>> sp.save(fig, "fig_composite")
+    """
+    from sciplot._core.style import VENUES
+
+    if nrows <= 0 or ncols <= 0:
+        raise ValueError(f"nrows/ncols 必须为正整数，实际: {nrows}x{ncols}")
+    if widths is not None and len(widths) != ncols:
+        raise ValueError(f"widths 长度 ({len(widths)}) 与 ncols ({ncols}) 不一致")
+    if heights is not None and len(heights) != nrows:
+        raise ValueError(f"heights 长度 ({len(heights)}) 与 nrows ({nrows}) 不一致")
+
+    apply_resolved_style(venue, palette, lang)
+    if figsize is None and venue in VENUES:
+        figsize = VENUES[venue].figsize
+
+    gridspec_kw: Dict[str, Any] = dict(hspace=hspace, wspace=wspace)
+    if widths is not None:
+        gridspec_kw["width_ratios"] = list(widths)
+    if heights is not None:
+        gridspec_kw["height_ratios"] = list(heights)
+
+    fig, axes = plt.subplots(
+        nrows, ncols,
+        figsize=figsize,
+        sharex=sharex,
+        sharey=sharey,
+        gridspec_kw=gridspec_kw,
+        **kwargs,
+    )
+
+    if panel_labels:
+        add_panel_labels(axes, style=label_style)
+    return fig, axes
 
 
 def create_gridspec(

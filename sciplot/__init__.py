@@ -142,6 +142,7 @@ from sciplot._core.layout import (
     new_figure,
     create_subplots,
     paper_subplots,
+    figure_panels,
     create_gridspec,
     create_twinx,
     add_panel_labels,
@@ -593,7 +594,7 @@ __all__ = [
 
     # ── 布局 ──
     "new_figure", "save",
-    "create_subplots", "paper_subplots", "create_gridspec", "create_twinx",
+    "create_subplots", "paper_subplots", "figure_panels", "create_gridspec", "create_twinx",
     "add_panel_labels", "list_paper_layouts",
 
     # ── 链式调用 ──
