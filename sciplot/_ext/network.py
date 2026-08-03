@@ -34,6 +34,18 @@ def _check_networkx():
         ) from e
 
 
+def _get_label_font_family() -> str:
+    """获取当前 rcParams 中最具体的字体族（支持中文回退链）。"""
+    font_family = plt.rcParams.get("font.family", "serif")
+    if isinstance(font_family, list):
+        font_family = font_family[0]
+    if font_family == "serif":
+        serif_fonts = plt.rcParams.get("font.serif", [])
+        if serif_fonts:
+            font_family = serif_fonts[0]
+    return str(font_family)
+
+
 def _coerce_numeric_attr(values) -> Optional[dict]:
     """尝试将属性字典的值全部转为数值；含非数值项时返回 None。"""
     coerced = {}
@@ -281,14 +293,7 @@ def plot_network(
         label_nodes = None  # 全部
 
     if label_nodes is not None or labels is True:
-        # 获取字体设置，确保中文正常显示
-        font_family = plt.rcParams.get("font.family", "serif")
-        if isinstance(font_family, list):
-            font_family = font_family[0]
-        if font_family == "serif":
-            serif_fonts = plt.rcParams.get("font.serif", [])
-            if serif_fonts:
-                font_family = serif_fonts[0]
+        font_family = _get_label_font_family()
 
         if label_nodes is not None:
             label_dict = {n: str(n) for n in label_nodes}
@@ -466,13 +471,7 @@ def plot_network3d(
         label_nodes = None
 
     if label_nodes is not None or labels is True:
-        font_family = plt.rcParams.get("font.family", "serif")
-        if isinstance(font_family, list):
-            font_family = font_family[0]
-        if font_family == "serif":
-            serif_fonts = plt.rcParams.get("font.serif", [])
-            if serif_fonts:
-                font_family = serif_fonts[0]
+        font_family = _get_label_font_family()
         fontsize = plt.rcParams.get("font.size", 9) - 1
         for n in G.nodes():
             if label_nodes is not None and n not in label_nodes:
@@ -660,14 +659,7 @@ def plot_network_communities(
         label_nodes = None
 
     if label_nodes is not None or labels is True:
-        # 获取字体设置，确保中文正常显示
-        font_family = plt.rcParams.get("font.family", "serif")
-        if isinstance(font_family, list):
-            font_family = font_family[0]
-        if font_family == "serif":
-            serif_fonts = plt.rcParams.get("font.serif", [])
-            if serif_fonts:
-                font_family = serif_fonts[0]
+        font_family = _get_label_font_family()
 
         if label_nodes is not None:
             label_dict = {n: str(n) for n in label_nodes}

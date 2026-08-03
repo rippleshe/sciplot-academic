@@ -47,6 +47,21 @@ def _get_3d_figsize(venue: Optional[str]) -> Tuple[float, float]:
     return (8.0, 6.0)
 
 
+def _new_3d_figure(
+    venue: Optional[str],
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> Tuple[Figure, Any]:
+    """创建 3D 图形与坐标轴（注册 3D projection，应用完整样式）。"""
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    figsize = _get_3d_figsize(effective_venue)
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, projection="3d")
+    return fig, ax
+
+
 def plot_surface(
     X: np.ndarray,
     Y: np.ndarray,
@@ -94,14 +109,9 @@ def plot_surface(
         >>> result = sp.plot_surface(X, Y, Z, xlabel="X", ylabel="Y", zlabel="Z")
         >>> result.save("surface3d")
     """
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
-
     X, Y, Z = _validate_grid_shapes(X, Y, Z)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    figsize = _get_3d_figsize(effective_venue)
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111, projection="3d")
+    fig, ax = _new_3d_figure(venue, palette, lang)
 
     surf = ax.plot_surface(X, Y, Z, cmap=cmap, alpha=alpha, **kwargs)
     fig.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
@@ -295,10 +305,7 @@ def plot_3d_scatter(
                 f"点大小数组 s 长度必须为 1 或与数据点数量一致，实际为 {s_arr.size}"
             )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    figsize = _get_3d_figsize(effective_venue)
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111, projection="3d")
+    fig, ax = _new_3d_figure(venue, palette, lang)
 
     scatter_kwargs: Dict[str, Any] = dict(alpha=alpha, **kwargs)
     if c_mappable:
@@ -375,10 +382,7 @@ def plot_wireframe(
     if not isinstance(cstride, int) or cstride <= 0:
         raise ValueError(f"cstride 必须为正整数，实际值: {cstride!r}")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    figsize = _get_3d_figsize(effective_venue)
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111, projection="3d")
+    fig, ax = _new_3d_figure(venue, palette, lang)
 
     ax.plot_wireframe(
         X, Y, Z, color=color, alpha=alpha,
@@ -490,10 +494,7 @@ def plot_waterfall3d(
             raise ValueError(f"y_list[{i}] 不能包含 NaN 或 Inf")
         normalized.append(y_arr)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    figsize = _get_3d_figsize(effective_venue)
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111, projection="3d")
+    fig, ax = _new_3d_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
     if not colors:
