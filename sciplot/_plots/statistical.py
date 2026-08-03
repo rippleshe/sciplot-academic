@@ -10,6 +10,7 @@ import warnings
 from typing import Any, List, Optional
 from statistics import NormalDist
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from sciplot._core.layout import new_figure
@@ -767,6 +768,137 @@ def plot_raincloud(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_volcano(
+    log2fc: np.ndarray,
+    p_values: np.ndarray,
+    labels: Optional[List[str]] = None,
+    xlabel: str = "log2(Fold Change)",
+    ylabel: str = "-log10(p)",
+    title: str = "",
+    fc_threshold: float = 1.0,
+    p_threshold: float = 0.05,
+    color_up: str = "#D62728",
+    color_down: str = "#1F77B4",
+    color_ns: str = "#BBBBBB",
+    alpha: float = 0.6,
+    annotate_top: bool = True,
+    top_n: int = 8,
+    show_thresholds: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制火山图（Volcano Plot，组学/大规模差异分析）
+
+    横轴为 log2 倍数变化（效应大小），纵轴为 -log10(p)（显著性），
+    按阈值将点分为显著上调 / 显著下调 / 不显著三类着色，
+    并可标注最显著的若干特征。
+
+    参数:
+        log2fc       : log2 倍数变化数组
+        p_values     : 显著性 p 值数组（与 log2fc 等长，允许 0）
+        labels       : 特征标签（等长，用于标注）；None 则不标注
+        fc_threshold : 倍数变化阈值，默认 1.0（即 2 倍）
+        p_threshold  : 显著性阈值，默认 0.05
+        color_up     : 显著上调颜色，默认红
+        color_down   : 显著下调颜色，默认蓝
+        color_ns     : 不显著颜色，默认灰
+        alpha        : 散点透明度
+        annotate_top : 是否标注最显著的 top_n 个特征
+        top_n        : 标注数量，默认 8
+        show_thresholds: 是否绘制阈值参考线
+
+    示例:
+        >>> # 差异表达基因分析
+        >>> fig, ax = sp.plot_volcano(
+        ...     log2fc, p_values, labels=gene_names,
+        ...     fc_threshold=1.0, p_threshold=0.05,
+        ...     xlabel="log2(FC)", ylabel="-log10(p)",
+        ... )
+        >>> sp.save(fig, "volcano")
+    """
+    fc = np.asarray(log2fc, dtype=float).ravel()
+    p = np.asarray(p_values, dtype=float).ravel()
+
+    n = len(fc)
+    if len(p) != n:
+        raise ValueError(
+            f"log2fc 长度 ({n}) 与 p_values 长度 ({len(p)}) 不一致"
+        )
+    if n == 0:
+        raise ValueError("log2fc/p_values 不能为空")
+    if not np.all(np.isfinite(fc)):
+        raise ValueError("log2fc 不能包含 NaN 或 Inf")
+    if np.any(p < 0) or np.any(~np.isfinite(p[p > 0])):
+        raise ValueError("p_values 必须为 [0, 1] 范围内的有限数值")
+    if np.any(p > 1.0):
+        raise ValueError("p_values 必须为 [0, 1] 范围内的有限数值")
+    if labels is not None and len(labels) != n:
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与数据长度 ({n}) 不一致"
+        )
+    if not 0 < p_threshold <= 1:
+        raise ValueError(f"p_threshold 必须在 (0, 1] 范围内，实际值: {p_threshold!r}")
+    if fc_threshold <= 0:
+        raise ValueError(f"fc_threshold 必须为正数，实际值: {fc_threshold!r}")
+
+    # -log10(p)，p=0 时用最小非零 p 的对数值（避免 inf）
+    nonzero_p = p[p > 0]
+    if nonzero_p.size == 0:
+        neg_log10p = np.full(n, 10.0)
+    else:
+        min_log = -np.log10(float(nonzero_p.min()))
+        neg_log10p = np.where(p > 0, -np.log10(p), min_log + 0.5)
+
+    # 三分类着色
+    is_sig = p <= p_threshold
+    is_up = is_sig & (fc >= fc_threshold)
+    is_down = is_sig & (fc <= -fc_threshold)
+    colors = np.where(is_up, color_up, np.where(is_down, color_down, color_ns))
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    ax.scatter(fc, neg_log10p, c=colors, alpha=alpha, s=18, edgecolors="none", **kwargs)
+
+    if show_thresholds:
+        ax.axvline(x=fc_threshold, color="#888888", linestyle="--", linewidth=0.8)
+        ax.axvline(x=-fc_threshold, color="#888888", linestyle="--", linewidth=0.8)
+        ax.axhline(y=-np.log10(p_threshold), color="#888888", linestyle="--", linewidth=0.8)
+
+    # 标注最显著的 top_n 个特征（显著性优先，其次按 |fc|）
+    if annotate_top and labels is not None and top_n > 0:
+        score = neg_log10p + np.abs(fc) * 0.1
+        top_idx = np.argsort(score)[::-1][:top_n]
+        fontsize = max(6, plt.rcParams.get("font.size", 9) - 2)
+        for idx in top_idx:
+            ax.annotate(
+                str(labels[idx]),
+                xy=(fc[idx], neg_log10p[idx]),
+                xytext=(5, 5), textcoords="offset points",
+                fontsize=fontsize,
+            )
+
+    # 图例
+    from matplotlib.patches import Patch
+
+    handles = [
+        Patch(facecolor=color_up, label="显著上调", alpha=alpha),
+        Patch(facecolor=color_down, label="显著下调", alpha=alpha),
+        Patch(facecolor=color_ns, label="不显著", alpha=alpha),
+    ]
+    ax.legend(handles=handles, loc="upper left", frameon=False)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_residuals",
     "plot_qq",
@@ -775,4 +907,5 @@ __all__ = [
     "plot_multi_density",
     "plot_ridgeline",
     "plot_raincloud",
+    "plot_volcano",
 ]

@@ -285,6 +285,7 @@ from sciplot._plots.statistical import (
     plot_multi_density,
     plot_ridgeline,
     plot_raincloud,
+    plot_volcano,
 )
 
 # ── 扩展模块 (Extensions) ──────────────────────────────────────
@@ -348,6 +349,7 @@ from sciplot._plots.aliases import (
     waterfall3d,
     ridgeline,
     raincloud,
+    volcano,
 )
 
 # ── 工具 ──────────────────────────────────────────────────────
@@ -620,7 +622,7 @@ __all__ = [
     # ── 极坐标 / 时序 / 统计（简洁别名）──
     "radar", "timeseries", "multi_timeseries", "gantt",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline", "raincloud",
+    "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline", "raincloud", "volcano",
 
     # ── 高级（完整名称）──
     "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble",
@@ -638,7 +640,7 @@ __all__ = [
     "plot_parallel", "plot_scatter_matrix",
 
     # ── 统计图表 ──
-    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud",
+    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano",
 
     # ── 机器学习扩展 ──
     "plot_pca", "plot_confusion_matrix",
