@@ -11,8 +11,9 @@ import warnings
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.patches import Patch
 import numpy as np
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import apply_resolved_style, get_cycle_colors
@@ -435,4 +436,159 @@ def plot_slope(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope"]
+def plot_gantt(
+    tasks: List[str],
+    start: Union[Sequence[Any], np.ndarray],
+    duration: Optional[Union[Sequence[float], np.ndarray]] = None,
+    end: Optional[Union[Sequence[Any], np.ndarray]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    color_by: Optional[Union[List[str], np.ndarray]] = None,
+    show_labels: bool = True,
+    alpha: float = 0.85,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制甘特图（Gantt，任务进度时间线）
+
+    每个任务一行水平条形，起点为 start、宽度为 duration（或由 end 推导），
+    支持数值时间轴（天数/小时）与 datetime 时间轴。
+
+    参数:
+        tasks     : 任务名称列表
+        start     : 任务开始时间（数值或 datetime/date 序列）
+        duration  : 任务持续时长；数值轴为数值，日期轴为 timedelta 或天数
+        end       : 任务结束时间（与 duration 二选一，优先 duration）
+        color_by  : 每任务颜色或类别标签（等长）；None 用配色循环
+        show_labels: 是否显示任务名称
+        alpha     : 条形透明度
+
+    示例:
+        >>> # 数值时间轴（天数）
+        >>> fig, ax = sp.plot_gantt(
+        ...     ["数据采集", "模型训练", "论文撰写"],
+        ...     start=[0, 10, 30], duration=[10, 20, 20],
+        ...     xlabel="天数",
+        ... )
+        >>> sp.save(fig, "gantt")
+
+        >>> # datetime 时间轴
+        >>> import datetime
+        >>> starts = [datetime.date(2024, 1, 1), datetime.date(2024, 1, 15)]
+        >>> fig, ax = sp.plot_gantt(
+        ...     ["阶段1", "阶段2"], start=starts, duration=[14, 21],
+        ... )
+    """
+    if not tasks:
+        raise ValueError("参数 'tasks' 不能为空列表")
+
+    start_arr = np.asarray(start)
+    if start_arr.ndim != 1 or len(start_arr) != len(tasks):
+        raise ValueError(
+            f"start 长度 ({len(start_arr)}) 与 tasks 长度 ({len(tasks)}) 不一致"
+        )
+
+    # 检测日期轴
+    is_datetime = False
+    if len(start_arr) > 0:
+        first = start_arr[0]
+        if isinstance(first, (datetime, date, np.datetime64)) or (
+            hasattr(first, "dtype") and np.issubdtype(first.dtype, np.datetime64)
+        ):
+            is_datetime = True
+
+    # 解析 duration / end
+    if duration is not None and end is not None:
+        raise ValueError("duration 与 end 只能二选一，不能同时提供")
+
+    if duration is not None:
+        dur_arr = np.asarray(duration, dtype=float).ravel()
+        if len(dur_arr) != len(tasks):
+            raise ValueError(
+                f"duration 长度 ({len(dur_arr)}) 与 tasks 长度 ({len(tasks)}) 不一致"
+            )
+        if not np.all(np.isfinite(dur_arr)) or np.any(dur_arr <= 0):
+            raise ValueError("duration 必须全部为正的有限数值")
+        if is_datetime:
+            # datetime 轴：duration 视为天数
+            ends = [s + timedelta(days=float(d)) for s, d in zip(start_arr, dur_arr)]
+        else:
+            ends = [float(s) + float(d) for s, d in zip(start_arr, dur_arr)]
+    elif end is not None:
+        end_arr = np.asarray(end)
+        if len(end_arr) != len(tasks):
+            raise ValueError(
+                f"end 长度 ({len(end_arr)}) 与 tasks 长度 ({len(tasks)}) 不一致"
+            )
+        if is_datetime:
+            ends = list(end_arr)
+        else:
+            ends = [float(e) for e in end_arr]
+            starts_float = [float(s) for s in start_arr]
+            if np.any(np.asarray(ends) <= np.asarray(starts_float)):
+                raise ValueError("end 必须全部大于 start")
+    else:
+        raise ValueError("必须提供 duration 或 end 之一")
+
+    if is_datetime:
+        starts_plot = [mdates.date2num(s) for s in start_arr]
+        ends_plot = [mdates.date2num(e) for e in ends]
+        widths = [e - s for s, e in zip(starts_plot, ends_plot)]
+        if any(w <= 0 for w in widths):
+            raise ValueError("end 必须全部大于 start")
+    else:
+        starts_plot = [float(s) for s in start_arr]
+        widths = [e - s for s, e in zip(starts_plot, ends)]
+        if any(w <= 0 for w in widths):
+            raise ValueError("end 必须全部大于 start")
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+    colors = get_cycle_colors()
+
+    # 颜色解析：color_by 为类别时按类别着色
+    if color_by is not None:
+        c_arr = np.asarray(color_by).ravel()
+        if len(c_arr) != len(tasks):
+            raise ValueError(
+                f"color_by 长度 ({len(c_arr)}) 与 tasks 长度 ({len(tasks)}) 不一致"
+            )
+        unique_vals = sorted(set(c_arr), key=str)
+        color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_vals)}
+        bar_colors = [color_map[v] for v in c_arr]
+        legend_handles = [
+            Patch(facecolor=c, label=str(v), alpha=alpha)
+            for v, c in color_map.items()
+        ]
+    else:
+        bar_colors = [colors[i % len(colors)] for i in range(len(tasks))]
+        legend_handles = None
+
+    y = np.arange(len(tasks))
+    ax.barh(y, widths, left=starts_plot, color=bar_colors, alpha=alpha, **kwargs)
+
+    if show_labels:
+        ax.set_yticks(y)
+        ax.set_yticklabels(tasks)
+    else:
+        ax.set_yticks([])
+
+    if is_datetime:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    if legend_handles:
+        ax.legend(handles=legend_handles, loc="lower right", frameon=False)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt"]

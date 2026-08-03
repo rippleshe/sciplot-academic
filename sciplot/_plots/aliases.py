@@ -51,6 +51,7 @@ from sciplot._plots.polar import (
 from sciplot._plots.timeseries import (
     plot_timeseries,
     plot_multi_timeseries,
+    plot_gantt,
 )
 from sciplot._plots.statistical import (
     plot_density,
@@ -131,6 +132,7 @@ combo = _make_alias(plot_combo)
 radar = _make_alias(plot_radar)
 timeseries = _make_alias(plot_timeseries)
 multi_timeseries = _make_alias(plot_multi_timeseries)
+gantt = _make_alias(plot_gantt)
 density = _make_alias(plot_density)
 multi_density = _make_alias(plot_multi_density)
 residuals = _make_alias(plot_residuals)
@@ -147,7 +149,7 @@ __all__ = [
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "combo",
-    "radar", "timeseries", "multi_timeseries",
+    "radar", "timeseries", "multi_timeseries", "gantt",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "waterfall3d",
 ]
