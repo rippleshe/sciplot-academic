@@ -863,6 +863,152 @@ def annotate_significance(
 
 
 # ============================================================================
+# 蜂群图
+# ============================================================================
+
+def _swarm_offsets(values: np.ndarray, width: float = 0.8) -> np.ndarray:
+    """确定性蜂群布局：按值排序后交错分配到多行，形成紧凑蜂群形状。"""
+    n = len(values)
+    if n == 0:
+        return np.empty(0)
+    order = np.argsort(values, kind="stable")
+    rows = max(1, int(np.ceil(np.sqrt(n))))
+
+    row_of = np.empty(n, dtype=int)
+    for i in range(n):
+        row_of[i] = i % rows
+
+    offsets = np.zeros(n)
+    for r in range(rows):
+        idxs = np.where(row_of == r)[0]
+        cnt = len(idxs)
+        if cnt <= 1:
+            continue
+        step = width / (cnt - 1)
+        start = -width / 2
+        for k, i in enumerate(idxs):
+            offsets[i] = start + k * step
+
+    result = np.empty(n)
+    result[order] = offsets
+    return result
+
+
+def plot_beeswarm(
+    data_list: List[np.ndarray],
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    method: str = "swarm",
+    orient: str = "v",
+    point_size: float = 4.0,
+    alpha: float = 0.6,
+    jitter_width: float = 0.25,
+    show_box: bool = False,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制蜂群图（Beeswarm，原始数据点的紧凑分布展示）
+
+    每个数据点以散点呈现：swarm 模式按值排序后交错排列成蜂群形状，
+    展示数据的实际分布与密度；jitter 模式在组内随机抖动。
+    可叠加箱线提供统计摘要。
+
+    参数:
+        data_list  : 多组数据列表，每组至少 1 个有限数值
+        labels     : 各组标签；None 则自动生成 "Series N"
+        method     : "swarm" 确定性蜂群 | "jitter" 随机抖动
+        orient     : "v" 组沿 X 轴（垂直蜂群） | "h" 组沿 Y 轴（水平蜂群）
+        point_size : 数据点大小
+        alpha      : 数据点透明度
+        jitter_width: jitter 模式的抖动幅度
+        show_box   : 是否叠加箱线图
+
+    示例:
+        >>> fig, ax = sp.plot_beeswarm(
+        ...     [ctrl, drug_a, drug_b], labels=["对照", "药物A", "药物B"],
+        ...     ylabel="响应值", show_box=True,
+        ... )
+        >>> sp.save(fig, "beeswarm")
+    """
+    if not data_list:
+        raise ValueError("参数 'data_list' 不能为空列表")
+    if method not in {"swarm", "jitter"}:
+        raise ValueError(f"method 仅支持 'swarm' / 'jitter'，实际值: {method!r}")
+    if orient not in {"v", "h"}:
+        raise ValueError(f"orient 仅支持 'v' / 'h'，实际值: {orient!r}")
+
+    normalized_data: List[np.ndarray] = []
+    for i, values in enumerate(data_list):
+        arr = np.asarray(values, dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if arr.size == 0:
+            raise ValueError(f"data_list[{i}] 至少需要 1 个有效数据点")
+        normalized_data.append(arr)
+
+    if labels is None:
+        labels = [f"Series {i + 1}" for i in range(len(normalized_data))]
+    elif len(labels) != len(normalized_data):
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
+        )
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    colors = _get_cycle_colors()
+    rng = np.random.default_rng(42)
+
+    for i, (values, label) in enumerate(zip(normalized_data, labels)):
+        color = colors[i % len(colors)]
+        pos = float(i)
+
+        if method == "swarm":
+            offsets = _swarm_offsets(values)
+        else:
+            offsets = rng.uniform(-jitter_width, jitter_width, len(values))
+
+        if orient == "v":
+            ax.scatter(pos + offsets, values, s=point_size, alpha=alpha,
+                       color=color, edgecolors="none", **kwargs)
+        else:
+            ax.scatter(values, pos + offsets, s=point_size, alpha=alpha,
+                       color=color, edgecolors="none", **kwargs)
+
+        if show_box:
+            if orient == "v":
+                ax.boxplot(values, positions=[pos], widths=0.35,
+                           patch_artist=True, showfliers=False)
+            else:
+                ax.boxplot(values, positions=[pos], vert=False, widths=0.35,
+                           patch_artist=True, showfliers=False)
+            for patch in ax.patches[-1:]:
+                patch.set_facecolor(color)
+                patch.set_alpha(0.15)
+                patch.set_edgecolor(color)
+
+    if orient == "v":
+        ax.set_xticks(np.arange(len(normalized_data)))
+        ax.set_xticklabels(labels)
+        ax.set_xlim(-0.6, len(normalized_data) - 0.4)
+    else:
+        ax.set_yticks(np.arange(len(normalized_data)))
+        ax.set_yticklabels(labels)
+        ax.set_ylim(-0.6, len(normalized_data) - 0.4)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
 # 内部工具
 # ============================================================================
 

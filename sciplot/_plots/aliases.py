@@ -32,6 +32,7 @@ from sciplot._plots.distribution import (
     plot_violin,
     plot_histogram,
     plot_combo,
+    plot_beeswarm,
 )
 from sciplot._plots.advanced import (
     plot_errorbar,
@@ -105,6 +106,7 @@ hbar = _make_alias(plot_horizontal_bar)
 hist = _make_alias(plot_histogram)
 box = _make_alias(plot_box)
 violin = _make_alias(plot_violin)
+beeswarm = _make_alias(plot_beeswarm)
 lollipop = _make_alias(plot_lollipop)
 
 # ═══════════════════════════════════════════════════════════════
@@ -139,7 +141,7 @@ __all__ = [
     "line", "scatter", "step", "area",
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "lollipop",
+    "hist", "box", "violin", "beeswarm", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
