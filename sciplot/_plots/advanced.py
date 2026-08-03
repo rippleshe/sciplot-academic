@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -439,6 +439,152 @@ def plot_bubble_heatmap(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def _pack_bubbles(sizes: np.ndarray, max_tries: int = 3000) -> Tuple[np.ndarray, np.ndarray]:
+    """贪心圆形打包：按大小降序，沿黄金角螺旋放置并检测碰撞。
+
+    返回 (positions, radii)，位置已归一化到 [-1, 1] 区间。
+    """
+    n = len(sizes)
+    order = np.argsort(sizes)[::-1]
+    radii = np.sqrt(sizes / float(np.max(sizes)))
+
+    # 面积和决定整体尺度：让打包区域大致落在单位圆内
+    total_area = float(np.sum(np.pi * radii**2))
+    scale = 1.0 / max(1.0, np.sqrt(total_area / np.pi))
+    radii = radii * scale * 0.9
+
+    pos = np.zeros((n, 2))
+    placed: list = []
+    golden = np.pi * (3 - np.sqrt(5))
+
+    for idx, i in enumerate(order):
+        if idx == 0:
+            pos[i] = (0.0, 0.0)
+            placed.append(i)
+            continue
+        angle = golden * idx
+        spiral_r = (radii[i] + radii[order[0]]) * 0.4
+        best: Optional[Tuple[float, float]] = None
+        for _ in range(max_tries):
+            cand = (spiral_r * np.cos(angle), spiral_r * np.sin(angle))
+            ok = True
+            for j in placed:
+                dist = np.hypot(cand[0] - pos[j][0], cand[1] - pos[j][1])
+                if dist < (radii[i] + radii[j]) * 0.98:
+                    ok = False
+                    break
+            if ok:
+                best = cand
+                break
+            angle += golden * 0.6
+            spiral_r *= 1.02
+        if best is None:
+            # 兜底：放到最远未占用方向（极少触发）
+            best = (spiral_r * np.cos(angle), spiral_r * np.sin(angle))
+        pos[i] = best
+        placed.append(i)
+
+    # 归一化到 [-1, 1]
+    max_abs = float(np.max(np.abs(pos))) if n else 1.0
+    if max_abs > 0:
+        pos = pos / max_abs * 0.95
+    return pos, radii
+
+
+def plot_packed_bubble(
+    labels: List[str],
+    sizes: np.ndarray,
+    colors: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    alpha: float = 0.85,
+    show_values: bool = True,
+    fmt: str = ".0f",
+    min_font: float = 6.0,
+    max_font: float = 16.0,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制打包气泡图（Packed Bubble，圆面积编码数值的紧凑占比展示）
+
+    圆形面积与数值成正比，按大小降序贪心打包（黄金角螺旋 + 碰撞检测），
+    适合展示占比/规模构成（如经费分配、品类份额）。
+
+    参数:
+        labels     : 各项标签（等长）
+        sizes      : 各项数值（等长，>0）
+        colors     : 每项颜色；None 用当前配色循环
+        show_values: 是否在气泡内显示数值
+        fmt        : 数值格式
+        min_font / max_font: 气泡内文字字号随面积缩放的范围
+
+    示例:
+        >>> fig, ax = sp.plot_packed_bubble(
+        ...     ["计算", "存储", "网络", "人力", "运维"],
+        ...     np.array([40, 25, 15, 12, 8]),
+        ... )
+        >>> sp.save(fig, "packed_bubble")
+    """
+    if not labels:
+        raise ValueError("参数 'labels' 不能为空列表")
+    sizes_arr = np.asarray(sizes, dtype=float).ravel()
+    if len(sizes_arr) != len(labels):
+        raise ValueError(
+            f"sizes 长度 ({len(sizes_arr)}) 与 labels 长度 ({len(labels)}) 不一致"
+        )
+    if not np.all(np.isfinite(sizes_arr)):
+        raise ValueError("sizes 不能包含 NaN 或 Inf")
+    if np.any(sizes_arr <= 0):
+        raise ValueError("sizes 必须全部为正数")
+
+    if colors is not None:
+        if len(colors) != len(labels):
+            raise ValueError(
+                f"colors 长度 ({len(colors)}) 与 labels 长度 ({len(labels)}) 不一致"
+            )
+    else:
+        cycle = get_cycle_colors()
+        colors = [cycle[i % len(cycle)] for i in range(len(labels))]
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    pos, radii = _pack_bubbles(sizes_arr)
+    fontsize = plt.rcParams.get("font.size", 9)
+
+    for i, (label, size) in enumerate(zip(labels, sizes_arr)):
+        r = radii[i]
+        circle = plt.Circle(
+            pos[i], r, facecolor=colors[i], alpha=alpha,
+            edgecolor="white", linewidth=1.0, **kwargs,
+        )
+        ax.add_patch(circle)
+        fs = max(min_font, min(max_font, fontsize * (0.7 + 1.3 * (r / max(radii)))))
+        ax.text(
+            pos[i][0], pos[i][1], label,
+            ha="center", va="center", fontsize=fs, color="white",
+            fontweight="bold", zorder=3,
+        )
+        if show_values:
+            ax.text(
+                pos[i][0], pos[i][1] - r * 0.45, f"{size:{fmt}}",
+                ha="center", va="center", fontsize=max(5, fs - 2),
+                color="white", zorder=3,
+            )
+
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
+    ax.set_aspect("equal")
+    ax.set_axis_off()
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_errorbar",
     "plot_confidence",
@@ -447,6 +593,7 @@ __all__ = [
     "plot_bubble",
     "plot_hexbin",
     "plot_marginal",
+    "plot_packed_bubble",
 ]
 
 

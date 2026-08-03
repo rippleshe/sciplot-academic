@@ -262,6 +262,7 @@ from sciplot._plots.advanced import (
     plot_bubble,
     plot_hexbin,
     plot_marginal,
+    plot_packed_bubble,
 )
 from sciplot._plots.polar import (
     plot_radar,
@@ -331,6 +332,7 @@ from sciplot._plots.aliases import (
     bubble,
     hexbin,
     marginal,
+    packed_bubble,
     combo,
     # 极坐标 / 时序 / 统计别名
     radar,
@@ -621,10 +623,10 @@ __all__ = [
     "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline", "raincloud",
 
     # ── 高级（完整名称）──
-    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal",
+    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble",
 
     # ── 高级（简洁别名）──
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble",
 
     # ── 极坐标图表 ──
     "plot_radar",
