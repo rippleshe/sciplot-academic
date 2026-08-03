@@ -35,7 +35,7 @@ fig, ax = sp.plot_grouped_bar(
     ylabel="Top-1 准确率 (%)",
     show_values=True,
     value_fmt=".1f",
-    palette="pastel",
+    colors=["#A8B8C8", "#7FA8D0", "#5B9BD5", "#D96A3A"],  # 本文方法深橙高亮
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

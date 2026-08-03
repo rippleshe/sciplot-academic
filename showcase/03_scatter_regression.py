@@ -42,19 +42,21 @@ ss_tot = np.sum((respiration - np.mean(respiration)) ** 2)
 r_squared = 1 - ss_res / ss_tot
 
 # ── 绘图 ──────────────────────────────────────────────────────
+# 配色：实测样本=主蓝，拟合线=深橙（与样本形成对比），区间=同橙浅带
 fig, ax = sp.plot_scatter(
     soc, respiration,
     xlabel="土壤有机碳含量 (g/kg)",
     ylabel="微生物呼吸速率 (mg CO2/kg/h)",
     label="实测样本",
     s=25,
-    alpha=0.7,
+    alpha=0.75,
+    color="#3E7CB1",
 )
 
 # 手动添加回归线和置信区间
-ax.plot(x_fit, y_fit, color="#D62728", linewidth=1.5, label=f"线性拟合 (R²={r_squared:.3f})")
-ax.fill_between(x_fit, ci_lower, ci_upper, color="#D62728", alpha=0.15, label="95% 置信区间")
-ax.legend()
+ax.plot(x_fit, y_fit, color="#D96A3A", linewidth=1.8, label=f"线性拟合 (R²={r_squared:.3f})")
+ax.fill_between(x_fit, ci_lower, ci_upper, color="#D96A3A", alpha=0.12, label="95% 置信区间")
+ax.legend(frameon=False)
 
 # ── 保存 ──────────────────────────────────────────────────────
 sp.save(fig, "showcase/03_scatter_regression", formats=("png",), dpi=300)

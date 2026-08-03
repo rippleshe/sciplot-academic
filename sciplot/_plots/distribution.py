@@ -102,6 +102,7 @@ def plot_grouped_bar(
     show_values: bool = False,
     value_fmt: str = ".1f",
     legend_loc: str = "best",
+    colors: Optional[Sequence[str]] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -111,7 +112,7 @@ def plot_grouped_bar(
     绘制分组柱状图（多方法/多指标对比，论文最常见）
 
     参数:
-        groups    : 横轴分组标签（如 ["数据集A", "数据集B", "数据集C"]）
+        groups    : 横轴分组标签（如 ["数据集A", "数据集B", "数据集C"])
         data      : {方法名: 对应各组的数值} 有序字典
                     如 {"BERT": [87, 89, 91], "GPT": [85, 90, 93]}
         width     : 每组所有柱的总宽（占一个间隔的比例），默认 0.8
@@ -163,6 +164,11 @@ def plot_grouped_bar(
         )
     bar_w = (width - gap * (n_series - 1)) / n_series
     group_centers = np.arange(n_groups)
+
+    if colors is not None and len(colors) != n_series:
+        raise ValueError(
+            f"colors 长度 ({len(colors)}) 与系列数 ({n_series}) 不一致"
+        )
 
     for i, (series_name, values) in enumerate(normalized_data.items()):
         offsets = group_centers + (i - (n_series - 1) / 2) * (bar_w + gap)
