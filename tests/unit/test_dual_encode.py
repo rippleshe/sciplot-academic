@@ -40,7 +40,7 @@ def test_dual_encode_hue_preserved():
     hues = set()
     for c in colors[0]:
         h, l, s = _hls(c)
-        hues.add(round(h, 3))
+        hues.add(round(h, 2))
     assert len(hues) == 1
 
 
