@@ -6,13 +6,13 @@ description: >-
   边际分布、雨云、蜂群、山脊、六边形、哑铃、发散条形、甘特、打包气泡、雷达、3D 曲面/瀑布、
   网络/3D 网络、维恩、密度、QQ、残差、PCA 等 45+ 类型），或表达画图/出图/可视化/论文插图/
   实验结果展示等意图时触发。库名提及 matplotlib/seaborn/plotly 时引导使用 sciplot。
-version: 1.12.5
+version: 1.12.6
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
 ---
 
-# SciPlot Academic — 科研绘图 Skill (v1.12.5)
+# SciPlot Academic — 科研绘图 Skill (v1.12.6)
 
 ---
 
@@ -84,6 +84,9 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 | 泰勒图(模型评估) | `sp.plot_taylor()` | `sp.taylor()` |
 | 弦图(流量/共现) | `sp.plot_chord()` | `sp.chord()` |
 | 桑基图(能量/物质流) | `sp.plot_sankey()` | `sp.sankey()` |
+| 瀑布图(增量分解) | `sp.plot_waterfall()` | `sp.waterfall()` |
+| 流图(时序构成演变) | `sp.plot_streamgraph()` | `sp.streamgraph()` |
+| 环形条形图(环形排名) | `sp.plot_circular_barplot()` | `sp.circular_barplot()` |
 | 矩形树图(占比构成) | `sp.plot_treemap()` | `sp.treemap()` |
 | 环形图(占比构成) | `sp.plot_donut()` | `sp.donut()` |
 | 三角相图(三组分) | `sp.plot_ternary()` | `sp.ternary()` |
@@ -202,7 +205,7 @@ fig.add_artist(cp)
 | 多线 | `plot_multi` / `multi` | `(x, y_list)` | `labels`, `use_linestyles`, `highlight_last` | x 可标量数组或逐线数组；highlight_last 加粗最后一条 |
 | 散点 | `plot_scatter` | `(x, y)` | `s=20`, `alpha=0.7` | 回归线需手动：`slope, ic = np.polyfit(x, y, 1)` 后 `ax.plot`（参考 showcase/03） |
 | 柱状 | `plot_bar` | `(categories, values)` | `width=0.6` | categories 为标签列表 |
-| 分组柱 | `plot_grouped_bar` | `(groups, data)` | `gap=0.05`, `show_values`, `value_fmt` | data 为 2D 数组（行=组，列=系列） |
+| 分组柱 | `plot_grouped_bar` | `(groups, data)` | `gap=0.05`, `show_values`, `value_fmt`, `colors` | data 为 2D 数组（行=组，列=系列）；colors 自定义系列色 |
 | 直方 | `plot_histogram` | `(data,)` | `bins=30`, `density` | bins 必须正整数 |
 | 热力 | `plot_heatmap` | `(data,)` 2D | `cmap`, `show_values`, `fmt`, `vmin/vmax` | NaN 报错；NaN 矩阵用 `masked` 语义请预清洗 |
 | 气泡热力 | `plot_bubble_heatmap` | `(data,)` 2D | `background=True`, `bubble_scale` | 气泡大小编码 \|值\|，颜色编码值 |
@@ -223,6 +226,9 @@ fig.add_artist(cp)
 | 泰勒 | `plot_taylor` | `(observations, models_dict)` | `obs_name`, `rms_levels` | models 为 {名称: 预测数组} 字典 |
 | 弦图 | `plot_chord` | `(matrix, labels)` | `min_flow`, `color_by`, `show_values` | matrix 为 2D 流量矩阵 |
 | 桑基 | `plot_sankey` | `(sources, targets, values)` | `labels`(列表/dict), `node_colors`, `min_flow` | 节点高度与带宽度 ∝ 流量；无新依赖 |
+| 瀑布 | `plot_waterfall` | `(categories, values)` | `start_value`, `show_connectors`, 三色自定义 | 增=绿/减=红/总计=深灰；累计虚线 |
+| 流图 | `plot_streamgraph` | `(x, y_list)` | `baseline=wiggle/center/zero`, `alpha` | 时序构成演变；非负序列 |
+| 环形条形 | `plot_circular_barplot` | `(categories, values)` | `sort`, `start_angle`, `bar_width` | 极坐标排名；外圈水平标签 |
 | 矩形树图 | `plot_treemap` | `(categories, values)` | `colors`, `show_values`, `fmt` | squarify 布局；面积编码占比 |
 | 环形图 | `plot_donut` | `(categories, values)` | `hole_ratio`, `show_percent`, `start_angle`, `center_text` | 外圈“类别+百分比”，环内数值，中心可显总和 |
 | 三角相图 | `plot_ternary` | `(a, b, c)` | `color_by`, `grid_levels` | 要求非负且每行之和>0；行和自动归一化 |
@@ -1338,6 +1344,13 @@ with sp.style_context("ieee", palette="ocean"):
 | `rdbu` / `coolwarm` | 发散型 | 7 |
 
 子集: `pastel-2` 取前 2 色，`ocean-4` 取前 4 色。
+
+### 双编码配色（复合图专用）
+```python
+# 行=色相、列=明度梯度（条件矩阵：2 处理 × 3 剂量）
+colors = sp.dual_encode_colors(["#E07B54", "#5B7DB1"], 3)
+# colors[0] = 处理A 的 3 档浅→深；colors[1] = 处理B 的 3 档
+```
 
 ### 高级图表速查
 ```python

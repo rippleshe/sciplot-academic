@@ -7,6 +7,36 @@
 
 ---
 
+## [1.12.6] - 2026-08-03
+
+### Added
+
+- 新增 3 个高级图表（均带别名，纯 matplotlib 无新依赖）：
+  - `plot_streamgraph`（`streamgraph`）：流图，wiggle/center/zero 三种基线，
+    Byron-Wattenberg 平滑，Evolution 家族经典类型
+  - `plot_circular_barplot`（`circular_barplot`）：环形条形图，极坐标排名，
+    外圈水平标签，默认降序
+  - `plot_waterfall`（`waterfall`）：瀑布图，增/减/总计三色、累计虚线连接、
+    起始值与数值标注
+- 新增 `dual_encode_colors`：双编码配色生成器（色相 × 明度矩阵），
+  复合图“行=色相、列=剂量梯度”一键生成
+- `plot_grouped_bar` 新增 `colors` 参数（自定义系列颜色）
+- `plot_heatmap` 支持 NaN 掩膜格（不写文字），相关矩阵下三角惯例可用
+- 新增 showcase 39–41（流图/环形条形/瀑布）；05 改为下三角掩膜、
+  02 本文方法高亮、03 协调配色、34 改用 dual_encode_colors
+
+### Changed
+
+- 重构：拆分 advanced.py（1807 → 1264 行），sankey 移至 `_plots/flow.py`，
+  treemap/donut 移至 `_plots/proportions.py`，按图表家族归档
+
+### Tests
+
+- 新增 30 个用例（streamgraph 9 / circular_barplot 10 / waterfall 11 /
+  dual_encode 9 / grouped_bar colors 4），总数 1413 passed
+
+---
+
 ## [1.12.5] - 2026-08-03
 
 ### Fixed

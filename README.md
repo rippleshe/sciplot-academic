@@ -212,6 +212,20 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/38_composite_time_march.png" width="100%">
       <br><b>复合图：时间推进</b>
     </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/39_streamgraph.png" width="100%">
+      <br><b>流图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/40_circular_barplot.png" width="100%">
+      <br><b>环形条形图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/41_waterfall.png" width="100%">
+      <br><b>瀑布图</b>
+    </td>
   </tr>
 </table>
 
