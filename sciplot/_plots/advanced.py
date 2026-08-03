@@ -1636,18 +1636,19 @@ def plot_treemap(
             facecolor=c, edgecolor=border_color,
             linewidth=border_width, zorder=1,
         ))
-        # 文字：面积过小或过扁则不显示
-        if show_values and rw > 0.06 and rh > 0.03:
-            area_frac = rw * rh
-            fs = max(min_font, min(max_font, 14 * (0.5 + 1.6 * np.sqrt(area_frac))))
+        # 文字：字号随矩形尺寸自适应（类别名占宽约 30%，数值行更小）
+        if show_values and rw > 0.04 and rh > 0.03:
             label_txt = f"{cat}"
-            if len(label_txt) * fs * 0.013 < rw and fs >= min_font:
-                ax.text(rx + rw / 2, ry + rh / 2 + 0.018, label_txt,
-                        ha="center", va="center", fontsize=fs,
+            fs_label = min(max_font, max(min_font, rw * 0.30 / max(1.0, len(label_txt))))
+            if fs_label >= min_font:
+                y_top = ry + rh / 2 + (0.012 if rh > 0.07 else 0.0)
+                ax.text(rx + rw / 2, y_top, label_txt,
+                        ha="center", va="center", fontsize=fs_label,
                         color="white", fontweight="bold", zorder=3)
-            if len(f"{v:{fmt}}") * fs * 0.013 < rw:
-                ax.text(rx + rw / 2, ry + rh / 2 - 0.022, f"{v:{fmt}}",
-                        ha="center", va="center", fontsize=fs - 2,
+            if rh > 0.06:
+                fs_val = max(min_font - 1.0, fs_label - 2.0)
+                ax.text(rx + rw / 2, ry + rh / 2 - 0.014, f"{v:{fmt}}",
+                        ha="center", va="center", fontsize=fs_val,
                         color="white", alpha=0.9, zorder=3)
 
     ax.set_xlim(0, 1)
@@ -1735,19 +1736,12 @@ def plot_donut(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     total = float(val_arr.sum())
-    autopct = None
-    pct_txt = None
-    if show_percent:
-        def pct_txt(pct: float) -> str:
-            return f"{pct:{percent_fmt}}%"
 
     wedges, *_ = ax.pie(
         val_arr,
         colors=color_list,
         startangle=start_angle,
         wedgeprops=dict(width=1.0 - hole_ratio, edgecolor="white", linewidth=1.5),
-        autopct=pct_txt,
-        pctdistance=1.0 - hole_ratio / 2,
         labels=None,
         **kwargs,
     )
@@ -1764,15 +1758,20 @@ def plot_donut(
                     ha="center", va="center", fontsize=fs,
                     color="white", fontweight="bold", zorder=5)
 
-    # 类别标签放外圈
+    # 外圈标签：类别名 + 可选百分比（避免与环内数值重叠）
     fs_label = max(7, plt.rcParams.get("font.size", 9) - 1)
-    for w, cat in zip(wedges, cat_arr):
+    for w, cat, v in zip(wedges, cat_arr, val_arr):
         ang = np.deg2rad((w.theta1 + w.theta2) / 2)
         x = label_radius * np.cos(ang)
         y = label_radius * np.sin(ang)
         ha = "left" if x >= 0 else "right"
         va = "bottom" if y >= 0 else "top"
-        ax.text(x, y, cat, ha=ha, va=va, fontsize=fs_label, zorder=5)
+        if show_percent:
+            pct = v / total * 100.0
+            label_txt = f"{cat}  {pct:{percent_fmt}}%"
+        else:
+            label_txt = cat
+        ax.text(x, y, label_txt, ha=ha, va=va, fontsize=fs_label, zorder=5)
 
     ax.set_aspect("equal")
     ax.set_xlim(-label_radius * 1.15, label_radius * 1.15)
