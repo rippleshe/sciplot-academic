@@ -122,6 +122,9 @@ def plot_parallel(
             else:
                 columns = list(df_numeric.columns)
             data = df_numeric.values
+        else:
+            # 轻量 DataFrame 模拟对象：直接取 .values（假定全数值）
+            data = df.values
 
     data = np.asarray(data)
 
