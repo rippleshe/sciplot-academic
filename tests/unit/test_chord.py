@@ -24,11 +24,14 @@ def chord_matrix():
 def test_chord_basic(chord_matrix, cleanup_figures):
     result = sp.plot_chord(chord_matrix, labels=["A", "B", "C", "D"])
     assert result.fig is not None
-    # 4 段弧 → 4 个 fill patch
+    # 4 个节点标签（弧段 + 弦均为 Polygon，以标签文本验证节点数）
+    texts = [t.get_text() for t in result.ax.texts]
+    assert "A" in texts and "D" in texts
+    # 存在弧段填充（面积大）与弦填充
     from matplotlib.patches import Polygon
 
     n_polys = sum(1 for p in result.ax.patches if isinstance(p, Polygon))
-    assert n_polys == 4
+    assert n_polys >= 4
 
 
 def test_chord_labels(chord_matrix, cleanup_figures):
@@ -78,6 +81,35 @@ def test_chord_bad_width_raises(chord_matrix, cleanup_figures):
 def test_chord_single_node_raises(cleanup_figures):
     with pytest.raises(ValueError, match="至少需要 2 个"):
         sp.plot_chord(np.array([[5.0]]))
+
+
+def test_chord_color_by_legend(chord_matrix, cleanup_figures):
+    """color_by 分组应生成类别图例。"""
+    result = sp.plot_chord(
+        chord_matrix, labels=["A", "B", "C", "D"],
+        color_by=["组1", "组1", "组2", "组2"],
+    )
+    legend = result.ax.get_legend()
+    assert legend is not None
+    texts = [t.get_text() for t in legend.get_texts()]
+    assert texts == ["组1", "组2"]
+
+
+def test_chord_min_flow_filter(chord_matrix, cleanup_figures):
+    """min_flow 过滤小流量弦。"""
+    result = sp.plot_chord(chord_matrix, labels=["A", "B", "C", "D"], min_flow=10.0)
+    assert result.fig is not None
+
+
+def test_chord_bad_min_flow_raises(chord_matrix, cleanup_figures):
+    with pytest.raises(ValueError, match="min_flow"):
+        sp.plot_chord(chord_matrix, min_flow=-1.0)
+
+
+def test_chord_color_by_mismatch_raises(chord_matrix, cleanup_figures):
+    with pytest.raises(ValueError, match="color_by"):
+        sp.plot_chord(chord_matrix, labels=["A", "B", "C", "D"],
+                      color_by=["x", "y"])
 
 
 def test_chord_alias_and_export(chord_matrix, cleanup_figures):

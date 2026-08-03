@@ -603,7 +603,9 @@ def plot_chord(
     title: str = "",
     width: float = 0.07,
     gap: float = 0.01,
-    alpha: float = 0.55,
+    alpha: float = 0.5,
+    min_flow: float = 0.0,
+    color_by: Optional[List[str]] = None,
     show_values: bool = False,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
@@ -613,21 +615,27 @@ def plot_chord(
     """
     绘制弦图（Chord Diagram，节点间流量/共现关系）
 
-    节点沿圆周排列，弧长编码节点总流量；节点间连线（贝塞尔曲线）
-    宽度编码双向流量，适合展示转移矩阵、共现关系、资源流向。
+    节点沿圆周排列，弧长编码节点总流量；节点间弦（渐变宽度多边形）
+    宽度编码流量、颜色取自源节点，源端宽而目标端收窄，
+    适合展示转移矩阵、共现关系、资源流向。
 
     参数:
         matrix     : 流量/共现矩阵 (n, n)，要求非负
         labels     : 节点标签（等长）；None 则用序号
         width      : 外圈弧宽（占单位半径比例），默认 0.07
         gap        : 弧段间最小间隙（弧度），默认 0.01
-        alpha      : 弦线透明度
+        alpha      : 弦透明度
+        min_flow   : 最小流量阈值，低于该值的弦不绘制（过滤噪声）
+        color_by   : 节点分类标签（等长）；提供时按类别着色并生成图例
         show_values: 是否在弧外显示各节点总量
 
     示例:
-        >>> # 城市间迁移流量
+        >>> # 城市间迁移流量（按区域分组着色）
         >>> fig, ax = sp.plot_chord(
-        ...     flow_matrix, labels=["北京", "上海", "广州", "深圳"],
+        ...     flow_matrix,
+        ...     labels=["北京", "上海", "广州", "深圳", "成都"],
+        ...     color_by=["华北", "华东", "华南", "华南", "西南"],
+        ...     min_flow=1.0,
         ... )
         >>> sp.save(fig, "chord")
     """
@@ -650,6 +658,13 @@ def plot_chord(
         labels = [str(i + 1) for i in range(n)]
     if not 0 < width < 1:
         raise ValueError(f"width 必须在 (0, 1) 范围内，实际值: {width!r}")
+    if min_flow < 0:
+        raise ValueError(f"min_flow 必须为非负数，实际值: {min_flow!r}")
+    if color_by is not None:
+        if len(color_by) != n:
+            raise ValueError(
+                f"color_by 长度 ({len(color_by)}) 与矩阵维度 ({n}) 不一致"
+            )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
     from sciplot._core.style import VENUES
@@ -659,6 +674,16 @@ def plot_chord(
     fig, ax = plt.subplots(figsize=(size, size))
 
     colors = get_cycle_colors()
+
+    # 节点颜色：color_by 分类或默认逐节点
+    if color_by is not None:
+        unique_groups = sorted(set(color_by), key=str)
+        group_map = {g: colors[i % len(colors)] for i, g in enumerate(unique_groups)}
+        node_colors = [group_map[g] for g in color_by]
+        categorical_legend = group_map
+    else:
+        node_colors = [colors[i % len(colors)] for i in range(n)]
+        categorical_legend = None
 
     # 节点总流量（行 + 列）
     totals = mat.sum(axis=1) + mat.sum(axis=0)
@@ -684,43 +709,58 @@ def plot_chord(
         return r * np.cos(theta), r * np.sin(theta)
 
     # ── 外圈弧段 ──
-    theta_grid = np.linspace(0, 2 * np.pi, 720)
     for i in range(n):
         start, end = arc_starts[i], arc_ends[i]
-        color = colors[i % len(colors)]
+        color = node_colors[i]
         seg = np.linspace(start, end, 100)
         r_in = 1.0
         r_out = 1.0 + width
         xs = np.concatenate([r_out * np.cos(seg), r_in * np.cos(seg[::-1])])
         ys = np.concatenate([r_out * np.sin(seg), r_in * np.sin(seg[::-1])])
-        ax.fill(xs, ys, color=color, alpha=0.9, edgecolor="none")
+        ax.fill(xs, ys, color=color, alpha=0.95, edgecolor="none")
         ax.plot(r_out * np.cos(seg), r_out * np.sin(seg),
                 color=color, linewidth=1.2)
 
-    # ── 弦线（贝塞尔） ──
+    # ── 弦（渐变宽度多边形：源端宽编码流量，目标端收窄） ──
     max_flow = float(mat.max()) if mat.size else 1.0
     if max_flow <= 0:
         max_flow = 1.0
+
+    def _bezier_curve(
+        p0: Tuple[float, float], p3: Tuple[float, float], n_pts: int = 48
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """三次贝塞尔（控制点取半径 0.5 处）。"""
+        p1 = (p0[0] * 0.5, p0[1] * 0.5)
+        p2 = (p3[0] * 0.5, p3[1] * 0.5)
+        t = np.linspace(0, 1, n_pts)
+        bx = ((1 - t) ** 3 * p0[0] + 3 * (1 - t) ** 2 * t * p1[0]
+              + 3 * (1 - t) * t**2 * p2[0] + t**3 * p3[0])
+        by = ((1 - t) ** 3 * p0[1] + 3 * (1 - t) ** 2 * t * p1[1]
+              + 3 * (1 - t) * t**2 * p2[1] + t**3 * p3[1])
+        return bx, by
+
     for i in range(n):
+        row_total = float(mat[i].sum())
         for j in range(n):
             flow = float(mat[i, j])
-            if flow <= 0 or i == j:
+            if flow <= 0 or i == j or flow < min_flow:
                 continue
-            # 源点：i 弧段内按流量比例取位置；终点：j 弧段起始段
-            src_theta = arc_starts[i] + (arc_ends[i] - arc_starts[i]) * 0.5
-            tgt_theta = arc_starts[j] + (arc_ends[j] - arc_starts[j]) * 0.3
-            p0 = _polar_to_cart(src_theta, 1.0)
-            p3 = _polar_to_cart(tgt_theta, 1.0)
-            p1 = _polar_to_cart(src_theta, 0.5)
-            p2 = _polar_to_cart(tgt_theta, 0.5)
-            t = np.linspace(0, 1, 60)
-            bx = ((1 - t) ** 3 * p0[0] + 3 * (1 - t) ** 2 * t * p1[0]
-                  + 3 * (1 - t) * t**2 * p2[0] + t**3 * p3[0])
-            by = ((1 - t) ** 3 * p0[1] + 3 * (1 - t) ** 2 * t * p1[1]
-                  + 3 * (1 - t) * t**2 * p2[1] + t**3 * p3[1])
-            lw = max(0.5, flow / max_flow * 6.0)
-            ax.plot(bx, by, color=colors[i % len(colors)],
-                    alpha=alpha, linewidth=lw, zorder=2)
+            # 源端角度：按该流量占 i 行总出量的比例定位在弧段内
+            src_frac = flow / row_total if row_total > 0 else 0.5
+            src_theta = arc_starts[i] + (arc_ends[i] - arc_starts[i]) * min(0.85, max(0.15, src_frac))
+            tgt_theta = arc_starts[j] + (arc_ends[j] - arc_starts[j]) * 0.35
+            # 源端宽度 ∝ 流量，目标端固定窄宽（视觉层次）
+            half_w = max(0.004, flow / max_flow * 0.03)
+            p0a = _polar_to_cart(src_theta - half_w, 1.0)
+            p0b = _polar_to_cart(src_theta + half_w, 1.0)
+            p3a = _polar_to_cart(tgt_theta - 0.007, 1.0)
+            p3b = _polar_to_cart(tgt_theta + 0.007, 1.0)
+            bx_top, by_top = _bezier_curve(p0a, p3a)
+            bx_bot, by_bot = _bezier_curve(p0b, p3b)
+            poly_x = np.concatenate([bx_top, bx_bot[::-1]])
+            poly_y = np.concatenate([by_top, by_bot[::-1]])
+            ax.fill(poly_x, poly_y, color=node_colors[i], alpha=alpha,
+                    edgecolor="none", zorder=2)
 
     # ── 标签与数值 ──
     label_r = 1.0 + width + 0.06
@@ -731,11 +771,21 @@ def plot_chord(
         ha = "left" if np.cos(mid) >= 0 else "right"
         va = "bottom" if np.sin(mid) >= 0 else "top"
         ax.text(x, y, labels[i], ha=ha, va=va, fontsize=fontsize,
-                color=colors[i % len(colors)], fontweight="bold")
+                color=node_colors[i], fontweight="bold")
         if show_values:
             ax.text(x, y - (0.06 if np.sin(mid) >= 0 else -0.06),
                     f"{totals[i]:.0f}", ha=ha, va=va,
                     fontsize=max(6, fontsize - 2), color="#555555")
+
+    # ── 分类图例 ──
+    if categorical_legend is not None:
+        from matplotlib.patches import Patch
+
+        handles = [
+            Patch(facecolor=c, label=str(g), alpha=0.9)
+            for g, c in categorical_legend.items()
+        ]
+        ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=8)
 
     ax.set_xlim(-1.35, 1.35)
     ax.set_ylim(-1.35, 1.35)
