@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -154,7 +154,6 @@ def plot_grouped_bar(
     gap = validate_positive_number(gap, "gap", allow_zero=True)
 
     fig, ax = new_styled_figure(venue, palette, lang)
-    colors = _get_cycle_colors()
 
     n_series = len(normalized_data)
     if width <= gap * (n_series - 1):
@@ -162,13 +161,15 @@ def plot_grouped_bar(
             f"width={width} 过小，必须大于 gap*(系列数-1)={gap * (n_series - 1):.6g}，"
             "否则每个柱子的宽度将小于等于 0"
         )
-    bar_w = (width - gap * (n_series - 1)) / n_series
-    group_centers = np.arange(n_groups)
-
     if colors is not None and len(colors) != n_series:
         raise ValueError(
             f"colors 长度 ({len(colors)}) 与系列数 ({n_series}) 不一致"
         )
+    if colors is None:
+        colors = _get_cycle_colors()
+
+    bar_w = (width - gap * (n_series - 1)) / n_series
+    group_centers = np.arange(n_groups)
 
     for i, (series_name, values) in enumerate(normalized_data.items()):
         offsets = group_centers + (i - (n_series - 1) / 2) * (bar_w + gap)
