@@ -198,6 +198,20 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/35_composite_comparative.png" width="100%">
       <br><b>复合图：对照双列</b>
     </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/36_composite_hub_spoke.png" width="100%">
+      <br><b>复合图：中心-辐条</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/37_composite_pipeline.png" width="100%">
+      <br><b>复合图：流水线</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/38_composite_time_march.png" width="100%">
+      <br><b>复合图：时间推进</b>
+    </td>
   </tr>
 </table>
 
