@@ -7,6 +7,30 @@
 
 ---
 
+## [1.12.3] - 2026-08-03
+
+### Changed
+
+- 提取 `new_styled_figure` 公共入口：统一 apply_resolved_style + new_figure
+  配对，消除 11 个文件约 40 处样板代码；`create_sciplot_figure` 复用同一路径
+- 提取 `_require_optional`/`_try_import_optional`：统一 scipy/sklearn/
+  matplotlib-venn 等可选依赖的降级与报错提示
+- 提取 `_is_constant`（KDE 常数退化判断）、`_coerce_to_date`（日历日期转换）、
+  `_is_datetime_value`（日期类型判断），分别消除 5/3/3 处重复
+- `new_figure` 成为取色安全入口（内部保证 prop_cycle 非空），删除
+  statistical.py 7 处冗余调用，空颜色循环崩溃防护覆盖全库
+
+### Fixed
+
+- 修复 `plot_volcano` 在 p=0 时的 log10 除零 RuntimeWarning
+
+### Tests
+
+- 新增 12 个用例（_coerce_to_date ×4、refactor helpers ×9 等），
+  总数 1316 passed
+
+---
+
 ## [1.12.2] - 2026-08-03
 
 ### Changed
