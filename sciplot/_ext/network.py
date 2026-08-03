@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
+from matplotlib.patches import Patch
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import apply_resolved_style, get_cycle_colors
@@ -72,6 +73,103 @@ def _get_layout(G, layout: str, **kwargs):
             fallback_kwargs.pop("seed", None)
             return layout_func(G, **fallback_kwargs)
         raise
+
+
+def _resolve_node_colors(G, node_color_by, colors):
+    """解析节点着色，返回 (node_colors, 分类色映射, 连续色映射信息)。
+
+    分类色映射: Dict[value, color]（非 None 时按类别着色）
+    连续色映射信息: (cmap, norm) 或 None
+    """
+    nx = _check_networkx()
+    categorical_map: Optional[Dict[Any, str]] = None
+    continuous_info = None
+
+    if node_color_by is None:
+        return colors[0], categorical_map, continuous_info
+
+    if node_color_by == "degree":
+        color_values = dict(G.degree())
+    else:
+        color_values = nx.get_node_attributes(G, node_color_by)
+
+    if not color_values:
+        return colors[0], categorical_map, continuous_info
+
+    numeric_attr = _coerce_numeric_attr(color_values)
+    unique_values = sorted(set(color_values.values()), key=str)  # 确定性排序
+    if numeric_attr is None or len(unique_values) <= 10:
+        categorical_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
+        node_colors = [categorical_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
+        return node_colors, categorical_map, continuous_info
+
+    norm = Normalize(min(numeric_attr.values()), max(numeric_attr.values()))
+    try:
+        cmap = plt.colormaps.get_cmap("viridis")
+    except AttributeError:
+        cmap = plt.cm.get_cmap("viridis")  # type: ignore[attr-defined]
+    node_colors = [cmap(norm(numeric_attr.get(n, 0))) for n in G.nodes()]
+    return node_colors, categorical_map, (cmap, norm)
+
+
+def _resolve_node_sizes(G, node_size_by, node_size, size_range) -> Union[float, List[float]]:
+    """解析节点尺寸映射；属性非数值时警告并回退默认。"""
+    nx = _check_networkx()
+    if node_size_by is None:
+        return node_size
+
+    if node_size_by == "degree":
+        size_values = dict(G.degree())
+    else:
+        size_values = nx.get_node_attributes(G, node_size_by)
+
+    if not size_values:
+        return node_size
+
+    numeric_size = _coerce_numeric_attr(size_values)
+    if numeric_size is None:
+        warnings.warn(
+            f"节点属性 '{node_size_by}' 包含非数值项，已回退为默认节点大小。",
+            UserWarning, stacklevel=2,
+        )
+        return node_size
+
+    min_size, max_size = min(numeric_size.values()), max(numeric_size.values())
+    if max_size <= min_size:
+        return [node_size] * G.number_of_nodes()
+    return [
+        size_range[0] + (numeric_size.get(n, min_size) - min_size) /
+        (max_size - min_size) * (size_range[1] - size_range[0])
+        for n in G.nodes()
+    ]
+
+
+def _resolve_edge_widths(G, edge_weight_by, edge_width, width_range) -> Union[float, List[float]]:
+    """解析边宽映射；属性非数值时警告并回退默认。"""
+    nx = _check_networkx()
+    if edge_weight_by is None:
+        return edge_width
+
+    weight_values = nx.get_edge_attributes(G, edge_weight_by)
+    if not weight_values:
+        return edge_width
+
+    numeric_weight = _coerce_numeric_attr(weight_values)
+    if numeric_weight is None:
+        warnings.warn(
+            f"边属性 '{edge_weight_by}' 包含非数值项，已回退为默认边宽。",
+            UserWarning, stacklevel=2,
+        )
+        return edge_width
+
+    min_w, max_w = min(numeric_weight.values()), max(numeric_weight.values())
+    if max_w <= min_w:
+        return [edge_width] * G.number_of_edges()
+    return [
+        width_range[0] + (numeric_weight.get(e, min_w) - min_w) /
+        (max_w - min_w) * (width_range[1] - width_range[0])
+        for e in G.edges()
+    ]
 
 
 def plot_network(
@@ -143,96 +241,18 @@ def plot_network(
 
     colors = get_cycle_colors()
 
-    # ── 节点着色 ──
-    categorical_colors: Optional[Dict[Any, str]] = None
+    # ── 节点着色 / 尺寸 / 边宽（共享辅助函数） ──
+    node_colors, categorical_colors, continuous_info = _resolve_node_colors(
+        G, node_color_by, colors
+    )
+    node_sizes = _resolve_node_sizes(G, node_size_by, node_size, node_size_range)
+    edge_widths = _resolve_edge_widths(G, edge_weight_by, edge_width, edge_width_range)
     continuous_mappable = None
-    if node_color_by is not None:
-        if node_color_by == "degree":
-            color_values = dict(G.degree())
-        else:
-            color_values = nx.get_node_attributes(G, node_color_by)
-
-        if color_values:
-            numeric_attr = _coerce_numeric_attr(color_values)
-            unique_values = sorted(set(color_values.values()), key=str)  # 确定性排序
-            if numeric_attr is None or len(unique_values) <= 10:
-                # 分类着色：非数值属性或类别数较少时按类别映射（顺序稳定）
-                color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
-                node_colors = [color_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
-                categorical_colors = color_map
-            else:
-                norm = Normalize(min(numeric_attr.values()), max(numeric_attr.values()))
-                try:
-                    cmap = plt.colormaps.get_cmap("viridis")
-                except AttributeError:
-                    cmap = plt.cm.get_cmap("viridis")  # type: ignore[attr-defined]
-                node_colors = [cmap(norm(numeric_attr.get(n, 0))) for n in G.nodes()]
-                if show_colorbar:
-                    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-                    sm.set_array([])
-                    continuous_mappable = sm
-        else:
-            node_colors = colors[0]
-    else:
-        node_colors = colors[0]
-
-    # ── 节点大小 ──
-    if node_size_by is not None:
-        if node_size_by == "degree":
-            size_values = dict(G.degree())
-        else:
-            size_values = nx.get_node_attributes(G, node_size_by)
-
-        if size_values:
-            numeric_size = _coerce_numeric_attr(size_values)
-            if numeric_size is None:
-                warnings.warn(
-                    f"节点属性 '{node_size_by}' 包含非数值项，已回退为默认节点大小。",
-                    UserWarning, stacklevel=2,
-                )
-                node_sizes = node_size
-            else:
-                min_size, max_size = min(numeric_size.values()), max(numeric_size.values())
-                if max_size > min_size:
-                    size_range = node_size_range
-                    node_sizes = [
-                        size_range[0] + (numeric_size.get(n, min_size) - min_size) /
-                        (max_size - min_size) * (size_range[1] - size_range[0])
-                        for n in G.nodes()
-                    ]
-                else:
-                    node_sizes = [node_size] * G.number_of_nodes()
-        else:
-            node_sizes = node_size
-    else:
-        node_sizes = node_size
-
-    # ── 边宽 ──
-    if edge_weight_by is not None:
-        weight_values = nx.get_edge_attributes(G, edge_weight_by)
-        if weight_values:
-            numeric_weight = _coerce_numeric_attr(weight_values)
-            if numeric_weight is None:
-                warnings.warn(
-                    f"边属性 '{edge_weight_by}' 包含非数值项，已回退为默认边宽。",
-                    UserWarning, stacklevel=2,
-                )
-                edge_widths = edge_width
-            else:
-                min_w, max_w = min(numeric_weight.values()), max(numeric_weight.values())
-                if max_w > min_w:
-                    width_range = edge_width_range
-                    edge_widths = [
-                        width_range[0] + (numeric_weight.get(e, min_w) - min_w) /
-                        (max_w - min_w) * (width_range[1] - width_range[0])
-                        for e in G.edges()
-                    ]
-                else:
-                    edge_widths = [edge_width] * G.number_of_edges()
-        else:
-            edge_widths = edge_width
-    else:
-        edge_widths = edge_width
+    if continuous_info is not None and show_colorbar:
+        cmap, norm = continuous_info
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        continuous_mappable = sm
 
     is_directed = G.is_directed()
 
@@ -307,6 +327,169 @@ def plot_network(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_network3d(
+    G: Any,
+    layout: str = "spring",
+    node_color_by: Optional[str] = None,
+    node_size_by: Optional[str] = None,
+    z_by: Optional[str] = None,
+    labels: Union[bool, int] = True,
+    node_size: float = 200,
+    node_alpha: float = 0.85,
+    edge_alpha: float = 0.35,
+    edge_width: float = 1.0,
+    title: str = "",
+    seed: Optional[int] = 42,
+    layout_kwargs: Optional[Dict[str, Any]] = None,
+    node_size_range: Tuple[float, float] = (60, 600),
+    show_colorbar: bool = False,
+    show_legend: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制 3D 网络图（节点立体分布，展示层级/属性纵向差异）
+
+    基于 2D 布局将节点映射到 X/Y 平面，Z 轴由节点属性（z_by）或 0 决定，
+    边以半透明线段连接。适合展示带层级属性的网络（如蛋白质互作 + 表达量、
+    社交网络 + 活跃度）。
+
+    参数:
+        G            : networkx Graph 或 DiGraph 对象
+        layout       : 布局算法（同 plot_network）
+        node_color_by: 按节点属性着色（"degree" 或任意属性）
+        node_size_by : 按节点属性调整大小
+        z_by         : Z 轴坐标来源（节点属性名或 "degree"）；None 则平铺于 0
+        labels       : 节点标签；True 全部 / False 不显示 / 整数 N 显示度最大的前 N 个
+        node_size    : 基础节点大小，默认 200
+        seed         : 布局随机种子，默认 42
+        layout_kwargs: 透传给布局函数的额外参数
+        node_size_range: 属性→尺寸映射范围，默认 (60, 600)
+        show_colorbar: 连续着色时显示颜色条
+        show_legend  : 分类着色时显示图例
+
+    示例:
+        >>> # 蛋白质互作网络：节点高度=表达量
+        >>> fig, ax = sp.plot_network3d(
+        ...     G, z_by="expression", node_color_by="module",
+        ... )
+        >>> sp.save(fig, "network3d")
+    """
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401  # 注册 3D projection
+    from sciplot._ext.plot3d import _get_3d_figsize
+
+    nx = _check_networkx()
+    layout_kw = dict(layout_kwargs or {})
+    if seed is not None:
+        layout_kw.setdefault("seed", seed)
+    pos = _get_layout(G, layout, **layout_kw)
+
+    # Z 坐标：节点属性或 degree，非数值回退 0
+    if z_by == "degree":
+        z_values = dict(G.degree())
+    elif z_by is not None:
+        z_values = nx.get_node_attributes(G, z_by)
+    else:
+        z_values = {}
+
+    if z_values:
+        numeric_z = _coerce_numeric_attr(z_values)
+        if numeric_z is None:
+            warnings.warn(
+                f"节点属性 '{z_by}' 包含非数值项，Z 坐标回退为 0。",
+                UserWarning, stacklevel=2,
+            )
+            z_coords = {n: 0.0 for n in G.nodes()}
+        else:
+            z_coords = {n: float(numeric_z.get(n, 0.0)) for n in G.nodes()}
+    else:
+        z_coords = {n: 0.0 for n in G.nodes()}
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    figsize = _get_3d_figsize(effective_venue)
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, projection="3d")
+
+    colors = get_cycle_colors()
+    node_colors, categorical_colors, continuous_info = _resolve_node_colors(
+        G, node_color_by, colors
+    )
+    node_sizes = _resolve_node_sizes(G, node_size_by, node_size, node_size_range)
+
+    # 边：逐条半透明线段
+    xyz = {n: (pos[n][0], pos[n][1], z_coords[n]) for n in G.nodes()}
+    for u, v in G.edges():
+        ax.plot(
+            [xyz[u][0], xyz[v][0]],
+            [xyz[u][1], xyz[v][1]],
+            [xyz[u][2], xyz[v][2]],
+            color="#888888", alpha=edge_alpha, linewidth=edge_width,
+        )
+
+    xs = [xyz[n][0] for n in G.nodes()]
+    ys = [xyz[n][1] for n in G.nodes()]
+    zs = [xyz[n][2] for n in G.nodes()]
+
+    scatter_kwargs: Dict[str, Any] = dict(
+        s=node_sizes, c=node_colors, alpha=node_alpha, depthshade=False,
+    )
+    scatter_kwargs.update(kwargs)
+    ax.scatter(xs, ys, zs, **scatter_kwargs)
+
+    # 标签（top-N 或全部）
+    label_nodes: Optional[set] = None
+    if isinstance(labels, int) and not isinstance(labels, bool):
+        if labels > 0:
+            top = sorted(G.nodes(), key=lambda n: G.degree(n), reverse=True)[:labels]
+            label_nodes = set(top)
+    elif labels is True:
+        label_nodes = None
+
+    if label_nodes is not None or labels is True:
+        font_family = plt.rcParams.get("font.family", "serif")
+        if isinstance(font_family, list):
+            font_family = font_family[0]
+        if font_family == "serif":
+            serif_fonts = plt.rcParams.get("font.serif", [])
+            if serif_fonts:
+                font_family = serif_fonts[0]
+        fontsize = plt.rcParams.get("font.size", 9) - 1
+        for n in G.nodes():
+            if label_nodes is not None and n not in label_nodes:
+                continue
+            ax.text(
+                xyz[n][0], xyz[n][1], xyz[n][2], str(n),
+                fontsize=fontsize, fontfamily=font_family,
+                ha="center", va="center", zorder=5,
+            )
+
+    # 连续着色 colorbar / 分类图例
+    if continuous_info is not None and show_colorbar:
+        cmap, norm = continuous_info
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax, shrink=0.5, aspect=10)
+        if node_color_by is not None:
+            cbar.set_label(node_color_by)
+
+    if categorical_colors is not None and show_legend:
+        from matplotlib.patches import Patch
+
+        handles = [
+            Patch(facecolor=c, label=str(v), alpha=node_alpha)
+            for v, c in categorical_colors.items()
+        ]
+        ax.legend(handles=handles, loc="upper right", frameon=False)
+
+    ax.set_axis_off()
+    if title:
+        ax.set_title(title)
+
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 def plot_network_from_matrix(
     adj_matrix: np.ndarray,
     threshold: float = 0.0,
@@ -364,9 +547,13 @@ def plot_network_from_matrix(
 
 def plot_network_communities(
     G: Any,
-    communities: List[List[Any]],
+    communities: Optional[List[List[Any]]] = None,
     layout: str = "spring",
+    labels: Union[bool, int] = True,
+    node_size: float = 300,
     title: str = "",
+    seed: Optional[int] = 42,
+    layout_kwargs: Optional[Dict[str, Any]] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -377,19 +564,43 @@ def plot_network_communities(
 
     参数:
         G          : networkx Graph 对象
-        communities: 社区列表，每个社区是节点列表
+        communities: 社区列表，每个社区是节点列表；
+                     None 时自动用 greedy_modularity_communities 检测
         layout     : 布局算法
+        labels     : 节点标签；True 全部 / False 不显示 / 整数 N 显示度最大的前 N 个
+        node_size  : 节点大小，默认 300
+        seed       : 布局随机种子，默认 42
+        layout_kwargs: 透传给布局函数的额外参数
         lang       : 语言设置（如 "zh", "en"），用于中文字体支持
 
     示例:
         >>> import networkx as nx
-        >>> from networkx.algorithms.community import greedy_modularity_communities
         >>> G = nx.karate_club_graph()
-        >>> communities = list(greedy_modularity_communities(G))
+        >>> # 自动检测社区
+        >>> fig, ax = sp.plot_network_communities(G)
+        >>> # 手动指定社区
+        >>> communities = [list(c) for c in nx.community.greedy_modularity_communities(G)]
         >>> fig, ax = sp.plot_network_communities(G, communities)
     """
     nx = _check_networkx()
-    pos = _get_layout(G, layout, seed=42)
+    layout_kw = dict(layout_kwargs or {})
+    if seed is not None:
+        layout_kw.setdefault("seed", seed)
+    pos = _get_layout(G, layout, **layout_kw)
+
+    if communities is None:
+        try:
+            from networkx.algorithms.community import greedy_modularity_communities
+        except ImportError:
+            greedy_modularity_communities = None  # type: ignore[assignment]
+        if greedy_modularity_communities is None:
+            raise ImportError(
+                "自动社区检测需要 networkx.algorithms.community，请升级 networkx"
+            )
+        detected = list(greedy_modularity_communities(G))
+        if not detected:
+            detected = [list(G.nodes())]
+        communities = [list(c) for c in detected]
 
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
@@ -409,28 +620,54 @@ def plot_network_communities(
         edge_color="#CCCCCC",
     )
 
+    node_sizes = node_size if isinstance(node_size, (int, float)) else 300
     nx.draw_networkx_nodes(
         G, pos, ax=ax,
         node_color=node_colors,
-        node_size=300,
+        node_size=node_sizes,
         alpha=0.8,
     )
 
-    # 获取字体设置，确保中文正常显示
-    font_family = plt.rcParams.get("font.family", "serif")
-    if isinstance(font_family, list):
-        font_family = font_family[0]
-    # 如果是 serif，尝试获取具体的 serif 字体列表中的第一个
-    if font_family == "serif":
-        serif_fonts = plt.rcParams.get("font.serif", [])
-        if serif_fonts:
-            font_family = serif_fonts[0]
+    # 标签（top-N 或全部）
+    label_nodes: Optional[set] = None
+    if isinstance(labels, int) and not isinstance(labels, bool):
+        if labels > 0:
+            top = sorted(G.nodes(), key=lambda n: G.degree(n), reverse=True)[:labels]
+            label_nodes = set(top)
+    elif labels is True:
+        label_nodes = None
 
-    nx.draw_networkx_labels(
-        G, pos, ax=ax,
-        font_size=plt.rcParams.get("font.size", 9) - 1,
-        font_family=font_family,
-    )
+    if label_nodes is not None or labels is True:
+        # 获取字体设置，确保中文正常显示
+        font_family = plt.rcParams.get("font.family", "serif")
+        if isinstance(font_family, list):
+            font_family = font_family[0]
+        if font_family == "serif":
+            serif_fonts = plt.rcParams.get("font.serif", [])
+            if serif_fonts:
+                font_family = serif_fonts[0]
+
+        if label_nodes is not None:
+            label_dict = {n: str(n) for n in label_nodes}
+            nx.draw_networkx_labels(
+                G, pos, labels=label_dict, ax=ax,
+                font_size=plt.rcParams.get("font.size", 9) - 1,
+                font_family=font_family,
+            )
+        else:
+            nx.draw_networkx_labels(
+                G, pos, ax=ax,
+                font_size=plt.rcParams.get("font.size", 9) - 1,
+                font_family=font_family,
+            )
+
+    # 社区图例
+    legend_handles = []
+    for i, community in enumerate(communities):
+        legend_handles.append(
+            Patch(facecolor=colors[i % len(colors)], label=f"社区 {i + 1}", alpha=0.8)
+        )
+    ax.legend(handles=legend_handles, loc="best", frameon=False)
 
     ax.set_axis_off()
     if title:
@@ -439,4 +676,4 @@ def plot_network_communities(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-__all__ = ["plot_network", "plot_network_from_matrix", "plot_network_communities"]
+__all__ = ["plot_network", "plot_network3d", "plot_network_from_matrix", "plot_network_communities"]

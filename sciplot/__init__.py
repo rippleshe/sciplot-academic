@@ -393,6 +393,7 @@ def palette(palette_name: str) -> PlotChain:
 
 _LAZY_EXT = {
     "plot_network": ("sciplot._ext.network", "networkx"),
+    "plot_network3d": ("sciplot._ext.network", "networkx"),
     "plot_network_from_matrix": ("sciplot._ext.network", "networkx"),
     "plot_network_communities": ("sciplot._ext.network", "networkx"),
     "plot_dendrogram": ("sciplot._ext.hierarchical", "scipy"),
@@ -533,6 +534,7 @@ MARKERS = tuple(MARKERS)
 
 if TYPE_CHECKING:
     def plot_network(*args: Any, **kwargs: Any) -> Any: ...
+    def plot_network3d(*args: Any, **kwargs: Any) -> Any: ...
     def plot_network_from_matrix(*args: Any, **kwargs: Any) -> Any: ...
     def plot_network_communities(*args: Any, **kwargs: Any) -> Any: ...
     def plot_dendrogram(*args: Any, **kwargs: Any) -> Any: ...
@@ -651,6 +653,7 @@ __all__ = [
 
     # ── 延迟加载扩展 ──
     "plot_network",
+    "plot_network3d",
     "plot_network_from_matrix",
     "plot_network_communities",
     "plot_dendrogram",
