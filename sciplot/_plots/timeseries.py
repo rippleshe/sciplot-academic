@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union, Sequence
+from typing import Any, Dict, List, Optional, Tuple, Union, Sequence
 import warnings
 
 import matplotlib.pyplot as plt
@@ -445,6 +445,10 @@ def plot_gantt(
     ylabel: str = "",
     title: str = "",
     color_by: Optional[Union[List[str], np.ndarray]] = None,
+    groups: Optional[List[str]] = None,
+    milestones: Optional[Dict[str, float]] = None,
+    dependencies: Optional[List[Tuple[int, int]]] = None,
+    now: Optional[float] = None,
     show_labels: bool = True,
     alpha: float = 0.85,
     venue: Optional[str] = None,
@@ -457,21 +461,27 @@ def plot_gantt(
 
     每个任务一行水平条形，起点为 start、宽度为 duration（或由 end 推导），
     支持数值时间轴（天数/小时）与 datetime 时间轴。
+    可选元素：阶段分组背景色带、里程碑菱形标记、任务依赖箭头、当前时间线。
 
     参数:
-        tasks     : 任务名称列表
-        start     : 任务开始时间（数值或 datetime/date 序列）
-        duration  : 任务持续时长；数值轴为数值，日期轴为 timedelta 或天数
-        end       : 任务结束时间（与 duration 二选一，优先 duration）
-        color_by  : 每任务颜色或类别标签（等长）；None 用配色循环
-        show_labels: 是否显示任务名称
-        alpha     : 条形透明度
+        tasks        : 任务名称列表
+        start        : 任务开始时间（数值或 datetime/date 序列）
+        duration     : 任务持续时长；数值轴为数值，日期轴为 timedelta 或天数
+        end          : 任务结束时间（与 duration 二选一，优先 duration）
+        color_by     : 每任务颜色或类别标签（等长）；None 用配色循环
+        groups       : 任务所属阶段（等长）；提供时绘制阶段背景色带
+        milestones   : {里程碑名称: 时间}，绘制菱形标记与虚线连接
+        dependencies : 依赖关系 [(上游任务索引, 下游任务索引)]，绘制箭头
+        now          : 当前时间位置，绘制红色时间线
+        show_labels  : 是否显示任务名称
+        alpha        : 条形透明度
 
     示例:
         >>> # 数值时间轴（天数）
         >>> fig, ax = sp.plot_gantt(
         ...     ["数据采集", "模型训练", "论文撰写"],
         ...     start=[0, 10, 30], duration=[10, 20, 20],
+        ...     milestones={"中期检查": 22}, dependencies=[(0, 1)], now=15,
         ...     xlabel="天数",
         ... )
         >>> sp.save(fig, "gantt")
@@ -568,14 +578,99 @@ def plot_gantt(
         bar_colors = [colors[i % len(colors)] for i in range(len(tasks))]
         legend_handles = None
 
+    # groups / milestones / dependencies / now 校验
+    if groups is not None:
+        if len(groups) != len(tasks):
+            raise ValueError(
+                f"groups 长度 ({len(groups)}) 与 tasks 长度 ({len(tasks)}) 不一致"
+            )
+    if dependencies is not None:
+        for dep in dependencies:
+            if len(dep) != 2 or not all(
+                isinstance(i, int) and 0 <= i < len(tasks) for i in dep
+            ):
+                raise ValueError(
+                    f"dependencies 必须为 [(上游索引, 下游索引)]，实际项: {dep!r}"
+                )
+
     y = np.arange(len(tasks))
-    ax.barh(y, widths, left=starts_plot, color=bar_colors, alpha=alpha, **kwargs)
+
+    # 阶段背景色带
+    if groups is not None:
+        from matplotlib.patches import Patch as _Patch
+
+        unique_groups = list(dict.fromkeys(groups))
+        group_colors = [colors[i % len(colors)] for i in range(len(unique_groups))]
+        group_map = dict(zip(unique_groups, group_colors))
+        for i, g in enumerate(groups):
+            ax.axhspan(
+                i - 0.5, i + 0.5, color=group_map[g], alpha=0.08, zorder=0,
+            )
+        # 阶段图例
+        legend_handles = legend_handles or []
+        legend_handles += [
+            _Patch(facecolor=c, label=str(g), alpha=0.5)
+            for g, c in zip(unique_groups, group_colors)
+        ]
+
+    ax.barh(y, widths, left=starts_plot, color=bar_colors, alpha=alpha, zorder=2, **kwargs)
+
+    # 任务依赖箭头（L 形：上游右端 → 下游左端）
+    if dependencies:
+        for up_idx, down_idx in dependencies:
+            x_from = starts_plot[up_idx] + widths[up_idx]
+            x_to = starts_plot[down_idx]
+            y_from = float(up_idx)
+            y_to = float(down_idx)
+            mid_y = y_from + (y_to - y_from) * 0.5
+            if abs(y_to - y_from) < 0.5:
+                # 相邻任务：直接水平箭头
+                ax.annotate(
+                    "", xy=(x_to, y_to), xytext=(x_from, y_from),
+                    arrowprops=dict(arrowstyle="->", color="#888888", lw=0.8),
+                    zorder=1,
+                )
+            else:
+                # 跨行：先水平、再垂直、再水平
+                ax.plot([x_from, x_to], [y_from, y_from], color="#AAAAAA",
+                        linewidth=0.8, zorder=1)
+                ax.plot([x_to, x_to], [y_from, y_to], color="#AAAAAA",
+                        linewidth=0.8, zorder=1)
+                ax.annotate(
+                    "", xy=(x_to, y_to), xytext=(x_to, y_to - 0.1),
+                    arrowprops=dict(arrowstyle="->", color="#AAAAAA", lw=0.8),
+                    zorder=1,
+                )
+
+    # 里程碑（菱形 + 虚线连接）
+    if milestones:
+        for m_name, m_time in milestones.items():
+            ax.axvline(x=m_time, color="#E07B54", linestyle=":",
+                       linewidth=1.0, alpha=0.8, zorder=1)
+            ax.scatter([m_time], [-0.55], marker="D", s=45, color="#E07B54",
+                       edgecolors="white", linewidths=0.8, zorder=4)
+            ax.text(m_time, -0.95, m_name, ha="center", va="top",
+                    fontsize=max(6, plt.rcParams.get("font.size", 9) - 2),
+                    color="#E07B54")
+
+    # 当前时间线
+    if now is not None:
+        ax.axvline(x=now, color="#D62728", linewidth=1.2, zorder=3)
+        ax.text(now, len(tasks) - 0.35, "现在", ha="center", va="bottom",
+                fontsize=max(6, plt.rcParams.get("font.size", 9) - 2),
+                color="#D62728")
 
     if show_labels:
         ax.set_yticks(y)
         ax.set_yticklabels(tasks)
     else:
         ax.set_yticks([])
+
+    # 里程碑位于任务区下方，扩展 y 范围容纳
+    if milestones:
+        ax.set_ylim(-1.25, len(tasks) - 0.4)
+    else:
+        ax.set_ylim(-0.5, len(tasks) - 0.5)
 
     if is_datetime:
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))

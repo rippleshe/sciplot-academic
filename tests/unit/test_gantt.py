@@ -112,6 +112,43 @@ def test_gantt_alias_and_export(cleanup_figures):
     assert result.fig is not None
 
 
+def test_gantt_milestones_dependencies_now(cleanup_figures):
+    """里程碑/依赖/当前线组合绘制。"""
+    result = sp.plot_gantt(
+        ["A", "B", "C"], start=[0.0, 1.0, 2.0], duration=[1.0, 1.0, 1.0],
+        milestones={"检查点": 2.5}, dependencies=[(0, 1)], now=1.5,
+    )
+    assert result.fig is not None
+
+
+def test_gantt_bad_dependencies_raises(cleanup_figures):
+    with pytest.raises(ValueError, match="dependencies"):
+        sp.plot_gantt(
+            ["A", "B"], start=[0.0, 1.0], duration=[1.0, 1.0],
+            dependencies=[(0, 5)],
+        )
+
+
+def test_gantt_groups_mismatch_raises(cleanup_figures):
+    with pytest.raises(ValueError, match="groups"):
+        sp.plot_gantt(
+            ["A", "B"], start=[0.0, 1.0], duration=[1.0, 1.0],
+            groups=["x"],
+        )
+
+
+def test_gantt_groups_legend(cleanup_figures):
+    """groups 阶段色带与图例。"""
+    result = sp.plot_gantt(
+        ["A", "B", "C"], start=[0.0, 1.0, 2.0], duration=[1.0, 1.0, 1.0],
+        groups=["前期", "中期", "后期"],
+    )
+    legend = result.ax.get_legend()
+    assert legend is not None
+    texts = [t.get_text() for t in legend.get_texts()]
+    assert "前期" in texts and "后期" in texts
+
+
 def test_gantt_save_png(tmp_path, cleanup_figures):
     result = sp.plot_gantt(
         ["数据采集", "模型训练", "论文撰写"],
