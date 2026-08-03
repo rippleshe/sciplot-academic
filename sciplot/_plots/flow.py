@@ -305,12 +305,20 @@ def plot_waterfall(
         cum += float(v)
     total = cum
 
-    # 条形颜色与高度
+    # 条形颜色与高度（增加/减少/总计）
     bar_colors = [increase_color if v >= 0 else decrease_color for v in val_arr]
     bar_colors.append(total_color)
     bar_heights = [abs(v) for v in val_arr] + [abs(total)]
     bar_bottoms = bottoms + [0.0]
     bar_cats = cat_arr + ["总计"]
+
+    # 是否显示起始条（标准瀑布图结构：起始值也画一条浅色基准条）
+    show_start = start_value != 0.0
+    if show_start:
+        bar_colors = ["#C8CDD3"] + bar_colors
+        bar_heights = [abs(start_value)] + bar_heights
+        bar_bottoms = [0.0] + bar_bottoms
+        bar_cats = ["期初"] + bar_cats
 
     fig, ax = new_styled_figure(venue, palette, lang)
 
@@ -320,22 +328,32 @@ def plot_waterfall(
     for b in bars:
         b.set_zorder(2)
 
-    # 累计连接线（各条形顶端之间的虚线）
+    # 累计连接线：从每个条顶端连到下一个条的基准（标准瀑布连接）
     if show_connectors and len(bottoms) > 1:
+        offset = 1 if show_start else 0
         cum_pts = [float(start_value)] + [b + h for b, h in zip(bottoms, [abs(v) for v in val_arr])]
         for i in range(len(cum_pts) - 1):
-            ax.plot([x_pos[i], x_pos[i + 1]], [cum_pts[i], cum_pts[i]],
-                    color="#999999", linestyle="--", linewidth=0.8, zorder=1)
+            # 水平段：当前条顶端 → 下一条 x 位置（同高度）
+            ax.plot([x_pos[i] + offset, x_pos[i + 1] + offset], [cum_pts[i], cum_pts[i]],
+                    color="#999999", linestyle="--", linewidth=0.9, zorder=1)
 
-    # 数值标注
+    # 数值标注（正值在条顶上方，负值在条底下方，避免重叠）
     if show_values:
-        fs = max(7, plt.rcParams.get("font.size", 9) - 1)
+        fs = relative_fontsize(-1, floor=6)
         span = max(bar_heights) if bar_heights else 1.0
-        for xi, (h, btm, v) in enumerate(zip(bar_heights, bar_bottoms,
-                                              [float(x) for x in val_arr] + [total])):
-            label_y = btm + h + 0.03 * span
+        if show_start:
+            value_labels = [float(start_value)] + [float(x) for x in val_arr] + [total]
+        else:
+            value_labels = [float(x) for x in val_arr] + [total]
+        for xi, (h, btm, v) in enumerate(zip(bar_heights, bar_bottoms, value_labels)):
+            if v >= 0:
+                label_y = btm + h + 0.03 * span
+                va = "bottom"
+            else:
+                label_y = btm - 0.03 * span
+                va = "top"
             ax.text(xi, label_y, f"{v:{fmt}}", ha="center",
-                    fontsize=fs, color="#333333", zorder=3)
+                    fontsize=fs, va=va, color="#333333", zorder=3)
 
     ax.set_xticks(x_pos)
     ax.set_xticklabels(bar_cats, rotation=25, ha="right")

@@ -1133,27 +1133,34 @@ def plot_funnel(
         w = 1.0 / (se_arr**2)
         reference = float(np.sum(w * eff) / np.sum(w))
 
-    # 95% 置信三角带（±1.96·SE，随 SE 线性展开）
+    # 95% 置信三角带（±1.96·SE，随 SE 线性展开；分层描边更精致）
     if show_ci_triangle:
         se_max = float(np.max(se_arr))
         se_range = np.linspace(0.02, se_max * 1.15, 120)
         upper = reference + 1.96 * se_range
         lower = reference - 1.96 * se_range
         ax.fill_betweenx(se_range, lower, upper,
-                         color="#BBBBBB", alpha=0.18, zorder=1,
+                         color="#9AA5B1", alpha=0.16, zorder=1,
                          label="95% 置信区间" if show_legend else None)
+        # 三角带边界线（细虚线，增强视觉结构）
+        ax.plot(upper, se_range, color="#9AA5B1", linewidth=0.7,
+                linestyle=":", zorder=1)
+        ax.plot(lower, se_range, color="#9AA5B1", linewidth=0.7,
+                linestyle=":", zorder=1)
 
     # CI 短线（可选）
     if lo is not None and hi is not None:
-        ax.hlines(se_arr, lo, hi, color="#999999", linewidth=0.8, zorder=2)
+        ax.hlines(se_arr, lo, hi, color="#8A93A0", linewidth=0.9, zorder=2)
 
-    # 散点
-    ax.scatter(eff, se_arr, s=30, color=point_color_final, alpha=0.75,
-               edgecolors="white", linewidths=0.5, zorder=3,
+    # 散点：点大小随精度（1/SE²）增大，突出高精度研究
+    weights = 1.0 / (se_arr**2)
+    sizes = 24 + 46 * (weights / np.max(weights))
+    ax.scatter(eff, se_arr, s=sizes, color=point_color_final, alpha=0.8,
+               edgecolors="white", linewidths=0.6, zorder=3,
                label="研究" if show_legend else None)
 
     # 参考线
-    ax.axvline(reference, color="#444444", linestyle="--", linewidth=1.0, zorder=4,
+    ax.axvline(reference, color="#333333", linestyle="--", linewidth=1.1, zorder=4,
                label="合并效应" if show_legend else None)
 
     # 倒置 y 轴：精度高的研究在上

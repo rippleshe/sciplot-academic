@@ -1008,35 +1008,62 @@ def plot_bump(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
-    for i in range(n_items):
-        if highlight is not None and labels[i] == highlight:
-            c = highlight_color
-            lw = linewidth + 0.8
-        elif highlight is not None:
-            c = base_color
-            lw = linewidth * 0.8
-        else:
-            c = cycle_color(colors, i)
-            lw = linewidth
-        alpha = 1.0 if (highlight is None or labels[i] == highlight) else 0.6
-        ax.plot(x, ranks[i], "-o", color=c, linewidth=lw,
-                markersize=marker_size, alpha=alpha, zorder=3)
 
-    # 末端直接标注
+    def _series_color(i: int) -> str:
+        if highlight is not None and labels[i] == highlight:
+            return highlight_color
+        if highlight is not None:
+            return base_color
+        return cycle_color(colors, i)
+
+    # ── 曲线：先画非高亮（垫底、细、半透明），高亮最后（粗、实） ──
+    order = sorted(range(n_items),
+                   key=lambda i: 1 if (highlight is not None and labels[i] == highlight) else 0)
+    for i in order:
+        c = _series_color(i)
+        is_hl = highlight is not None and labels[i] == highlight
+        lw = (linewidth + 1.0) if is_hl else (linewidth * 0.85 if highlight else linewidth)
+        alpha = 1.0 if is_hl else (0.55 if highlight is not None else 0.9)
+        z = 4 if is_hl else 2
+        # 曲线本体
+        ax.plot(x, ranks[i], color=c, linewidth=lw, alpha=alpha, zorder=z,
+                solid_capstyle="round")
+        # 每个时间点的排名小圆点（高亮对象更大）
+        ms = marker_size + (2.2 if is_hl else 0.0)
+        ax.scatter(x, ranks[i], s=ms ** 2 * 1.6, color=c, alpha=alpha,
+                   edgecolors="white", linewidths=0.8, zorder=z + 1)
+
+    # ── 起点/终点大圆点（强调轨迹端点） ──
+    for i in range(n_items):
+        c = _series_color(i)
+        is_hl = highlight is not None and labels[i] == highlight
+        z = 5 if is_hl else 3
+        for xi in (0, n_time - 1):
+            ax.scatter(x[xi], ranks[i, xi], s=(marker_size + 3.5) ** 2,
+                       color=c, edgecolors="white", linewidths=1.2, zorder=z)
+
+    # ── 末端直接标注（名称 + 当前排名） ──
     if show_end_labels:
         fs = relative_fontsize(-1, floor=6)
         for i in range(n_items):
-            c = highlight_color if (highlight is not None and labels[i] == highlight) \
-                else (base_color if highlight is not None else cycle_color(colors, i))
-            ax.text(x[-1] + 0.12, ranks[i, -1], str(labels[i]),
-                    va="center", ha="left", fontsize=fs, color=c, clip_on=False)
+            c = _series_color(i)
+            is_hl = highlight is not None and labels[i] == highlight
+            lbl = f"{labels[i]}"
+            ax.text(x[-1] + 0.18, ranks[i, -1], lbl,
+                    va="center", ha="left", fontsize=fs,
+                    color=c, fontweight="bold" if is_hl else "normal",
+                    clip_on=False)
+            # 末端排名数值（浅色小字，紧贴端点上方）
+            ax.text(x[-1] - 0.02, ranks[i, -1] - 0.32, f"{ranks[i, -1]}",
+                    va="bottom", ha="center", fontsize=relative_fontsize(-3, floor=5),
+                    color=c, alpha=0.85, clip_on=False)
 
     ax.set_xticks(x)
     if time_points is not None:
         ax.set_xticklabels(time_points)
     ax.set_yticks(np.arange(1, n_items + 1))
     ax.invert_yaxis()  # 排名 1 在顶部
-    ax.set_xlim(-0.4, n_time - 0.6 + (0.6 if show_end_labels else 0.0))
+    ax.set_xlim(-0.4, n_time - 0.6 + (1.1 if show_end_labels else 0.0))
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:

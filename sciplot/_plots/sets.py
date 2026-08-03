@@ -137,11 +137,11 @@ def plot_upset(
 
     # ── 布局：左侧集合柱 + 右侧主区 ──
     n_inters = len(combos)
-    fig = plt.figure(figsize=(6.0 + n_inters * 0.45, 5.2))
-    # 左列宽 20%，主区 80%
+    fig = plt.figure(figsize=(6.0 + n_inters * 0.55, 5.4))
+    # 左列宽 22%，主区 78%；上行 58%（交集柱），下行 42%（点阵）
     gs = fig.add_gridspec(2, 2, width_ratios=[0.22, 0.78],
-                          height_ratios=[0.55, 0.45],
-                          hspace=0.10, wspace=0.06)
+                          height_ratios=[0.58, 0.42],
+                          hspace=0.08, wspace=0.06)
     ax_set = fig.add_subplot(gs[0, 0])
     ax_main = fig.add_subplot(gs[1, 1])
     ax_bar = fig.add_subplot(gs[0, 1], sharex=ax_main)
@@ -153,18 +153,28 @@ def plot_upset(
         set_colors = [cycle_color(cycle, i) for i in range(n_sets)]
     inter_color = intersection_color or "#4A6B8A"
 
-    # ── 左：集合大小（水平柱，从上到下） ──
+    fs_small = relative_fontsize(-2, floor=6)
+    fs_tiny = relative_fontsize(-3, floor=5)
+
+    # ── 左：集合大小（水平柱，从上到下，柱尾数值标签） ──
     y_set = np.arange(n_sets)
     ax_set.barh(y_set, set_sizes, color=set_colors,
-                edgecolor="white", linewidth=0.6)
+                edgecolor="white", linewidth=0.8, height=0.62, zorder=2)
     ax_set.set_yticks(y_set)
-    ax_set.set_yticklabels(names, fontsize=relative_fontsize(-2, floor=6))
+    ax_set.set_yticklabels(names, fontsize=fs_small)
     ax_set.invert_yaxis()
     ax_set.set_xlabel("集合大小", fontsize=relative_fontsize(-1))
-    ax_set.tick_params(axis="x", labelsize=relative_fontsize(-3, floor=5))
+    ax_set.tick_params(axis="x", labelsize=fs_tiny)
     ax_set.tick_params(direction="in")
+    ax_set.set_xlim(0, max(set_sizes) * 1.22)
     for spine in ["top", "right"]:
         ax_set.spines[spine].set_visible(False)
+    # 柱尾数值
+    if show_counts:
+        for yi, s in enumerate(set_sizes):
+            ax_set.text(s + max(set_sizes) * 0.015, yi, str(int(s)),
+                        va="center", ha="left", fontsize=fs_tiny,
+                        color="#555555")
 
     # ── 主区 x 轴：每个交集一个槽位 ──
     x_pos = np.arange(n_inters)
@@ -173,57 +183,63 @@ def plot_upset(
     ax_main.invert_yaxis()
     ax_main.set_xlim(-0.5, n_inters - 0.5)
 
-    # 点阵：实心 = 该集合属于此交集
+    # 点阵：先画连线（垫底），再画圆点
     for ci, (combo, size) in enumerate(combos):
-        for si in range(n_sets):
-            if si in combo:
-                ax_main.scatter(ci, si, s=42, color="#2C3E50", zorder=3)
-            else:
-                ax_main.scatter(ci, si, s=42, color="#D5DBDB",
-                                facecolors="none", edgecolors="#BDC3C7",
-                                linewidths=0.8, zorder=2)
-        # 同交集内集合间连线
         combo_sorted = sorted(combo)
         for a, b in zip(combo_sorted[:-1], combo_sorted[1:]):
             # 相邻集合才连线（经典 UpSet 约定：连续成员连成线段）
             if b == a + 1:
                 ax_main.plot([ci, ci], [a, b], color="#2C3E50",
-                             linewidth=2.2, zorder=1)
+                             linewidth=2.6, zorder=1, solid_capstyle="round")
+    for ci, (combo, size) in enumerate(combos):
+        for si in range(n_sets):
+            if si in combo:
+                ax_main.scatter(ci, si, s=120, color="#2C3E50",
+                                edgecolors="white", linewidths=1.2,
+                                zorder=3)
+            else:
+                ax_main.scatter(ci, si, s=120, facecolors="none",
+                                edgecolors="#C8CDD3", linewidths=1.0,
+                                zorder=2)
 
     ax_main.set_xticks(x_pos)
     ax_main.set_xticklabels([])
     ax_main.set_yticks([])
     ax_main.tick_params(direction="in")
 
-    # ── 顶：交集大小柱 ──
+    # ── 顶：交集大小柱（渐变蓝 + 加粗数值） ──
     sizes = [c[1] for c in combos]
-    ax_bar.bar(x_pos, sizes, color=inter_color,
-               edgecolor="white", linewidth=0.6)
-    ax_bar.set_ylim(0, max(sizes) * 1.18)
+    cmap_sizes = plt.cm.get_cmap("Blues")
+    bar_colors = [cmap_sizes(0.45 + 0.5 * s / max(sizes)) for s in sizes]
+    ax_bar.bar(x_pos, sizes, color=bar_colors,
+               edgecolor="white", linewidth=0.8, width=0.66, zorder=2)
+    ax_bar.set_ylim(0, max(sizes) * 1.25)
     ax_bar.set_ylabel("交集大小", fontsize=relative_fontsize(-1))
     ax_bar.tick_params(axis="x", labelbottom=False)
-    ax_bar.tick_params(axis="y", labelsize=relative_fontsize(-3, floor=5))
+    ax_bar.tick_params(axis="y", labelsize=fs_tiny)
     ax_bar.tick_params(direction="in")
     for spine in ["top", "right"]:
         ax_bar.spines[spine].set_visible(False)
     ax_bar.set_xticks(x_pos)
 
-    # 柱顶数值
+    # 柱顶数值（加粗）
     if show_counts:
-        fs_count = relative_fontsize(-3, floor=5)
         for xi, s in enumerate(sizes):
-            ax_bar.text(xi, s + max(sizes) * 0.03, str(s),
-                        ha="center", va="bottom", fontsize=fs_count,
-                        color="#333333")
+            ax_bar.text(xi, s + max(sizes) * 0.03, str(int(s)),
+                        ha="center", va="bottom", fontsize=fs_small,
+                        color="#2C3E50", fontweight="bold")
 
-    # 底部分组标签（集合成员的并集名，如 "A&B"）
+    # 底部分组标签（集合成员的并集名，如 "A&B"；过长自动截断）
     if show_degree_labels:
-        fs_bottom = relative_fontsize(-3, floor=5)
+        fs_bottom = fs_tiny
+        max_chars = max(10, int(18 / max(1.0, n_inters / 4.0)))
         for ci, (combo, size) in enumerate(combos):
             label = "&".join(names[i] for i in combo)
-            ax_main.text(ci, n_sets + 0.35, label,
+            if len(label) > max_chars:
+                label = label[: max_chars - 1] + "…"
+            ax_main.text(ci, n_sets + 0.42, label,
                          ha="center", va="top", fontsize=fs_bottom,
-                         color="#555555", rotation=0)
+                         color="#555555")
 
     # 隐藏边框
     for ax in (ax_main,):
@@ -231,7 +247,7 @@ def plot_upset(
             spine.set_visible(False)
 
     if title:
-        fig.suptitle(title, fontsize=max(8, int(plt.rcParams.get("font.size", 9))), y=0.98)
+        fig.suptitle(title, fontsize=relative_fontsize(1), y=0.99)
 
     return PlotResult(fig, ax_main, metadata={
         "venue": venue, "palette": palette,

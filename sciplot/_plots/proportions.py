@@ -143,34 +143,54 @@ def plot_treemap(
             )
         color_list = list(colors)
     else:
-        cycle = get_cycle_colors()
-        color_list = [cycle_color(cycle, i) for i in range(len(cat_arr))]
+        # 默认配色：单色系明度渐变（面积与颜色双编码，有序且美观）
+        # 数值越大颜色越深，避免多色循环造成的杂乱感
+        vmin = float(np.min(val_arr))
+        vmax = float(np.max(val_arr))
+        span = vmax - vmin
+        if span <= 0:
+            span = 1.0
+        from sciplot.utils import darken_color, lighten_color
+
+        base = get_cycle_colors()[0]
+        color_list = []
+        for v in val_arr:
+            frac = (float(v) - vmin) / span  # 0=最浅, 1=最深
+            # 浅端用亮化 35%，深端用加深 25%，形成平滑梯度
+            if frac < 0.5:
+                color_list.append(lighten_color(base, 0.35 - 0.5 * frac))
+            else:
+                color_list.append(darken_color(base, 0.5 * (frac - 0.5)))
 
     rects = _treemap_layout(list(val_arr), 0.0, 0.0, 1.0, 1.0)
 
     fig, ax = new_styled_figure(venue, palette, lang)
 
-    # ── 矩形 ──
+    total_val = float(val_arr.sum())
+
+    # ── 矩形（先画底色，再画内描边增强层次） ──
+
     for (rx, ry, rw, rh), c, v, cat in zip(rects, color_list, val_arr, cat_arr):
         ax.add_patch(Rectangle(
             (rx, ry), rw, rh,
-            facecolor=c, edgecolor=border_color,
-            linewidth=border_width, zorder=1,
+            facecolor=c, edgecolor="white",
+            linewidth=1.6, zorder=1,
         ))
-        # 文字：字号随矩形尺寸自适应（类别名占宽约 30%，数值行更小）
-        if show_values and rw > 0.04 and rh > 0.03:
-            label_txt = f"{cat}"
-            fs_label = min(max_font, max(min_font, rw * 0.30 / max(1.0, len(label_txt))))
+        # 文字：字号随矩形尺寸自适应（类别名 + 数值 + 百分比）
+        if show_values and rw > 0.05 and rh > 0.035:
+            label_txt = str(cat)
+            fs_label = min(max_font, max(min_font, rw * 0.34 / max(1.0, len(label_txt))))
             if fs_label >= min_font:
-                y_top = ry + rh / 2 + (0.012 if rh > 0.07 else 0.0)
+                y_top = ry + rh / 2 + (0.014 if rh > 0.08 else 0.0)
                 ax.text(rx + rw / 2, y_top, label_txt,
                         ha="center", va="center", fontsize=fs_label,
                         color="white", fontweight="bold", zorder=3)
-            if rh > 0.06:
-                fs_val = max(min_font - 1.0, fs_label - 2.0)
-                ax.text(rx + rw / 2, ry + rh / 2 - 0.014, f"{v:{fmt}}",
+            if rh > 0.07:
+                pct = v / total_val * 100.0
+                fs_val = max(min_font - 1.0, fs_label - 1.5)
+                ax.text(rx + rw / 2, ry + rh / 2 - 0.016, f"{v:{fmt}}  ({pct:.0f}%)",
                         ha="center", va="center", fontsize=fs_val,
-                        color="white", alpha=0.9, zorder=3)
+                        color="white", alpha=0.92, zorder=3)
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
@@ -409,58 +429,84 @@ def plot_sunburst(
             queue.append(c)
     max_depth = max(depth)
 
-    # 顶层节点颜色
+    # ── 配色：第一层分支分配色相，层内按深度明度渐变 ──
+    from sciplot.utils import darken_color, lighten_color
+
+    # 第一层（深度 1）为着色单元；若根直接是叶子则根自身着色
+    level1 = [i for i in range(n) if depth[i] == 1]
+    if not level1:
+        level1 = list(roots)
+
     cycle = get_cycle_colors()
     if colors is None:
-        top_colors = [cycle_color(cycle, i) for i in range(len(roots))]
+        branch_colors = [cycle_color(cycle, i) for i in range(len(level1))]
     else:
-        if len(colors) != len(roots):
+        if len(colors) != len(level1):
             raise ValueError(
-                f"colors 长度 ({len(colors)}) 与顶层节点数 ({len(roots)}) 不一致"
+                f"colors 长度 ({len(colors)}) 与第一层节点数 ({len(level1)}) 不一致"
             )
-        top_colors = list(colors)
-    root_color_map = {root: top_colors[i] for i, root in enumerate(roots)}
-    node_color: Dict[int, str] = {}
-    for i, p in enumerate(par):
-        if p is None:
-            node_color[i] = root_color_map[i]
+        branch_colors = list(colors)
+
+    # 每个节点 → 所属第一层分支的索引
+    branch_of: Dict[int, int] = {}
+    for i in range(n):
+        if depth[i] == 0:
+            branch_of[i] = -1  # 根节点单独处理
+            continue
+        if depth[i] == 1:
+            branch_of[i] = level1.index(i)
         else:
-            node_color[i] = node_color[index_of[p]]
+            # 向上追溯至深度 1
+            anc = i
+            while depth[anc] > 1:
+                anc = index_of[par[anc]]  # type: ignore[index]
+            branch_of[i] = level1.index(anc)
+
+    node_color: Dict[int, str] = {}
+    for i in range(n):
+        if depth[i] == 0:
+            node_color[i] = "#9AA5B1"  # 根节点中性灰
+        else:
+            base = branch_colors[branch_of[i]]
+            # 每深一层加深 14%；第一层用亮色，叶子最深
+            if depth[i] <= 1:
+                node_color[i] = lighten_color(base, 0.10)
+            else:
+                node_color[i] = darken_color(base, 0.14 * (depth[i] - 1))
 
     fig, ax = new_styled_figure(venue, palette, lang)
 
     # 递归绘制扇区（从根开始，按数值分配角度）
     ring_width = 1.0 / (max_depth + 1) if max_depth > 0 else 1.0
 
+    from matplotlib.patches import Wedge
+
     def _draw_node(idx: int, theta0: float, theta1: float, depth_idx: int) -> None:
-        """绘制节点扇区，递归绘制子节点。"""
+        """绘制节点扇区（Wedge patch），递归绘制子节点。
+
+        theta0/theta1 为弧度，从 12 点方向顺时针展开。
+        根节点（depth 0）不绘制扇区，中心留白。
+        """
         r_outer = 1.0 - depth_idx * ring_width
         r_inner = max(0.0, r_outer - ring_width + ring_gap)
-        if theta1 - theta0 > 1e-9 and r_outer - r_inner > 1e-9:
-            wedge = ax.pie(
-                [val[idx]],
-                startangle=90.0,
-                colors=[node_color[idx]],
-                radius=r_outer,
-                counterclock=False,
-                wedgeprops=dict(
-                    width=r_outer - r_inner,
-                    edgecolor="white",
-                    linewidth=0.8,
-                ),
-            )
-            wedges = wedge[0]
-            w = wedges[0]
-            w.set_theta1(90.0 - theta1)
-            w.set_theta2(90.0 - theta0)
+        if depth_idx > 0 and theta1 - theta0 > 1e-9 and r_outer - r_inner > 1e-9:
+            # 弧度(从12点顺时针) → 度(matplotlib 从+x 逆时针)
+            deg0 = 90.0 - np.degrees(theta0)
+            deg1 = 90.0 - np.degrees(theta1)
+            w = Wedge((0.0, 0.0), r_outer, deg1, deg0,
+                      width=r_outer - r_inner,
+                      facecolor=node_color[idx], edgecolor="white",
+                      linewidth=1.0, zorder=2)
+            ax.add_patch(w)
 
             # 扇区标签（角度足够大才显示）
-            if show_labels and (theta1 - theta0) * 180.0 / np.pi >= label_min_angle:
+            if show_labels and np.degrees(theta1 - theta0) >= label_min_angle:
                 mid = (theta0 + theta1) / 2
                 r_mid = (r_inner + r_outer) / 2
                 fs = relative_fontsize(-2, floor=6)
-                x_t = r_mid * np.cos(mid)
-                y_t = r_mid * np.sin(mid)
+                # 12点顺时针坐标 → 笛卡尔
+                x_t = r_mid * np.sin(mid)
+                y_t = r_mid * np.cos(mid)
                 ax.text(x_t, y_t, lbl[idx], ha="center", va="center",
                         fontsize=fs, color="white", fontweight="bold", zorder=5)
 
@@ -485,8 +531,8 @@ def plot_sunburst(
         cursor += 2 * np.pi * frac
 
     ax.set_aspect("equal")
-    ax.set_xlim(-1.05, 1.05)
-    ax.set_ylim(-1.05, 1.05)
+    ax.set_xlim(-1.08, 1.08)
+    ax.set_ylim(-1.08, 1.08)
     ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():

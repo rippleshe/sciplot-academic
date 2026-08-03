@@ -36,13 +36,32 @@ def test_waterfall_total_bar_present(cleanup_figures):
     assert abs(last.get_height() - 11.0) < 1e-9
 
 
+def test_waterfall_start_bar_present(cleanup_figures):
+    """标准瀑布图应包含浅色期初条（start_value != 0 时）。"""
+    result = sp.plot_waterfall(["A", "B"], [10.0, -4.0], start_value=5.0)
+    labels = [t.get_text() for t in result.ax.get_xticklabels()]
+    assert "期初" in labels
+    bars = result.ax.patches
+    assert abs(bars[0].get_height() - 5.0) < 1e-9   # 期初条高度 = |start|
+    assert abs(bars[0].get_y() - 0.0) < 1e-9        # 期初条从 0 起
+
+
 def test_waterfall_bottoms_accumulate(cleanup_figures):
     """增量条底部应从起始值开始累计。"""
     result = sp.plot_waterfall(["A", "B"], [10.0, -4.0], start_value=5.0)
     bars = result.ax.patches
-    assert abs(bars[0].get_y() - 5.0) < 1e-9       # 第一根从 start 起
-    assert abs(bars[1].get_y() - 15.0) < 1e-9      # 第二根从 5+10 起
-    assert abs(bars[2].get_y() - 0.0) < 1e-9       # 总计条从 0 起
+    assert abs(bars[1].get_y() - 5.0) < 1e-9        # 第一根从 start 起
+    assert abs(bars[2].get_y() - 15.0) < 1e-9       # 第二根从 5+10 起
+    assert abs(bars[3].get_y() - 0.0) < 1e-9        # 总计条从 0 起
+
+
+def test_waterfall_no_start_bar_when_zero(cleanup_figures):
+    """start_value=0 时不画期初条（保持原有行为）。"""
+    result = sp.plot_waterfall(["A", "B"], [10.0, -4.0], start_value=0.0)
+    labels = [t.get_text() for t in result.ax.get_xticklabels()]
+    assert "期初" not in labels
+    bars = result.ax.patches
+    assert abs(bars[0].get_y() - 0.0) < 1e-9        # 第一根从 0 起
 
 
 def test_waterfall_length_mismatch_raises(cleanup_figures):
