@@ -580,3 +580,57 @@ def auto_select_palette(name: str, n: int) -> List[str]:
     if colors is None:
         raise ValueError(f"无法为 '{name}' 选择 {n} 色配色")
     return colors
+
+
+def dual_encode_colors(
+    hue_colors: Sequence[str],
+    levels: int,
+    min_lightness: float = 0.72,
+    max_lightness: float = 0.30,
+) -> List[List[str]]:
+    """双编码配色矩阵：色相 × 明度梯度。
+
+    为复合图生成“行=色相、列=明度”的双因素编码颜色：
+    每个色相按 levels 档从浅到深生成明度梯度，适合条件矩阵
+    （行=因素 A、列=因素 B 的剂量/浓度梯度）等场景。
+
+    参数:
+        hue_colors    : 基础色相列表（如 [\"#E07B54\", \"#5B7DB1\"]）
+        levels        : 每个色相的明度档位数
+        min_lightness : 最浅档的明度（0~1，越大越浅）
+        max_lightness : 最深档的明度（0~1，越小越深）
+
+    返回:
+        ``len(hue_colors) × levels`` 的十六进制颜色矩阵，
+        ``result[h][l]`` 为第 h 个色相的第 l 档（l=0 最浅）。
+
+    示例:
+        >>> # 条件矩阵：2 种处理 × 3 档剂量的 6 色
+        >>> colors = sp.dual_encode_colors([\"#E07B54\", \"#5B7DB1\"], 3)
+        >>> fig, ax = sp.plot_bar(cats, vals, color=colors[0][2])  # 处理1高剂量
+    """
+    import matplotlib.colors as mcolors
+
+    if not hue_colors:
+        raise ValueError("hue_colors 不能为空")
+    if levels <= 0:
+        raise ValueError(f"levels 必须为正整数，实际值: {levels!r}")
+    if not (0.0 < min_lightness <= 1.0) or not (0.0 <= max_lightness < 1.0):
+        raise ValueError("min_lightness/max_lightness 必须在 (0, 1) 范围")
+    if min_lightness < max_lightness:
+        raise ValueError("min_lightness 必须大于 max_lightness（浅→深）")
+
+    matrix: List[List[str]] = []
+    for hue in hue_colors:
+        rgb = mcolors.to_rgb(hue)
+        h, l, s = mcolors.rgb_to_hls(*rgb)
+        row: List[str] = []
+        if levels == 1:
+            row.append(hue)
+        else:
+            for i in range(levels):
+                frac = i / (levels - 1)
+                lightness = min_lightness + (max_lightness - min_lightness) * frac
+                row.append(mcolors.to_hex(mcolors.hls_to_rgb(h, lightness, s)))
+        matrix.append(row)
+    return matrix
