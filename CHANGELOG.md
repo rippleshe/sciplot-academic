@@ -7,6 +7,32 @@
 
 ---
 
+## [1.12.2] - 2026-08-03
+
+### Changed
+
+- CI 全面修复并全绿（三平台 × 四 Python 版本 × lint/typecheck/build 共 15 job）：
+  - typecheck job 修复 8 处 mypy 错误
+  - 全部 job 改用 `uv sync --frozen` 锁定依赖，消除依赖漂移
+  - 修复 macOS 符号链接（/var→/private/var）与 Windows 8.3 短名导致的
+    跨平台路径断言失败
+  - pandas 纳入 test 依赖（双版本 marker：py3.11+ 用 3.x，py3.10 用 2.x），
+    DataFrame 测试进入 CI 全平台
+- 重构（纯内部，无 API 变化）：
+  - 提取 `contrast_text_color` 公共工具，消除 4 处亮度对比重复
+  - 提取 `get_cmap_safe`/`polar_to_cart` 公共工具，消除 4 处重复
+  - `plot3d._new_3d_figure` 统一 3D 图形创建，消除 5 处重复
+  - network 模块 `_get_label_font_family` 消除 3 处字体获取重复
+  - `_resolve_norm` 统一 vmin/vmax 推断（含除零防护）
+  - Windows 保留设备名提为模块级 frozenset 常量
+
+### Fixed
+
+- 修复 `plot_volcano` 在 p=0 时的 log10 除零 RuntimeWarning
+  （np.where 全量求值改用 safe_p + errstate）
+
+---
+
 ## [1.12.1] - 2026-08-03
 
 ### Changed
