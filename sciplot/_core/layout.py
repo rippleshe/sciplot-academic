@@ -14,6 +14,7 @@ from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 
 from sciplot._core.style import VENUES
+from sciplot._core.utils import _ensure_non_empty_prop_cycle
 
 if TYPE_CHECKING:
     from sciplot._core.result import GridSpecResult
@@ -93,6 +94,9 @@ def new_figure(
     figsize: Optional[Tuple[float, float]] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
+    # 图形创建是取色安全入口：空颜色循环会导致 matplotlib 内部 nth-color
+    # 取色时 ZeroDivisionError，故在任何 subplots 前保证 prop_cycle 非空
+    _ensure_non_empty_prop_cycle()
     """
     创建新图形，自动套用 venue 默认尺寸
 
