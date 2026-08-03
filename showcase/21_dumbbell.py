@@ -1,31 +1,32 @@
 """
 21_dumbbell.py — 哑铃图
 
-展示 plot_dumbbell()：训练前后成绩对比。
-场景：六个学员的培训前后测评分数变化。
+展示 plot_dumbbell()：2023 vs 2024 十大城市空气质量改善对比。
+连线按改善/恶化着色，起点均值参考线，标签上下交替错位。
 """
 
 import numpy as np
 import sciplot as sp
 
-np.random.seed(42)
-
 # ── 数据生成 ──────────────────────────────────────────────────
-students = ["学员A", "学员B", "学员C", "学员D", "学员E", "学员F"]
-before = np.array([62, 71, 55, 68, 74, 58])
-after = np.array([81, 79, 74, 85, 83, 76])
+cities = [
+    "北京", "上海", "广州", "深圳", "成都", "杭州",
+    "武汉", "西安", "郑州", "沈阳",
+]
+pm25_2023 = np.array([41, 32, 28, 24, 36, 30, 44, 52, 58, 47])
+pm25_2024 = np.array([34, 29, 27, 22, 33, 26, 40, 46, 51, 40])
 
 # ── 绘图 ──────────────────────────────────────────────────────
 sp.setup_style("thesis", "ocean", lang="zh")
 
 fig, ax = sp.plot_dumbbell(
-    students,
-    before,
-    after,
-    xlabel="测评分数 (分)",
-    ylabel="学员",
-    start_label="培训前",
-    end_label="培训后",
+    cities,
+    pm25_2023,
+    pm25_2024,
+    xlabel="PM2.5 年均浓度 (μg/m³)",
+    ylabel="城市",
+    start_label="2023 年",
+    end_label="2024 年",
     show_values=True,
     sort_by="delta",
 )

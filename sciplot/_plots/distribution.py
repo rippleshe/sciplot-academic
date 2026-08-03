@@ -1029,8 +1029,12 @@ def plot_dumbbell(
     show_values: bool = False,
     fmt: str = ".1f",
     sort_by: Optional[str] = "delta",
-    line_alpha: float = 0.5,
+    line_alpha: float = 0.6,
     marker_size: float = 8.0,
+    improve_color: str = "#E07B54",
+    worsen_color: str = "#5B7DB1",
+    neutral_color: str = "#999999",
+    show_baseline: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -1039,8 +1043,9 @@ def plot_dumbbell(
     """
     绘制哑铃图（Dumbbell，两时点/两条件前后对比）
 
-    每个类别一行，起点与终点以圆点标记、中间连线，直观展示
-    变化幅度与方向，适合前后测对比、干预效果等场景。
+    每个类别一行：起点空心圆 + 终点实心圆 + 中间连线。
+    连线按变化方向着色（改善暖色/恶化冷色），数值标签上下交替
+    错位避免重叠，可叠加起点均值参考线。
 
     参数:
         categories : 类别标签列表
@@ -1053,6 +1058,10 @@ def plot_dumbbell(
         sort_by    : 排序方式："delta" 按变化量 | "start" | "end" | None 保持原序
         line_alpha : 连线透明度
         marker_size: 圆点大小
+        improve_color: 改善（end > start）连线颜色，默认暖色
+        worsen_color : 恶化（end < start）连线颜色，默认冷色
+        neutral_color: 持平连线颜色
+        show_baseline: 是否绘制起点均值参考虚线
 
     示例:
         >>> fig, ax = sp.plot_dumbbell(
@@ -1098,22 +1107,38 @@ def plot_dumbbell(
     colors = _get_cycle_colors()
 
     y = np.arange(len(cats))
-    for yi, (s_val, e_val) in zip(y, zip(starts, ends)):
-        ax.plot([s_val, e_val], [yi, yi], color="#999999",
-                linewidth=1.5, alpha=line_alpha, zorder=1)
+    # 连线：按变化方向着色
+    deltas = ends - starts
+    line_colors = np.where(
+        deltas > 1e-9, improve_color,
+        np.where(deltas < -1e-9, worsen_color, neutral_color),
+    )
+    for yi, (s_val, e_val) in enumerate(zip(starts, ends)):
+        ax.plot([s_val, e_val], [yi, yi], color=line_colors[yi],
+                linewidth=2.0, alpha=line_alpha, zorder=1)
 
-    ax.scatter(starts, y, s=marker_size**2, color=colors[0],
-               label=start_label, zorder=2)
+    # 起点均值参考线
+    if show_baseline:
+        baseline = float(np.mean(starts))
+        ax.axvline(x=baseline, color="#CCCCCC", linestyle=":", linewidth=1.0, zorder=0)
+
+    # 起点空心圆 + 终点实心圆（双编码）
+    ax.scatter(starts, y, s=marker_size**2, facecolors="white",
+               edgecolors=colors[0], linewidths=1.5,
+               label=start_label, zorder=3)
     ax.scatter(ends, y, s=marker_size**2, color=colors[1 % len(colors)],
-               label=end_label, zorder=2)
+               edgecolors="white", linewidths=0.8,
+               label=end_label, zorder=3)
 
     if show_values:
         fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
-        for yi, (s_val, e_val) in enumerate(zip(starts, ends)):
+        for idx, (yi, (s_val, e_val)) in enumerate(zip(y, zip(starts, ends))):
             delta = e_val - s_val
+            # 上下交替偏移避免相邻标签重叠
+            dy = 0.22 if idx % 2 == 0 else -0.22
             ax.text(
-                e_val, yi, f"  {e_val:{fmt}} ({delta:+.1f})",
-                ha="left", va="center", fontsize=fontsize, color="#333333",
+                e_val, yi + dy, f"{e_val:{fmt}} ({delta:+.1f})",
+                ha="left", va="center", fontsize=fontsize, color="#444444",
             )
 
     ax.set_yticks(y)
