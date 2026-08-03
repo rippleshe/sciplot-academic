@@ -27,6 +27,7 @@ def _ensure_thread_local_initialized() -> None:
         _thread_local.lang = None
         _thread_local.venue = None
         _thread_local.palette = None
+        _thread_local.theme = None
         _thread_local._initialized = True
 
 
@@ -64,6 +65,18 @@ def set_current_palette(palette: Optional[str]) -> None:
     """设置当前 palette（线程安全）。"""
     _ensure_thread_local_initialized()
     _thread_local.palette = palette
+
+
+def get_current_theme() -> Optional[str]:
+    """获取当前设置的主题模式（线程安全）。"""
+    _ensure_thread_local_initialized()
+    return cast(Optional[str], _thread_local.theme)
+
+
+def set_current_theme(theme: Optional[str]) -> None:
+    """设置当前主题模式（线程安全）。"""
+    _ensure_thread_local_initialized()
+    _thread_local.theme = theme
 
 
 # ============================================================================
@@ -106,7 +119,25 @@ VALID_LANGS = set(LANGUAGES.keys())
 # ============================================================================
 
 THEMES: Dict[str, Dict[str, Any]] = {
-    "light": {},  # 默认浅色，无需额外 rcParams
+    # 默认浅色：显式复位暗色主题涉及的 rcParams，避免从 dark 切回 light 时残留暗色参数。
+    "light": {
+        "figure.facecolor": "white",
+        "axes.facecolor": "white",
+        "axes.edgecolor": "black",
+        "axes.labelcolor": "black",
+        "text.color": "black",
+        "xtick.color": "black",
+        "ytick.color": "black",
+        "xtick.labelcolor": "black",
+        "ytick.labelcolor": "black",
+        "axes.titlecolor": "black",
+        "legend.facecolor": "white",
+        "legend.edgecolor": "0.8",
+        "legend.labelcolor": "black",
+        "figure.edgecolor": "white",
+        "savefig.facecolor": "white",
+        "grid.color": "#b0b0b0",
+    },
     "dark": {
         "figure.facecolor": "#1a1a2e",
         "axes.facecolor": "#16213e",
@@ -178,6 +209,16 @@ def setup_style(
         raise ValueError(
             f"未知 venue '{venue}'，可用选项: {list(VENUES.keys())}"
         )
+
+    # 主题：未显式传入时继承当前主题，再回退到配置默认值。
+    if theme is None:
+        current_theme = get_current_theme()
+        if current_theme is not None:
+            theme = current_theme
+        else:
+            from sciplot._core.config import get_config as _get_config
+            cfg_theme = _get_config("theme")
+            theme = cfg_theme if isinstance(cfg_theme, str) and cfg_theme else "light"
 
     venue_cfg = VENUES[venue]
     styles = list(venue_cfg.styles)
@@ -286,13 +327,14 @@ def setup_style(
             f"未知主题 '{effective_theme}'，可用选项: {list(THEMES.keys())}"
         )
     theme_rc = THEMES[effective_theme]
-    if theme_rc:  # "light" 是空字典，无需更新
+    if theme_rc:
         plt.rcParams.update(theme_rc)
 
     # 所有样式应用成功后再写入线程局部状态，避免异常路径污染状态。
     set_current_lang(lang)
     set_current_venue(venue)
     set_current_palette(palette)
+    set_current_theme(effective_theme)
 
 
 def reset_style() -> None:
@@ -301,6 +343,7 @@ def reset_style() -> None:
     set_current_lang(None)
     set_current_venue(None)
     set_current_palette(None)
+    set_current_theme(None)
 
 
 def get_venue_info(venue: str) -> Dict[str, Any]:

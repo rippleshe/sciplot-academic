@@ -158,6 +158,7 @@ def plot_heatmap(
     cmap: str = "Blues",
     show_values: bool = False,
     fmt: str = ".2f",
+    annot_color: Optional[str] = None,
     colorbar_label: str = "",
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
@@ -177,6 +178,7 @@ def plot_heatmap(
         cmap         : 颜色映射（"Blues" | "viridis" | "RdBu_r" | "seismic"）
         show_values  : 是否在格子内显示数值
         fmt          : 数值格式，如 ".2f" / ".0f" / "d"
+        annot_color  : 数值文字颜色；None 时根据格子底色自动选择黑/白以保证对比度
         colorbar_label: 颜色条标签
         vmin         : 颜色映射最小值
         vmax         : 颜色映射最大值
@@ -222,12 +224,25 @@ def plot_heatmap(
 
     # 数值标注
     if show_values:
+        from matplotlib.colors import to_rgb
+
         fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
+        norm = im.norm
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
+                cell_value = data[i, j]
+                if annot_color is None:
+                    # 依据格子实际渲染颜色的亮度自动选择黑/白文字，保证可读性。
+                    rgba = im.cmap(norm(cell_value))
+                    r, g, b = to_rgb(rgba)
+                    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+                    text_color = "black" if luminance > 0.55 else "white"
+                else:
+                    text_color = annot_color
                 ax.text(
-                    j, i, format(data[i, j], fmt),
+                    j, i, format(cell_value, fmt),
                     ha="center", va="center", fontsize=fontsize,
+                    color=text_color,
                 )
 
     ax.set_xlabel(xlabel)

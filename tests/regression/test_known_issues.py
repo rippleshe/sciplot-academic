@@ -24,8 +24,8 @@ class TestUnicodeMinusFix:
     def test_unicode_minus_disabled_in_zh_mode(self):
         """中文模式必须禁用 Unicode 减号"""
         sp.setup_style(lang="zh")
-        assert rcParams["axes.unicode_minus"] == False
-        assert rcParams["axes.formatter.use_mathtext"] == False
+        assert not rcParams["axes.unicode_minus"]
+        assert not rcParams["axes.formatter.use_mathtext"]
         
     def test_no_unicode_minus_warning(self, temp_dir, cleanup_figures):
         """测试不产生 U+2212 警告"""
@@ -75,7 +75,7 @@ class TestLaTeXChineseCompatibility:
     def test_latex_disabled_in_chinese(self):
         """中文模式必须禁用 LaTeX"""
         sp.setup_style(lang="zh")
-        assert rcParams["text.usetex"] == False
+        assert not rcParams["text.usetex"]
         
     def test_latex_enabled_in_english(self):
         """英文模式应该启用 LaTeX"""

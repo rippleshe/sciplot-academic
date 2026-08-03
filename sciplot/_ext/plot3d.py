@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union, Tuple, Sequence
+from typing import Any, Dict, Optional, Union, Tuple, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -222,7 +222,9 @@ def plot_3d_scatter(
 
     参数:
         x, y, z: 坐标数组
-        c      : 颜色映射值，None 则所有点同色
+        c      : 颜色映射值；None 则所有点同色。
+                 支持：数值标量 / 单元素数组（所有点渲染为同一颜色）、
+                 等长数值数组（按值着色 + 颜色条）、颜色字符串（如 "red"）。
         xlabel : X 轴标签
         ylabel : Y 轴标签
         zlabel : Z 轴标签
@@ -259,12 +261,31 @@ def plot_3d_scatter(
         )
 
     c_arr = c
-    if c is not None and isinstance(c, (list, tuple, np.ndarray)):
-        c_arr = np.asarray(c).ravel()
-        if c_arr.size not in (1, n_points):
-            raise ValueError(
-                f"颜色数组 c 长度必须为 1 或与数据点数量一致，实际为 {c_arr.size}"
-            )
+    c_mappable = False
+    if c is not None:
+        if isinstance(c, str):
+            # 颜色字符串：单色渲染，不参与颜色映射
+            c_arr = c
+        elif isinstance(c, (list, tuple, np.ndarray)):
+            c_arr = np.asarray(c).ravel()
+            if c_arr.size not in (1, n_points):
+                raise ValueError(
+                    f"颜色数组 c 长度必须为 1 或与数据点数量一致，实际为 {c_arr.size}"
+                )
+            if c_arr.size == 1:
+                # 单元素数组：广播为等长数组，按单一颜色渲染
+                c_arr = np.full(n_points, c_arr[0])
+            else:
+                c_mappable = True
+        else:
+            # 数值标量：广播为等长数组，按单一颜色渲染（3D scatter 不接受标量 c）
+            try:
+                scalar_val = float(c)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"参数 'c' 必须是颜色字符串、数值标量或数组，实际类型: {type(c).__name__}"
+                )
+            c_arr = np.full(n_points, scalar_val)
 
     s_arr = s
     if isinstance(s, (list, tuple, np.ndarray)):
@@ -279,9 +300,14 @@ def plot_3d_scatter(
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection="3d")
 
-    scatter = ax.scatter(x_arr, y_arr, z_arr, c=c_arr, s=s_arr, alpha=alpha, cmap=cmap, **kwargs)  # type: ignore[arg-type]
+    scatter_kwargs: Dict[str, Any] = dict(alpha=alpha, **kwargs)
+    if c_mappable:
+        # 仅在 c 为可映射数组时传入 cmap，避免无数据时 matplotlib 发出
+        # "No data for colormapping provided via 'c'" 警告。
+        scatter_kwargs["cmap"] = cmap
+    scatter = ax.scatter(x_arr, y_arr, z_arr, c=c_arr, s=s_arr, **scatter_kwargs)
 
-    if c is not None:
+    if c_mappable:
         fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=10)
 
     ax.set_xlabel(xlabel)

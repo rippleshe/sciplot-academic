@@ -41,6 +41,8 @@ from sciplot._core.style import (
     set_current_venue,
     get_current_palette,
     set_current_palette,
+    get_current_theme,
+    set_current_theme,
     VALID_LANGS,
 )
 from sciplot._core.palette import apply_palette, DEFAULT_PALETTE
@@ -99,6 +101,7 @@ class StyleContext:
         self._saved_lang: Optional[str] = None
         self._saved_venue: Optional[str] = None
         self._saved_palette: Optional[str] = None
+        self._saved_theme: Optional[str] = None
 
     def __enter__(self) -> StyleContext:
         """进入上下文，保存当前状态并应用新样式"""
@@ -107,6 +110,7 @@ class StyleContext:
         self._saved_lang = get_current_lang()
         self._saved_venue = get_current_venue()
         self._saved_palette = get_current_palette()
+        self._saved_theme = get_current_theme()
 
         # 将当前状态压入栈
         stack = self._get_stack()
@@ -142,12 +146,14 @@ class StyleContext:
             set_current_lang(self._saved_lang)
             set_current_venue(self._saved_venue)
             set_current_palette(self._saved_palette)
+            set_current_theme(self._saved_theme)
             if stack and stack[-1] is self:
                 stack.pop()
             self._saved_state = None
             self._saved_lang = None
             self._saved_venue = None
             self._saved_palette = None
+            self._saved_theme = None
             raise
 
         return self
@@ -186,11 +192,13 @@ class StyleContext:
         set_current_lang(self._saved_lang)
         set_current_venue(self._saved_venue)
         set_current_palette(self._saved_palette)
+        set_current_theme(self._saved_theme)
 
         self._saved_state = None
         self._saved_lang = None
         self._saved_venue = None
         self._saved_palette = None
+        self._saved_theme = None
 
         return False
 

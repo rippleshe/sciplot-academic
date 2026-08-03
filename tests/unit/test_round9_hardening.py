@@ -149,5 +149,5 @@ def test_exported_palette_constants_are_read_only():
     from sciplot import get_palette
     palette_from_const = sp.PASTEL_PALETTE["pastel"]
     palette_from_func = get_palette("pastel")
-    assert type(palette_from_const) == type(palette_from_func), \
+    assert type(palette_from_const) is type(palette_from_func), \
         f"类型不一致: {type(palette_from_const)} vs {type(palette_from_func)}"

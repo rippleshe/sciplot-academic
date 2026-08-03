@@ -17,7 +17,7 @@ class TestSetupStyle:
         # font.family 设置为 "serif"，实际字体在 font.serif 中指定
         assert rcParams["font.family"] == ["serif"]
         assert "SimSun" in rcParams["font.serif"]
-        assert rcParams["axes.unicode_minus"] == False
+        assert not rcParams["axes.unicode_minus"]
         
     def test_venue_nature(self, reset_style):
         """测试 Nature 期刊样式"""
@@ -61,16 +61,16 @@ class TestLanguageAndLaTeX:
     def test_chinese_mode_disables_latex(self, reset_style):
         """中文模式必须禁用 LaTeX"""
         sp.setup_style(lang="zh")
-        assert rcParams["text.usetex"] == False
-        assert rcParams["axes.unicode_minus"] == False
-        assert rcParams["axes.formatter.use_mathtext"] == False
+        assert not rcParams["text.usetex"]
+        assert not rcParams["axes.unicode_minus"]
+        assert not rcParams["axes.formatter.use_mathtext"]
         
     def test_english_mode_enables_latex(self, reset_style):
         """英文模式应该启用 LaTeX（如果系统支持）"""
         sp.setup_style(lang="en")
         # 注意：如果系统没有安装 LaTeX，这个可能仍然是 False
         # 但我们至少应该检查配置被正确设置
-        assert rcParams["axes.unicode_minus"] == False
+        assert not rcParams["axes.unicode_minus"]
         
     def test_chinese_font_settings(self, reset_style):
         """中文模式字体设置"""
@@ -82,15 +82,15 @@ class TestLanguageAndLaTeX:
         """测试负号 Unicode 修复（U+2212 问题）"""
         sp.setup_style(lang="zh")
         # 关键：必须使用 ASCII 减号，而不是 Unicode U+2212
-        assert rcParams["axes.unicode_minus"] == False
-        assert rcParams["axes.formatter.use_mathtext"] == False
+        assert not rcParams["axes.unicode_minus"]
+        assert not rcParams["axes.formatter.use_mathtext"]
         
     def test_language_variations(self, reset_style):
         """测试语言代码变体"""
         # 测试 "zh" 和 "zh-cn"
         for lang in ["zh", "zh-cn"]:
             sp.setup_style(lang=lang)
-            assert rcParams["text.usetex"] == False
+            assert not rcParams["text.usetex"]
             sp.reset_style()
 
 
