@@ -24,6 +24,15 @@ from sciplot._core.result import PlotResult
 # _get_cycle_colors 已从 sciplot._core.utils 导入（其内部保证 prop_cycle 非空）
 
 
+def _is_constant(values: np.ndarray) -> bool:
+    """判断序列是否为常数序列。
+
+    gaussian_kde 在零方差数据上会抛出 LinAlgError，各分布图函数
+    因此需要先检测常数序列并退化为垂直线/水平线。
+    """
+    return float(values.min()) == float(values.max())
+
+
 def _try_import_scipy_stats() -> Any:
     """尝试导入 scipy.stats，失败时返回 None。"""
     try:
@@ -365,9 +374,8 @@ def plot_density(
 
     fig, ax = new_styled_figure(venue, palette, lang)
 
-    if values.min() == values.max():
-        # 常数序列：gaussian_kde 在零方差数据上会抛出 LinAlgError，
-        # 退化为绘制垂直线，表示全部质量集中于此点。
+    if _is_constant(values):
+        # 常数序列：退化为绘制垂直线，表示全部质量集中于此点。
         colors = _get_cycle_colors()
         ax.axvline(x=float(values[0]), color=colors[0], linestyle="--", linewidth=1.5)
     else:
@@ -433,7 +441,7 @@ def plot_multi_density(
     x_eval = np.linspace(all_values.min(), all_values.max(), 256)
 
     for values, label in zip(normalized_data, labels):
-        if values.min() == values.max():
+        if _is_constant(values):
             # 常数序列：KDE 退化，绘制垂直线表示质量集中。
             ax.axvline(x=float(values[0]), linestyle="--", linewidth=1.5, label=label)
             continue
@@ -539,7 +547,7 @@ def plot_ridgeline(
         base = i * step
         color = colors[i % len(colors)]
 
-        if values.min() == values.max():
+        if _is_constant(values):
             # 常数序列：KDE 退化，绘制垂直线表示质量集中。
             ax.plot([values[0], values[0]], [base, base + 0.85],
                     color=color, linewidth=1.5, label=label, **kwargs)
@@ -682,7 +690,7 @@ def plot_raincloud(
 
             # ── 半小提琴（右侧） ──
             if show_violin:
-                if values.min() == values.max():
+                if _is_constant(values):
                     ax.plot([values[0], values[0]], [pos, pos + violin_scale * 2],
                             color=color, linewidth=1.2)
                 else:
@@ -718,7 +726,7 @@ def plot_raincloud(
                     patch.set_alpha(0.35)
 
             if show_violin:
-                if values.min() == values.max():
+                if _is_constant(values):
                     ax.plot([pos, pos + violin_scale * 2], [values[0], values[0]],
                             color=color, linewidth=1.2)
                 else:
