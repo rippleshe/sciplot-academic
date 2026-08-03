@@ -7,6 +7,38 @@
 
 ---
 
+## [1.12.4] - 2026-08-03
+
+### Added
+
+- 新增 3 个高级图表（均带别名，保持现有配色体系）：
+  - `plot_sankey`（`sankey`）：桑基图，纯 matplotlib 分层布局，
+    节点高度与流量带宽度均正比于流量，支持 labels dict / node_colors / min_flow
+  - `plot_treemap`（`treemap`）：矩形树图，内置 squarify 算法，
+    面积编码占比，字号随矩形尺寸自适应，支持自定义颜色
+  - `plot_donut`（`donut`）：环形图，中心挖空 + 外圈“类别+百分比”标签，
+    环内数值，避免百分比与数值重叠
+- 新增 `figure_panels`：Nature 级复合图布局（宽高比 / 自动面板标签 /
+  共享轴 / 面板间距），对齐 Nature 投稿惯例（89mm/183mm 尺寸体系）
+- `plot_multi_line` 新增 `highlight_last`：最后一条线加粗 + 星形标记，
+  对比图中突出“本文方法”的惯例做法
+- 新增 showcase 31–35：桑基（能源流）/ 矩形树图（半导体市场）/ 环形图
+  （经费构成）/ 复合图·条件矩阵 2×3 / 复合图·对照双列 1×2
+- README 画廊扩展至 35 张
+
+### Changed
+
+- 重构：提取 `cycle_color` 统一 33 处循环取色（空列表回退防护）；
+  提取 `add_colorbar` 统一 15 处 colorbar 创建（期刊默认参数收敛）
+- showcase 01 重做：本文方法高亮（加粗 + 星标）+ 浅网格
+
+### Tests
+
+- 新增 48 个用例（sankey 13 / treemap 14 / donut 9 / figure_panels 12），
+  总数 1364 passed
+
+---
+
 ## [1.12.3] - 2026-08-03
 
 ### Changed

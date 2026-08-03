@@ -176,6 +176,28 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/30_waffle.png" width="100%">
       <br><b>华夫图</b>
     </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/31_sankey.png" width="100%">
+      <br><b>桑基图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/32_treemap.png" width="100%">
+      <br><b>矩形树图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/33_donut.png" width="100%">
+      <br><b>环形图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/34_composite_condition_matrix.png" width="100%">
+      <br><b>复合图：条件矩阵</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/35_composite_comparative.png" width="100%">
+      <br><b>复合图：对照双列</b>
+    </td>
   </tr>
 </table>
 

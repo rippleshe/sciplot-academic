@@ -6,13 +6,13 @@ description: >-
   边际分布、雨云、蜂群、山脊、六边形、哑铃、发散条形、甘特、打包气泡、雷达、3D 曲面/瀑布、
   网络/3D 网络、维恩、密度、QQ、残差、PCA 等 45+ 类型），或表达画图/出图/可视化/论文插图/
   实验结果展示等意图时触发。库名提及 matplotlib/seaborn/plotly 时引导使用 sciplot。
-version: 1.12.3
+version: 1.12.4
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
 ---
 
-# SciPlot Academic — 科研绘图 Skill (v1.12.3)
+# SciPlot Academic — 科研绘图 Skill (v1.12.4)
 
 ---
 
@@ -83,6 +83,9 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 | 日历热图(全年活动) | `sp.plot_calendar_heatmap()` | `sp.calendar_heatmap()` |
 | 泰勒图(模型评估) | `sp.plot_taylor()` | `sp.taylor()` |
 | 弦图(流量/共现) | `sp.plot_chord()` | `sp.chord()` |
+| 桑基图(能量/物质流) | `sp.plot_sankey()` | `sp.sankey()` |
+| 矩形树图(占比构成) | `sp.plot_treemap()` | `sp.treemap()` |
+| 环形图(占比构成) | `sp.plot_donut()` | `sp.donut()` |
 | 三角相图(三组分) | `sp.plot_ternary()` | `sp.ternary()` |
 | 华夫图(占比格子) | `sp.plot_waffle()` | `sp.waffle()` |
 | 3D 瀑布图(多组堆叠) | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
@@ -150,7 +153,7 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 | 棒棒糖 | `plot_lollipop` | `(categories, values)` | `sort=True`, `marker_size`, `baseline` | 排名变体 |
 | 箱线 | `plot_box` | `(data, labels)` | `showfliers` | data 为数组列表或 2D |
 | 小提琴 | `plot_violin` | `(data, labels)` | `showmeans`, `showmedians` | 分布形状 |
-| 多线 | `plot_multi` / `multi` | `(x, y_list)` | `labels`, `use_linestyles` | x 可标量数组或逐线数组 |
+| 多线 | `plot_multi` / `multi` | `(x, y_list)` | `labels`, `use_linestyles`, `highlight_last` | x 可标量数组或逐线数组；highlight_last 加粗最后一条 |
 | 散点 | `plot_scatter` | `(x, y)` | `s=20`, `alpha=0.7` | 回归线需手动：`slope, ic = np.polyfit(x, y, 1)` 后 `ax.plot`（参考 showcase/03） |
 | 柱状 | `plot_bar` | `(categories, values)` | `width=0.6` | categories 为标签列表 |
 | 分组柱 | `plot_grouped_bar` | `(groups, data)` | `gap=0.05`, `show_values`, `value_fmt` | data 为 2D 数组（行=组，列=系列） |
@@ -173,6 +176,9 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 | 日历热图 | `plot_calendar_heatmap` | `(dates, values)` | `weekday_start=0/6`, `show_month_lines` | 字符串必须 `YYYY-MM-DD`；支持跨年 |
 | 泰勒 | `plot_taylor` | `(observations, models_dict)` | `obs_name`, `rms_levels` | models 为 {名称: 预测数组} 字典 |
 | 弦图 | `plot_chord` | `(matrix, labels)` | `min_flow`, `color_by`, `show_values` | matrix 为 2D 流量矩阵 |
+| 桑基 | `plot_sankey` | `(sources, targets, values)` | `labels`(列表/dict), `node_colors`, `min_flow` | 节点高度与带宽度 ∝ 流量；无新依赖 |
+| 矩形树图 | `plot_treemap` | `(categories, values)` | `colors`, `show_values`, `fmt` | squarify 布局；面积编码占比 |
+| 环形图 | `plot_donut` | `(categories, values)` | `hole_ratio`, `show_percent`, `start_angle` | 外圈“类别+百分比”，环内数值 |
 | 三角相图 | `plot_ternary` | `(a, b, c)` | `color_by`, `grid_levels` | 要求非负且每行之和>0；行和自动归一化 |
 | 华夫 | `plot_waffle` | `(categories, values)` | `rows/cols`, `show_percent` | 占比格子图 |
 | 雷达 | `plot_radar` | `(categories, values_list)` | `fill`, `show_labels` | values_list 每个元素一条多边形 |
@@ -291,9 +297,10 @@ import sciplot as sp
 sp.setup_style("thesis", "pastel-3", lang="zh")
 
 # ═══════════════════════════════════════════════════════════════
-# 用 paper_subplots() 锁定版心尺寸（不要用 plt.subplots）
+# 用 paper_subplots()/figure_panels() 锁定版心尺寸（不要用 plt.subplots）
+# figure_panels 额外支持：宽高比 + 自动面板标签 (a)(b)(c)
 # ═══════════════════════════════════════════════════════════════
-fig, axes = sp.paper_subplots(1, 2, venue="thesis")
+fig, axes = sp.figure_panels(1, 2, venue="thesis", widths=[1, 1], panel_labels=True)
 #                             ─┬  ─┬
 #                              │   └── 列数
 #                              └── 行数
