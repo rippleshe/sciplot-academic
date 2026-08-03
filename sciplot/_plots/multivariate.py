@@ -15,7 +15,7 @@ from matplotlib.lines import Line2D
 
 from sciplot._core.layout import new_figure
 from sciplot._core.style import VENUES, get_current_venue
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
+from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -217,11 +217,7 @@ def plot_parallel(
             if finite_values.size == 0:
                 raise ValueError("color_by 列全为 NaN 或 Inf，无法进行连续映射")
 
-            try:
-                cmap = plt.colormaps.get_cmap("viridis")
-            except AttributeError:
-                # 低版本matplotlib兼容
-                cmap = plt.cm.get_cmap("viridis")
+            cmap = get_cmap_safe("viridis")
             norm = Normalize(vmin=float(finite_values.min()), vmax=float(finite_values.max()))
 
             for i in range(n_samples):

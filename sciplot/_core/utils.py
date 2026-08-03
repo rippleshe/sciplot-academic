@@ -534,6 +534,16 @@ def get_cycle_colors() -> List[str]:
     return colors
 
 
+def get_cmap_safe(name: str):
+    """获取 colormap，兼容新旧 matplotlib API。"""
+    import matplotlib.pyplot as plt
+
+    try:
+        return plt.colormaps.get_cmap(name)
+    except AttributeError:
+        return plt.cm.get_cmap(name)  # type: ignore[attr-defined]
+
+
 def boxplot_with_orientation(
     ax: Any,
     data: Any,

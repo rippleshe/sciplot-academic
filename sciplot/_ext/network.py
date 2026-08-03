@@ -16,7 +16,7 @@ from matplotlib.colors import Normalize
 from matplotlib.patches import Patch
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
+from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -116,10 +116,7 @@ def _resolve_node_colors(G, node_color_by, colors):
         return node_colors, categorical_map, continuous_info
 
     norm = Normalize(min(numeric_attr.values()), max(numeric_attr.values()))
-    try:
-        cmap = plt.colormaps.get_cmap("viridis")
-    except AttributeError:
-        cmap = plt.cm.get_cmap("viridis")  # type: ignore[attr-defined]
+    cmap = get_cmap_safe("viridis")
     node_colors = [cmap(norm(numeric_attr.get(n, 0))) for n in G.nodes()]
     return node_colors, categorical_map, (cmap, norm)
 

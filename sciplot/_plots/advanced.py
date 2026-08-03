@@ -15,6 +15,7 @@ from sciplot._core.utils import (
     apply_resolved_style,
     boxplot_with_orientation,
     contrast_text_color,
+    get_cmap_safe,
     get_cycle_colors,
 )
 from sciplot._core.result import PlotResult
@@ -32,14 +33,6 @@ def _resolve_norm(
     if vmin_eff == vmax_eff:
         vmax_eff = vmin_eff + 1.0  # 避免 Normalize 除零
     return Normalize(vmin=vmin_eff, vmax=vmax_eff)
-
-
-def _get_cmap_safe(name: str):
-    """获取 colormap，兼容新旧 matplotlib API。"""
-    try:
-        return plt.colormaps.get_cmap(name)
-    except AttributeError:
-        return plt.cm.get_cmap(name)  # type: ignore[attr-defined]
 
 
 def plot_errorbar(
@@ -431,7 +424,7 @@ def plot_bubble_heatmap(
     sizes_pt2 = np.where(vals != 0, np.maximum(sizes_pt2, min_bubble_size), 0.0)
 
     colors = [im.cmap(norm(v)) for v in vals] if im is not None else \
-        [_get_cmap_safe(cmap)(norm(v)) for v in vals]
+        [get_cmap_safe(cmap)(norm(v)) for v in vals]
 
     scatter = ax.scatter(
         x_pts, y_pts, s=sizes_pt2, c=colors, alpha=1.0,
@@ -1211,7 +1204,7 @@ def plot_bubble(
         if finite_color.size == 0:
             raise ValueError("color 中不包含可用于颜色映射的有限数值")
         norm = _resolve_norm(vmin, vmax, finite_color)
-        cmap_obj = _get_cmap_safe(cmap)
+        cmap_obj = get_cmap_safe(cmap)
         scatter = ax.scatter(
             x_arr, y_arr, s=sizes, c=color_arr, cmap=cmap_obj,
             norm=norm, alpha=alpha, edgecolors=edgecolor,
