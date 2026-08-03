@@ -1219,6 +1219,138 @@ def plot_diverging_bar(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_waffle(
+    categories: List[str],
+    values: np.ndarray,
+    rows: int = 10,
+    cols: int = 10,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    colors: Optional[List[str]] = None,
+    show_percent: bool = True,
+    percent_fmt: str = ".0f",
+    square: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制华夫图（Waffle Chart，100 格占比构成）
+
+    将总量拆分为 rows×cols 个格子，每类按占比分配格数并着色，
+    直观呈现构成比例，适合汇报/PPT 场景。
+
+    参数:
+        categories  : 类别标签列表
+        values      : 各类数值（等长、非负；总和自动归一化）
+        rows / cols : 格子行列数（默认 10×10 = 100 格）
+        colors      : 每类颜色；None 用当前配色循环
+        show_percent: 是否显示各类百分比
+        percent_fmt : 百分比格式
+        square      : 格子是否为正方形（保持纵横比）
+
+    示例:
+        >>> fig, ax = sp.plot_waffle(
+        ...     ["训练", "验证", "测试"],
+        ...     np.array([70, 15, 15]),
+        ... )
+        >>> sp.save(fig, "waffle")
+    """
+    if not categories:
+        raise ValueError("参数 'categories' 不能为空列表")
+    values_arr = np.asarray(values, dtype=float).ravel()
+    if len(values_arr) != len(categories):
+        raise ValueError(
+            f"values 长度 ({len(values_arr)}) 与 categories 长度 ({len(categories)}) 不一致"
+        )
+    if not np.all(np.isfinite(values_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if np.any(values_arr < 0):
+        raise ValueError("values 不能包含负值")
+    total_value = float(values_arr.sum())
+    if total_value <= 0:
+        raise ValueError("values 总和必须大于 0")
+    if not isinstance(rows, int) or rows <= 0 or not isinstance(cols, int) or cols <= 0:
+        raise ValueError("rows/cols 必须为正整数")
+
+    if colors is not None:
+        if len(colors) != len(categories):
+            raise ValueError(
+                f"colors 长度 ({len(colors)}) 与 categories 长度 ({len(categories)}) 不一致"
+            )
+    else:
+        cycle = _get_cycle_colors()
+        colors = [cycle[i % len(cycle)] for i in range(len(categories))]
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    # 按比例分配格数（最后一项补齐差额）
+    n_cells = rows * cols
+    raw_counts = values_arr / total_value * n_cells
+    counts = np.floor(raw_counts).astype(int)
+    diff = n_cells - int(counts.sum())
+    # 将差额分配给余数最大的类别
+    if diff > 0:
+        remainders = raw_counts - counts
+        order = np.argsort(remainders)[::-1]
+        for idx in order:
+            if diff <= 0:
+                break
+            counts[idx] += 1
+            diff -= 1
+
+    # 逐格绘制（从左上开始，按类别顺序填充）
+    cell_idx = 0
+    patches_by_category: List[List[Any]] = [[] for _ in range(len(categories))]
+    for r in range(rows):
+        for c_i in range(cols):
+            # 找到当前格属于哪个类别
+            cat = 0
+            acc = 0
+            for k, cnt in enumerate(counts):
+                acc += cnt
+                if cell_idx < acc:
+                    cat = k
+                    break
+            x, y = c_i, rows - 1 - r
+            rect = plt.Rectangle(
+                (x, y), 0.92, 0.92,
+                facecolor=colors[cat], edgecolor="white", linewidth=0.5,
+                **kwargs,
+            )
+            ax.add_patch(rect)
+            patches_by_category[cat].append(rect)
+            cell_idx += 1
+
+    # 类别分隔线（可选）——在边界处加粗
+    ax.set_xlim(0, cols)
+    ax.set_ylim(0, rows)
+    if square:
+        ax.set_aspect("equal")
+    ax.set_axis_off()
+
+    # 图例 + 百分比
+    from matplotlib.patches import Patch
+
+    labels_display = []
+    for cat, cnt in zip(categories, counts):
+        pct = cnt / n_cells * 100
+        if show_percent:
+            labels_display.append(f"{cat}  {pct:{percent_fmt}}%")
+        else:
+            labels_display.append(cat)
+    handles = [Patch(facecolor=c, label=l) for c, l in zip(colors, labels_display)]
+    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5),
+              frameon=False)
+
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 # ============================================================================
 # 内部工具
 # ============================================================================

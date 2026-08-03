@@ -251,6 +251,7 @@ from sciplot._plots.distribution import (
     plot_beeswarm,
     plot_dumbbell,
     plot_diverging_bar,
+    plot_waffle,
     plot_combo,
     annotate_significance,
 )
@@ -329,6 +330,7 @@ from sciplot._plots.aliases import (
     beeswarm,
     dumbbell,
     diverging_bar,
+    waffle,
     # 高级图表
     errorbar,
     confidence,
@@ -619,12 +621,12 @@ __all__ = [
     # ── 分布 / 统计（完整名称）──
     "plot_bar", "plot_grouped_bar", "plot_stacked_bar", "plot_horizontal_bar", "plot_lollipop",
     "plot_box", "plot_violin", "plot_histogram", "plot_beeswarm",
-    "plot_dumbbell", "plot_diverging_bar",
+    "plot_dumbbell", "plot_diverging_bar", "plot_waffle",
     "plot_combo", "annotate_significance",
 
     # ── 分布 / 统计（简洁别名）──
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar",
+    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle",
     "combo", "lollipop",
 
     # ── 极坐标 / 时序 / 统计（简洁别名）──
