@@ -149,6 +149,11 @@ def audit_figure(
                 unlabeled.append("x")
             if not ylbl:
                 unlabeled.append("y")
+            # 3D 轴：额外检查 z 轴标签
+            if hasattr(ax, "get_zlabel"):
+                zlbl = ax.get_zlabel().strip()
+                if not zlbl:
+                    unlabeled.append("z")
         if unlabeled:
             msg = f"存在未标注的坐标轴: {', '.join(sorted(set(unlabeled)))} 轴"
             issues.append(msg)

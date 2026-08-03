@@ -67,6 +67,29 @@ def test_audit_disabled_checks(cleanup_figures):
     assert report["safe"] is True
 
 
+def test_audit_3d_z_axis(cleanup_figures):
+    """3D 图审计应检查 z 轴标签。"""
+    import numpy as np
+
+    # 带 z 标签：clean
+    rng = np.random.default_rng(0)
+    fig, ax = sp.plot_3d_scatter(
+        rng.random(20), rng.random(20), rng.random(20),
+        xlabel="X", ylabel="Y", zlabel="Z",
+    )
+    report = sp.audit_figure(fig, verbose=False, check_axis_labels=True)
+    assert report["safe"] is True
+
+    # 缺 z 标签：检出
+    fig2, ax2 = sp.plot_3d_scatter(
+        rng.random(20), rng.random(20), rng.random(20),
+        xlabel="X", ylabel="Y",
+    )
+    report2 = sp.audit_figure(fig2, verbose=False, check_axis_labels=True)
+    assert not report2["safe"]
+    assert any("z 轴" in i for i in report2["issues"])
+
+
 def test_audit_exported(cleanup_figures):
     assert callable(sp.audit_figure)
     assert "audit_figure" in sp.__all__
