@@ -256,6 +256,7 @@ from sciplot._plots.advanced import (
     plot_confidence,
     plot_heatmap,
     plot_bubble_heatmap,
+    plot_bubble,
 )
 from sciplot._plots.polar import (
     plot_radar,
@@ -275,6 +276,7 @@ from sciplot._plots.statistical import (
     plot_bland_altman,
     plot_density,
     plot_multi_density,
+    plot_ridgeline,
 )
 
 # ── 扩展模块 (Extensions) ──────────────────────────────────────
@@ -316,6 +318,7 @@ from sciplot._plots.aliases import (
     confidence,
     heatmap,
     bubble_heatmap,
+    bubble,
     combo,
     # 极坐标 / 时序 / 统计别名
     radar,
@@ -328,6 +331,7 @@ from sciplot._plots.aliases import (
     bland_altman,
     lollipop,
     waterfall3d,
+    ridgeline,
 )
 
 # ── 工具 ──────────────────────────────────────────────────────
@@ -597,13 +601,13 @@ __all__ = [
     # ── 极坐标 / 时序 / 统计（简洁别名）──
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "waterfall3d",
+    "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline",
 
     # ── 高级（完整名称）──
-    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap",
+    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble",
 
     # ── 高级（简洁别名）──
-    "errorbar", "confidence", "heatmap", "bubble_heatmap",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble",
 
     # ── 极坐标图表 ──
     "plot_radar",
@@ -615,7 +619,7 @@ __all__ = [
     "plot_parallel", "plot_scatter_matrix",
 
     # ── 统计图表 ──
-    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density",
+    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline",
 
     # ── 机器学习扩展 ──
     "plot_pca", "plot_confusion_matrix",

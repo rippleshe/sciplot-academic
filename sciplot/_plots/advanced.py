@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -443,4 +443,185 @@ __all__ = [
     "plot_confidence",
     "plot_heatmap",
     "plot_bubble_heatmap",
+    "plot_bubble",
 ]
+
+
+def plot_bubble(
+    x: np.ndarray,
+    y: np.ndarray,
+    size: np.ndarray,
+    color: Optional[np.ndarray] = None,
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    cmap: str = "viridis",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    size_scale: float = 200.0,
+    min_size: float = 2.0,
+    alpha: float = 0.7,
+    edgecolor: str = "white",
+    linewidth: float = 0.8,
+    show_values: bool = False,
+    fmt: str = ".2f",
+    colorbar_label: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制二维气泡图（气泡面积编码第三维数值）
+
+    在散点图基础上用气泡面积编码 size 参数，可用 color 增加第四个
+    颜色通道，适合同时展示多个维度的关系。
+
+    参数:
+        x, y         : 坐标数组（等长）
+        size         : 气泡面积编码值（等长，允许 0/负值按绝对值处理）
+        color        : 颜色通道数组（等长，连续数值）；None 则全部同色
+        labels       : 分类标签列表（等长，用于图例，需与 x 等长）
+        cmap         : 颜色映射（color 不为 None 时生效）
+        vmin / vmax  : 颜色映射范围
+        size_scale   : 最大气泡面积（points²），默认 200
+        min_size     : 非零值的最小气泡面积（points²）
+        alpha        : 透明度，默认 0.7
+        edgecolor    : 气泡描边颜色，默认 "white"
+        linewidth    : 气泡描边宽度，默认 0.8
+        show_values  : 是否在气泡内显示数值（size 值）
+        fmt          : 数值格式
+        colorbar_label: 颜色条标签
+        **kwargs     : 传递给 ax.scatter() 的额外参数
+
+    示例:
+        >>> # 气泡图：GDP vs 人口，气泡面积=产值
+        >>> fig, ax = sp.plot_bubble(
+        ...     gdp, population, size=output,
+        ...     color=growth_rate,
+        ...     xlabel="GDP", ylabel="人口",
+        ...     colorbar_label="增长率",
+        ... )
+        >>> sp.save(fig, "bubble")
+    """
+    from matplotlib.colors import Normalize, to_rgb
+
+    x_arr = np.asarray(x, dtype=float).ravel()
+    y_arr = np.asarray(y, dtype=float).ravel()
+    size_arr = np.asarray(size, dtype=float).ravel()
+
+    n_points = len(x_arr)
+    if len(y_arr) != n_points:
+        raise ValueError(f"x 长度 ({n_points}) 与 y 长度 ({len(y_arr)}) 不一致")
+    if len(size_arr) != n_points:
+        raise ValueError(
+            f"size 长度 ({len(size_arr)}) 与 x 长度 ({n_points}) 不一致"
+        )
+    if n_points == 0:
+        raise ValueError("x/y/size 不能为空")
+    if not np.all(np.isfinite(x_arr)) or not np.all(np.isfinite(y_arr)):
+        raise ValueError("x 和 y 不能包含 NaN 或 Inf")
+
+    if color is not None:
+        color_arr = np.asarray(color).ravel()
+        if color_arr.size != n_points:
+            raise ValueError(
+                f"color 长度 ({color_arr.size}) 与 x 长度 ({n_points}) 不一致"
+            )
+    else:
+        color_arr = None
+
+    if labels is not None:
+        if len(labels) != n_points:
+            raise ValueError(
+                f"labels 长度 ({len(labels)}) 与 x 长度 ({n_points}) 不一致"
+            )
+
+    if not isinstance(size_scale, (int, float)) or size_scale <= 0:
+        raise ValueError(f"size_scale 必须为正数，实际值: {size_scale!r}")
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    # 气泡面积 ∝ |size|（线性缩放）
+    max_abs = float(np.max(np.abs(size_arr))) if n_points else 1.0
+    if max_abs == 0:
+        max_abs = 1.0
+    sizes = size_scale * np.abs(size_arr) / max_abs
+    sizes = np.where(size_arr != 0, np.maximum(sizes, min_size), 0.0)
+
+    if color_arr is not None:
+        finite_color = color_arr[np.isfinite(color_arr)]
+        if finite_color.size == 0:
+            raise ValueError("color 中不包含可用于颜色映射的有限数值")
+        vmin_eff = float(finite_color.min()) if vmin is None else float(vmin)
+        vmax_eff = float(finite_color.max()) if vmax is None else float(vmax)
+        if vmin_eff == vmax_eff:
+            vmax_eff = vmin_eff + 1.0
+        norm = Normalize(vmin=vmin_eff, vmax=vmax_eff)
+        cmap_obj = plt.colormaps.get_cmap(cmap)
+        scatter = ax.scatter(
+            x_arr, y_arr, s=sizes, c=color_arr, cmap=cmap_obj,
+            norm=norm, alpha=alpha, edgecolors=edgecolor,
+            linewidths=linewidth, **kwargs,
+        )
+        cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+        if colorbar_label:
+            cbar.set_label(colorbar_label)
+    else:
+        colors = get_cycle_colors()
+        scatter = ax.scatter(
+            x_arr, y_arr, s=sizes, c=colors[0], alpha=alpha,
+            edgecolors=edgecolor, linewidths=linewidth, **kwargs,
+        )
+
+    if labels is not None:
+        # 分类着色：按标签覆盖颜色，并生成图例
+        if color_arr is None:
+            unique_labels: List[Any] = []
+            seen: set = set()
+            for lbl in labels:
+                if lbl not in seen:
+                    seen.add(lbl)
+                    unique_labels.append(lbl)
+            from matplotlib.lines import Line2D as _Line2D
+
+            scatter.set_array(None)
+            label_colors = {
+                lbl: colors[i % len(colors)]
+                for i, lbl in enumerate(unique_labels)
+            }
+            scatter.set_facecolors([label_colors[l] for l in labels])
+            handles = [
+                _Line2D([0], [0], marker="o", linestyle="",
+                        markerfacecolor=label_colors[l], markersize=8, label=str(l))
+                for l in unique_labels
+            ]
+            ax.legend(handles=handles, loc="best")
+
+    if show_values:
+        from matplotlib.colors import to_rgb as _to_rgb
+
+        fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
+        for idx, (x_p, y_p, v) in enumerate(zip(x_arr, y_arr, size_arr)):
+            if color_arr is not None:
+                # 依据数据点实际渲染颜色选择对比色
+                rgba = cmap_obj(norm(float(color_arr[idx])))
+                r, g, b = _to_rgb(rgba)
+                luminance = 0.299 * r + 0.587 * g + 0.114 * b
+                text_color = "black" if luminance > 0.55 else "white"
+            else:
+                text_color = "black"
+            ax.text(
+                x_p, y_p, format(v, fmt),
+                ha="center", va="center", fontsize=fontsize,
+                color=text_color, zorder=4,
+            )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

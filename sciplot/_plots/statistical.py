@@ -462,10 +462,138 @@ def plot_multi_density(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_ridgeline(
+    data_list: List[np.ndarray],
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    overlap: float = 0.3,
+    fill: bool = True,
+    alpha: float = 0.55,
+    bw_method: Optional[float] = None,
+    show_median: bool = False,
+    median_color: str = "#444444",
+    median_alpha: float = 0.85,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制山脊图（Ridgeline / Joyplot，多组分布堆叠对比）
+
+    每组数据的 KDE 曲线沿 Y 轴堆叠，各组互相重叠错开，
+    适合一次对比多个分布的形状、中心与展宽（如不同条件下的
+    响应分布、多实验重复）。
+
+    参数:
+        data_list  : 多组数据列表，每组至少 2 个有限数值
+        labels     : 各组标签；None 则自动生成 "Series N"
+        overlap    : 相邻山脊的重叠比例（0~1，越小越分离），默认 0.3
+        fill       : 是否填充山脊内部，默认 True
+        alpha      : 填充透明度，默认 0.55
+        bw_method  : KDE 带宽参数，透传 scipy.stats.gaussian_kde
+        show_median: 是否在各山脊上标注中位数刻度线
+        median_color: 中位数刻度线颜色
+        median_alpha: 中位数刻度线透明度
+        lang       : 语言设置
+
+    示例:
+        >>> # 多条件分布对比
+        >>> groups = [
+        ...     np.random.normal(0, 1, 300),
+        ...     np.random.normal(0.8, 1.2, 300),
+        ...     np.random.normal(1.6, 0.8, 300),
+        ... ]
+        >>> fig, ax = sp.plot_ridgeline(
+        ...     groups, labels=["对照组", "处理A", "处理B"],
+        ...     xlabel="响应值", ylabel="组",
+        ...     show_median=True,
+        ... )
+        >>> sp.save(fig, "ridgeline")
+    """
+    stats = _check_scipy_stats()
+    if not data_list:
+        raise ValueError("data_list 不能为空")
+
+    if not isinstance(overlap, (int, float)) or not (0.0 <= overlap < 1.0):
+        raise ValueError(
+            f"overlap 必须在 [0, 1) 范围内，实际值: {overlap!r}"
+        )
+
+    normalized_data: List[np.ndarray] = []
+    for i, values in enumerate(data_list):
+        arr = np.asarray(values, dtype=float)
+        arr = arr[np.isfinite(arr)]
+        if arr.size < 2:
+            raise ValueError(f"data_list[{i}] 至少需要 2 个有效数据点")
+        normalized_data.append(arr)
+
+    if labels is None:
+        labels = [f"Series {i + 1}" for i in range(len(normalized_data))]
+    elif len(labels) != len(normalized_data):
+        raise ValueError(
+            f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
+        )
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    _ensure_non_empty_prop_cycle()
+    fig, ax = new_figure(effective_venue)
+
+    colors = _get_cycle_colors()
+
+    all_values = np.concatenate(normalized_data)
+    x_eval = np.linspace(all_values.min(), all_values.max(), 256)
+    step = 1.0 - overlap
+
+    for i, (values, label) in enumerate(zip(normalized_data, labels)):
+        base = i * step
+        color = colors[i % len(colors)]
+
+        if values.min() == values.max():
+            # 常数序列：KDE 退化，绘制垂直线表示质量集中。
+            ax.plot([values[0], values[0]], [base, base + 0.85],
+                    color=color, linewidth=1.5, label=label, **kwargs)
+            if show_median:
+                ax.axvline(x=float(values[0]), ymin=(base + 0.1) / (base + 1.2),
+                           ymax=(base + 0.9) / (base + 1.2),
+                           color=median_color, alpha=median_alpha, linewidth=1.0)
+            continue
+
+        kde = stats.gaussian_kde(values, bw_method=bw_method)
+        y_eval = kde(x_eval)
+        y_norm = y_eval / y_eval.max()
+
+        ax.plot(x_eval, base + y_norm, color=color, linewidth=1.4, label=label, **kwargs)
+        if fill:
+            ax.fill_between(x_eval, base, base + y_norm, color=color, alpha=alpha)
+
+        if show_median:
+            median_val = float(np.median(values))
+            ax.axvline(
+                x=median_val, ymin=(base + 0.08) / (base + 1.2),
+                ymax=(base + 0.95) / (base + 1.2),
+                color=median_color, alpha=median_alpha, linewidth=1.0,
+            )
+
+    ax.set_yticks([i * step for i in range(len(normalized_data))])
+    ax.set_yticklabels(labels)
+    ax.set_ylim(-0.15, (len(normalized_data) - 1) * step + 1.15)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.legend()
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_residuals",
     "plot_qq",
     "plot_bland_altman",
     "plot_density",
     "plot_multi_density",
+    "plot_ridgeline",
 ]

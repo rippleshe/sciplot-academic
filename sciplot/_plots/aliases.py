@@ -38,6 +38,7 @@ from sciplot._plots.advanced import (
     plot_confidence,
     plot_heatmap,
     plot_bubble_heatmap,
+    plot_bubble,
 )
 from sciplot._plots.polar import (
     plot_radar,
@@ -52,6 +53,7 @@ from sciplot._plots.statistical import (
     plot_residuals,
     plot_qq,
     plot_bland_altman,
+    plot_ridgeline,
 )
 from sciplot._ext.plot3d import (
     plot_waterfall3d,
@@ -109,6 +111,7 @@ errorbar = _make_alias(plot_errorbar)
 confidence = _make_alias(plot_confidence)
 heatmap = _make_alias(plot_heatmap)
 bubble_heatmap = _make_alias(plot_bubble_heatmap)
+bubble = _make_alias(plot_bubble)
 combo = _make_alias(plot_combo)
 
 # ═══════════════════════════════════════════════════════════════
@@ -122,6 +125,7 @@ multi_density = _make_alias(plot_multi_density)
 residuals = _make_alias(plot_residuals)
 qq = _make_alias(plot_qq)
 bland_altman = _make_alias(plot_bland_altman)
+ridgeline = _make_alias(plot_ridgeline)
 waterfall3d = _make_alias(plot_waterfall3d)
 
 
@@ -130,8 +134,8 @@ __all__ = [
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "lollipop",
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "combo",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "waterfall3d",
+    "residuals", "qq", "bland_altman", "ridgeline", "waterfall3d",
 ]
