@@ -6,13 +6,13 @@ description: >-
   边际分布、雨云、蜂群、山脊、六边形、哑铃、发散条形、甘特、打包气泡、雷达、3D 曲面/瀑布、
   网络/3D 网络、维恩、密度、QQ、残差、PCA 等 45+ 类型），或表达画图/出图/可视化/论文插图/
   实验结果展示等意图时触发。库名提及 matplotlib/seaborn/plotly 时引导使用 sciplot。
-version: 1.12.0
+version: 1.12.3
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
 ---
 
-# SciPlot Academic — 科研绘图 Skill (v1.12.0)
+# SciPlot Academic — 科研绘图 Skill (v1.12.3)
 
 ---
 
