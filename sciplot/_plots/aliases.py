@@ -51,6 +51,9 @@ from sciplot._plots.polar import (
     plot_radar,
     plot_taylor,
 )
+from sciplot._plots.multivariate import (
+    plot_ternary,
+)
 from sciplot._plots.timeseries import (
     plot_timeseries,
     plot_multi_timeseries,
@@ -138,6 +141,7 @@ combo = _make_alias(plot_combo)
 # ═══════════════════════════════════════════════════════════════
 radar = _make_alias(plot_radar)
 taylor = _make_alias(plot_taylor)
+ternary = _make_alias(plot_ternary)
 timeseries = _make_alias(plot_timeseries)
 multi_timeseries = _make_alias(plot_multi_timeseries)
 gantt = _make_alias(plot_gantt)
@@ -159,7 +163,7 @@ __all__ = [
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo",
-    "radar", "taylor", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
+    "radar", "taylor", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "waterfall3d",
 ]

@@ -391,4 +391,143 @@ def plot_scatter_matrix(
     return PlotResult(fig, axes, metadata={"venue": effective_venue, "palette": palette})
 
 
-__all__ = ["plot_parallel", "plot_scatter_matrix"]
+def plot_ternary(
+    a: np.ndarray,
+    b: np.ndarray,
+    c: np.ndarray,
+    labels: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    color_by: Optional[np.ndarray] = None,
+    cmap: str = "viridis",
+    grid: bool = True,
+    grid_levels: int = 4,
+    alpha: float = 0.7,
+    show_colorbar: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制三角相图（Ternary Diagram，三组分占比）
+
+    三个组分归一化后投影到等边三角形内，每个点代表一个
+    三组分混合配比，适合材料配方、土壤质地、相平衡等场景。
+
+    参数:
+        a, b, c      : 三组分含量（等长、非负；行和自动归一化）
+        labels       : 三个顶点标签，默认 ["A", "B", "C"]
+        color_by     : 连续着色通道（等长）
+        cmap         : 颜色映射
+        grid         : 是否绘制平行网格线
+        grid_levels  : 每个方向的网格线数，默认 4
+        alpha        : 散点透明度
+        show_colorbar: 是否显示颜色条
+
+    示例:
+        >>> # 三组分材料配比
+        >>> fig, ax = sp.plot_ternary(
+        ...     a, b, c, labels=["组分A", "组分B", "组分C"],
+        ...     color_by=性能值,
+        ... )
+        >>> sp.save(fig, "ternary")
+    """
+    a_arr = np.asarray(a, dtype=float).ravel()
+    b_arr = np.asarray(b, dtype=float).ravel()
+    c_arr = np.asarray(c, dtype=float).ravel()
+
+    n = len(a_arr)
+    if len(b_arr) != n or len(c_arr) != n:
+        raise ValueError("a/b/c 长度必须一致")
+    if n == 0:
+        raise ValueError("a/b/c 不能为空")
+    if not np.all(np.isfinite(a_arr)) or not np.all(np.isfinite(b_arr)) \
+            or not np.all(np.isfinite(c_arr)):
+        raise ValueError("a/b/c 不能包含 NaN 或 Inf")
+    if np.any(a_arr < 0) or np.any(b_arr < 0) or np.any(c_arr < 0):
+        raise ValueError("a/b/c 不能包含负值（组分占比必须非负）")
+    row_sums = a_arr + b_arr + c_arr
+    if np.any(row_sums <= 0):
+        raise ValueError("a/b/c 每行之和必须大于 0")
+
+    if labels is not None:
+        if len(labels) != 3:
+            raise ValueError(f"labels 必须恰好 3 个顶点标签，当前: {len(labels)}")
+    else:
+        labels = ["A", "B", "C"]
+
+    if color_by is not None:
+        color_arr = np.asarray(color_by).ravel()
+        if color_arr.size != n:
+            raise ValueError(
+                f"color_by 长度 ({color_arr.size}) 与数据长度 ({n}) 不一致"
+            )
+    else:
+        color_arr = None
+    if not isinstance(grid_levels, int) or grid_levels <= 0:
+        raise ValueError(f"grid_levels 必须为正整数，实际值: {grid_levels!r}")
+
+    # 归一化 + 三角投影（B 在 (1,0)，C 在 (0.5, √3/2)）
+    norm = row_sums[:, None]
+    a_n = a_arr / norm[:, 0]
+    b_n = b_arr / norm[:, 0]
+    c_n = c_arr / norm[:, 0]
+    xs = (2 * b_n + c_n) / 2
+    ys = c_n * (np.sqrt(3) / 2)
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    from sciplot._core.style import VENUES
+
+    venue_cfg = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    size = max(venue_cfg.figsize) * 0.95
+    fig, ax = plt.subplots(figsize=(size, size * 0.92))
+
+    # 三角形边框
+    tri = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, np.sqrt(3) / 2], [0.0, 0.0]])
+    ax.plot(tri[:, 0], tri[:, 1], color="#444444", linewidth=1.2, zorder=1)
+
+    # 网格线（平行于三边）
+    if grid:
+        for k in range(1, grid_levels + 1):
+            frac = k / (grid_levels + 1)
+            # 平行于 BC（a 恒定）
+            x0, y0 = 0.5 * frac, frac * np.sqrt(3) / 2
+            x1, y1 = 1 - 0.5 * frac, frac * np.sqrt(3) / 2
+            ax.plot([x0, x1], [y0, y1], color="#CCCCCC", linewidth=0.5, zorder=1)
+            # 平行于 AC（b 恒定）
+            x2, y2 = 0.5 * frac, frac * np.sqrt(3) / 2
+            ax.plot([x2 - 0.5 * frac, x2], [y2, 0.0], color="#CCCCCC", linewidth=0.5, zorder=1)
+            # 平行于 AB（c 恒定）
+            x3, y3 = 1 - 0.5 * frac, frac * np.sqrt(3) / 2
+            ax.plot([x3, x3 - 0.5 * frac], [y3, 0.0], color="#CCCCCC", linewidth=0.5, zorder=1)
+
+    # 散点
+    if color_arr is not None:
+        scatter = ax.scatter(xs, ys, c=color_arr, cmap=cmap, alpha=alpha,
+                             edgecolors="none", zorder=3, **kwargs)
+        if show_colorbar:
+            cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+    else:
+        colors = get_cycle_colors()
+        ax.scatter(xs, ys, c=colors[0], alpha=alpha,
+                   edgecolors="none", zorder=3, **kwargs)
+
+    # 顶点标签
+    fontsize = plt.rcParams.get("font.size", 9) + 1
+    ax.text(0.0, -0.08, labels[0], ha="center", va="top", fontsize=fontsize, fontweight="bold")
+    ax.text(1.0, -0.08, labels[1], ha="center", va="top", fontsize=fontsize, fontweight="bold")
+    ax.text(0.5, np.sqrt(3) / 2 + 0.06, labels[2], ha="center", va="bottom",
+            fontsize=fontsize, fontweight="bold")
+
+    ax.set_xlim(-0.1, 1.1)
+    ax.set_ylim(-0.12, np.sqrt(3) / 2 + 0.12)
+    ax.set_aspect("equal")
+    ax.set_axis_off()
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = ["plot_parallel", "plot_scatter_matrix", "plot_ternary"]

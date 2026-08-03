@@ -279,6 +279,7 @@ from sciplot._plots.timeseries import (
 from sciplot._plots.multivariate import (
     plot_parallel,
     plot_scatter_matrix,
+    plot_ternary,
 )
 from sciplot._plots.statistical import (
     plot_residuals,
@@ -352,6 +353,7 @@ from sciplot._plots.aliases import (
     qq,
     bland_altman,
     lollipop,
+    ternary,
     waterfall3d,
     ridgeline,
     raincloud,
@@ -628,7 +630,8 @@ __all__ = [
     # ── 极坐标 / 时序 / 统计（简洁别名）──
     "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap", "taylor",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline", "raincloud", "volcano",
+    "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline",
+    "ternary", "raincloud", "volcano",
 
     # ── 高级（完整名称）──
     "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord",
@@ -643,7 +646,7 @@ __all__ = [
     "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap",
 
     # ── 多维图表 ──
-    "plot_parallel", "plot_scatter_matrix",
+    "plot_parallel", "plot_scatter_matrix", "plot_ternary",
 
     # ── 统计图表 ──
     "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano",
