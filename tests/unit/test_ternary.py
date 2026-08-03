@@ -125,6 +125,32 @@ def test_ternary_alias_and_export(ternary_data, cleanup_figures):
 
 def test_ternary_save_png(tmp_path, ternary_data, cleanup_figures):
     a, b, c = ternary_data
-    result = sp.plot_ternary(a, b, c, labels=["砂", "粉", "黏"], color_by=a + b)
+    result = sp.plot_ternary(a, b, c, labels=["砂", "粉", "黏"], color_by=a + b,
+                             colorbar_label="有机质")
     paths = result.save(str(tmp_path / "ternary"), formats=("png",), dpi=100)
     assert paths[0].exists() and paths[0].stat().st_size > 0
+
+
+def test_ternary_colorbar_label(cleanup_figures):
+    """colorbar_label 参数生效（此前缺失导致 kwargs 透传崩溃）。"""
+    a = np.array([0.5, 0.3])
+    b = np.array([0.3, 0.4])
+    c = np.array([0.2, 0.3])
+    result = sp.plot_ternary(a, b, c, color_by=a + b, colorbar_label="有机质")
+    assert result.fig.axes[-1].get_ylabel() == "有机质"
+
+
+def test_volcano_legend_language(cleanup_figures):
+    """图例语言跟随 lang：en 模式必须为英文。"""
+    fc = np.array([1.5, -1.5, 0.1])
+    p = np.array([0.01, 0.02, 0.5])
+    sp.reset_style()
+    try:
+        result = sp.plot_volcano(fc, p, lang="en")
+        texts = [t.get_text() for t in result.ax.get_legend().get_texts()]
+        assert texts == ["Up-regulated", "Down-regulated", "Not significant"]
+        result_zh = sp.plot_volcano(fc, p, lang="zh")
+        texts_zh = [t.get_text() for t in result_zh.ax.get_legend().get_texts()]
+        assert texts_zh == ["显著上调", "显著下调", "不显著"]
+    finally:
+        sp.reset_style()

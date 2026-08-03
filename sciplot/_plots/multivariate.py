@@ -401,6 +401,7 @@ def plot_ternary(
     title: str = "",
     color_by: Optional[np.ndarray] = None,
     cmap: str = "viridis",
+    colorbar_label: str = "",
     grid: bool = True,
     grid_levels: int = 4,
     alpha: float = 0.7,
@@ -421,6 +422,7 @@ def plot_ternary(
         labels       : 三个顶点标签，默认 ["A", "B", "C"]
         color_by     : 连续着色通道（等长）
         cmap         : 颜色映射
+        colorbar_label: 颜色条标签
         grid         : 是否绘制平行网格线
         grid_levels  : 每个方向的网格线数，默认 4
         alpha        : 散点透明度
@@ -509,6 +511,8 @@ def plot_ternary(
                              edgecolors="none", zorder=3, **kwargs)
         if show_colorbar:
             cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+            if colorbar_label:
+                cbar.set_label(colorbar_label)
     else:
         colors = get_cycle_colors()
         ax.scatter(xs, ys, c=colors[0], alpha=alpha,

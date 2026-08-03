@@ -881,13 +881,20 @@ def plot_volcano(
                 fontsize=fontsize,
             )
 
-    # 图例
+    # 图例（语言跟随当前设置）
     from matplotlib.patches import Patch
 
+    from sciplot._core.style import get_current_lang
+
+    active_lang = lang or get_current_lang() or "zh"
+    if active_lang in {"zh", "zh-cn"}:
+        legend_labels = ["显著上调", "显著下调", "不显著"]
+    else:
+        legend_labels = ["Up-regulated", "Down-regulated", "Not significant"]
     handles = [
-        Patch(facecolor=color_up, label="显著上调", alpha=alpha),
-        Patch(facecolor=color_down, label="显著下调", alpha=alpha),
-        Patch(facecolor=color_ns, label="不显著", alpha=alpha),
+        Patch(facecolor=color_up, label=legend_labels[0], alpha=alpha),
+        Patch(facecolor=color_down, label=legend_labels[1], alpha=alpha),
+        Patch(facecolor=color_ns, label=legend_labels[2], alpha=alpha),
     ]
     ax.legend(handles=handles, loc="upper left", frameon=False)
 

@@ -149,6 +149,34 @@
       <br><b>3D 网络图</b>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/25_volcano.png" width="100%">
+      <br><b>火山图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/26_calendar_heatmap.png" width="100%">
+      <br><b>日历热图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/27_taylor.png" width="100%">
+      <br><b>泰勒图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/28_chord.png" width="100%">
+      <br><b>弦图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/29_ternary.png" width="100%">
+      <br><b>三角相图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/30_waffle.png" width="100%">
+      <br><b>华夫图</b>
+    </td>
+  </tr>
 </table>
 
 </div>
