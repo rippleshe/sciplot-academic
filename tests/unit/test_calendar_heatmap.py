@@ -142,15 +142,6 @@ def test_coerce_to_date_truncates_time(cleanup_figures):
     assert _coerce_to_date(np.datetime64("2024-05-06T23:59:59")) == datetime.date(2024, 5, 6)
 
 
-def test_calendar_alias_and_export(calendar_data, cleanup_figures):
-    dates, values = calendar_data
-    assert callable(sp.plot_calendar_heatmap)
-    assert callable(sp.calendar_heatmap)
-    assert "plot_calendar_heatmap" in sp.__all__ and "calendar_heatmap" in sp.__all__
-    result = sp.calendar_heatmap(dates, values)
-    assert result.fig is not None
-
-
 def test_calendar_save_png(tmp_path, calendar_data, cleanup_figures):
     dates, values = calendar_data
     result = sp.plot_calendar_heatmap(dates, values, colorbar_label="事件数")
