@@ -18,6 +18,7 @@ from sciplot._core.utils import (
     get_cycle_colors as _get_cycle_colors,
     new_styled_figure,
     _try_import_optional,
+    _require_optional,
 )
 from sciplot._core.result import PlotResult
 
@@ -34,20 +35,9 @@ def _is_constant(values: np.ndarray) -> bool:
     return float(values.min()) == float(values.max())
 
 
-def _try_import_scipy_stats() -> Any:
-    """尝试导入 scipy.stats，失败时返回 None。"""
-    return _try_import_optional("scipy.stats")
-
-
 def _check_scipy_stats() -> Any:
     """检查 scipy.stats 可用性并返回模块对象。"""
-    stats = _try_import_scipy_stats()
-    if stats is not None:
-        return stats
-    raise ImportError(
-        "统计图表功能需要安装 scipy。\n"
-        "请运行: uv pip install scipy 或 pip install scipy"
-    )
+    return _require_optional("scipy.stats", "统计图表功能")
 
 
 def _theoretical_quantiles_without_scipy(
@@ -189,7 +179,7 @@ def plot_qq(
         >>> data = np.random.normal(0, 1, 100)
         >>> fig, ax = sp.plot_qq(data, title="正态性检验")
     """
-    stats = _try_import_scipy_stats()
+    stats = _try_import_optional("scipy.stats")
 
     data = np.asarray(data, dtype=float)
     data = data[np.isfinite(data)]

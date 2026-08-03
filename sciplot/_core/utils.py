@@ -250,6 +250,17 @@ def _try_import_optional(module_name: str) -> Any:
         return None
 
 
+def _require_optional(module_name: str, feature_hint: str) -> Any:
+    """导入可选模块，缺失时抛出带安装提示的 ImportError。"""
+    mod = _try_import_optional(module_name)
+    if mod is not None:
+        return mod
+    raise ImportError(
+        f"{feature_hint}需要安装 {module_name}。\n"
+        f"请运行: pip install {module_name.split('.')[0]}"
+    )
+
+
 def new_styled_figure(
     venue: Optional[str] = None,
     palette: Optional[str] = None,

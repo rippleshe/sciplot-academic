@@ -16,13 +16,8 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.style import VENUES
-from sciplot._core.utils import apply_resolved_style, new_styled_figure, _try_import_optional
+from sciplot._core.utils import apply_resolved_style, new_styled_figure, _try_import_optional, _require_optional
 from sciplot._core.result import PlotResult
-
-
-def _try_import_scipy():
-    """尝试导入 scipy.cluster.hierarchy，失败时返回 None。"""
-    return _try_import_optional("scipy.cluster.hierarchy")
 
 
 def _check_scipy():
@@ -35,13 +30,7 @@ def _check_scipy():
     抛出:
         ImportError: 未安装 scipy 时
     """
-    hierarchy = _try_import_scipy()
-    if hierarchy is not None:
-        return hierarchy
-    raise ImportError(
-        "层次聚类功能需要安装 scipy。\n"
-        "请运行: uv add scipy 或 pip install scipy"
-    )
+    return _require_optional("scipy.cluster.hierarchy", "层次聚类功能")
 
 
 def plot_dendrogram(
@@ -204,7 +193,7 @@ def plot_clustermap(
 
     hierarchy = None
     if row_cluster or col_cluster:
-        hierarchy = _try_import_scipy()
+        hierarchy = _try_import_optional("scipy.cluster.hierarchy")
         if hierarchy is None:
             warnings.warn(
                 "未检测到 scipy，plot_clustermap 已降级为普通热力图（跳过层次聚类）。",

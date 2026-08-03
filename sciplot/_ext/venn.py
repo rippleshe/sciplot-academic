@@ -14,20 +14,14 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from sciplot._core.utils import get_cycle_colors, new_styled_figure
+from sciplot._core.utils import get_cycle_colors, new_styled_figure, _require_optional
 from sciplot._core.result import PlotResult
 
 
 def _check_venn():
     """检查 matplotlib-venn 是否可用"""
-    try:
-        from matplotlib_venn import venn2, venn3
-        return venn2, venn3
-    except ImportError:
-        raise ImportError(
-            "Venn 图功能需要安装 matplotlib-venn。\n"
-            "请运行: pip install matplotlib-venn 或 pip install sciplot-academic[venn]"
-        )
+    mod = _require_optional("matplotlib_venn", "Venn 图功能")
+    return mod.venn2, mod.venn3
 
 
 def plot_venn2(
