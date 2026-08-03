@@ -7,6 +7,30 @@
 
 ---
 
+## [1.12.1] - 2026-08-03
+
+### Changed
+
+- CI 修复：typecheck job 8 处 mypy 错误（泰勒图/边际分布/气泡图/网络图）；
+  全部 job 从 `uv pip install --system` 改为 `uv sync --frozen` 锁定依赖，
+  消除依赖漂移导致的偶发失败
+- 弦图升级：贝塞尔线改为渐变宽度 Polygon（源端宽目标端窄）、
+  `color_by` 分组着色 + 图例、`min_flow` 低频过滤、源端按流量比例定位
+- 打包气泡图升级：`color_by` 分组 + 图例、浅阴影层次、文字自动对比色、
+  `min_size_frac` 保证小气泡可见（跨数量级数据）
+- 哑铃图升级：改善/恶化分色连线、起点空心 + 终点实心双编码、
+  起点均值参考线、数值标签上下交替防重叠
+- 甘特图升级：`groups` 阶段背景色带、`milestones` 菱形标记、
+  `dependencies` L 形依赖箭头、`now` 当前时间线
+- 3D 网络图：恢复 depthshade 深度明暗、节点柔和描边、细淡边线、标签 halo，
+  消除塑料感
+
+### Fixed
+
+- 修复 `plot_network3d` 无 node_color_by 时按字符遍历颜色字符串崩溃
+
+---
+
 ## [1.12.0] - 2026-08-03
 
 ### Added

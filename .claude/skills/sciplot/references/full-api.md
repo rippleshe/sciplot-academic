@@ -546,11 +546,14 @@ fig, ax = sp.plot_beeswarm(groups, labels=["A", "B"], show_box=True)
 ```python
 sp.plot_dumbbell(categories, start, end, xlabel="", ylabel="", title="",
                  start_label="Before", end_label="After", show_values=False,
-                 fmt=".1f", sort_by="delta", line_alpha=0.5, marker_size=8.0,
+                 fmt=".1f", sort_by="delta", line_alpha=0.6, marker_size=8.0,
+                 improve_color="#E07B54", worsen_color="#5B7DB1",
+                 neutral_color="#999999", show_baseline=True,
                  venue=None, palette=None, lang=None, **kwargs)
 ```
 
-两时点前后对比，`sort_by` 支持 "delta"/"start"/"end"/None。
+两时点前后对比：改善/恶化分色连线、起点空心 + 终点实心双编码、
+起点均值参考线、标签上下交替防重叠。`sort_by` 支持 "delta"/"start"/"end"/None。
 
 ```python
 fig, ax = sp.plot_dumbbell(cats, before, after, show_values=True)
@@ -575,12 +578,14 @@ fig, ax = sp.plot_diverging_bar(cats, np.array([42, -18, 35]), show_values=True)
 
 ```python
 sp.plot_gantt(tasks, start, duration=None, end=None, xlabel="", ylabel="",
-              title="", color_by=None, show_labels=True, alpha=0.85,
+              title="", color_by=None, groups=None, milestones=None,
+              dependencies=None, now=None, show_labels=True, alpha=0.85,
               venue=None, palette=None, lang=None, **kwargs)
 ```
 
 任务时间线，支持数值与 datetime 双轴；`duration` 与 `end` 二选一；
-`color_by` 提供类别着色图例。
+`groups` 阶段背景色带、`milestones` 菱形标记、`dependencies` L 形箭头、
+`now` 当前时间线、`color_by` 类别着色图例。
 
 ```python
 fig, ax = sp.plot_gantt(tasks, start=[0, 10], duration=[10, 20])
@@ -589,13 +594,15 @@ fig, ax = sp.plot_gantt(tasks, start=[0, 10], duration=[10, 20])
 ### plot_packed_bubble（打包气泡图，v1.11.0 新增）
 
 ```python
-sp.plot_packed_bubble(labels, sizes, colors=None, xlabel="", ylabel="",
-                      title="", alpha=0.85, show_values=True, fmt=".0f",
-                      min_font=6.0, max_font=16.0,
+sp.plot_packed_bubble(labels, sizes, colors=None, color_by=None, xlabel="",
+                      ylabel="", title="", alpha=0.88, show_values=True,
+                      fmt=".0f", min_font=6.0, max_font=16.0,
+                      min_size_frac=0.22,
                       venue=None, palette=None, lang=None, **kwargs)
 ```
 
-圆形面积编码数值，黄金角螺旋贪心打包保证无重叠。
+圆形面积编码数值，黄金角螺旋贪心打包保证无重叠；`color_by` 分组着色 + 图例，
+浅阴影层次，文字按底色自动对比色，`min_size_frac` 保证小气泡可见。
 
 ```python
 fig, ax = sp.plot_packed_bubble(labels, np.array([40, 25, 15]))
@@ -651,11 +658,12 @@ fig, ax = sp.plot_taylor(obs, {"模型A": pred_a, "模型B": pred_b})
 
 ```python
 sp.plot_chord(matrix, labels=None, title="", width=0.07, gap=0.01,
-              alpha=0.55, show_values=False,
+              alpha=0.5, min_flow=0.0, color_by=None, show_values=False,
               venue=None, palette=None, lang=None, **kwargs)
 ```
 
-节点间流量/共现关系：弧长编码总量，贝塞尔弦线宽度编码流量。
+节点间流量/共现关系：弧长编码总量，渐变宽度弦（源端宽目标端窄），
+`color_by` 分组着色 + 图例，`min_flow` 过滤低频弦。
 
 ```python
 fig, ax = sp.plot_chord(flow_matrix, labels=cities)
@@ -823,7 +831,7 @@ sp.plot_network3d(G, layout="spring", node_color_by=None, node_size_by=None,
 ```
 
 3D 网络图：2D 布局映射 X/Y，`z_by` 节点属性决定 Z 坐标（"degree" 或任意数值属性），
-支持分类图例与连续 colorbar。
+depthshade 深度明暗、节点柔和描边、细淡边线、标签 halo。
 
 ```python
 fig, ax = sp.plot_network3d(G, z_by="expression", node_color_by="module")
