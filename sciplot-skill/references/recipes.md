@@ -192,6 +192,66 @@ result.save("surface3d", formats=("png",), dpi=300)
 
 ---
 
+## 气泡热力图（矩阵双重编码）
+
+```python
+# 场景：基因表达矩阵 / 混淆矩阵 / 参数扫描，需要同时看量级与符号
+sp.setup_style("nature", "ocean", lang="en")
+
+expr = np.random.rand(8, 10) * 10  # 表达量矩阵
+fig, ax = sp.plot_bubble_heatmap(
+    expr,
+    row_labels=[f"Gene {i}" for i in range(8)],
+    col_labels=[f"Sample {i}" for i in range(10)],
+    cmap="RdBu_r", vmin=0, vmax=10,
+    show_values=True, fmt=".0f",
+)
+sp.save(fig, "bubble_heatmap", formats=("pdf", "png"))
+```
+
+---
+
+## 3D 瀑布图（多组光谱/信号堆叠）
+
+```python
+# 场景：拉曼光谱、色谱、多条件时频曲线对比
+sp.setup_style("thesis", "pastel", lang="zh")
+
+x = np.linspace(400, 4000, 400)  # 波数
+spectra = []
+for center in [1200, 1600, 2000, 2400]:
+    peak = np.exp(-((x - center) / 150) ** 2)
+    spectra.append(peak + 0.03 * np.random.default_rng(center).randn(400))
+
+fig, ax = sp.plot_waterfall3d(
+    x, spectra, labels=[f"样品{i}" for i in range(4)],
+    xlabel="波数 (cm⁻¹)", ylabel="样品", zlabel="强度",
+    fill=True, fill_alpha=0.25,
+)
+sp.save(fig, "waterfall3d", formats=("png",), dpi=300)
+```
+
+---
+
+## 山脊图（多组分布对比）
+
+```python
+# 场景：多条件/多组 KDE 分布堆叠，展示中心与展宽变化
+sp.setup_style("nature", "forest", lang="en")
+
+groups = [np.random.normal(m, s, 400) for m, s in
+          [(0, 1.0), (0.8, 1.2), (1.6, 0.8), (2.2, 1.4)]]
+
+fig, ax = sp.plot_ridgeline(
+    groups, labels=["Control", "T1", "T2", "T3"],
+    xlabel="Response", ylabel="Group",
+    show_median=True,
+)
+sp.save(fig, "ridgeline", formats=("pdf", "png"))
+```
+
+---
+
 ## 链式调用风格
 
 ```python

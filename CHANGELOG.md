@@ -7,6 +7,44 @@
 
 ---
 
+## [1.10.0] - 2026-08-03
+
+### Added
+
+- 新增 `plot_bubble_heatmap` 气泡热力图：格子底色 + 气泡大小双重编码数值，
+  支持自动对比度标注、零值隐藏、NaN 跳过（别名 `bubble_heatmap`）
+- 新增 `plot_waterfall3d` 3D 瀑布图：多组曲线沿第三轴堆叠，支持填充带、
+  组间距、基线偏移（别名 `waterfall3d`）
+- 新增 `plot_bubble` 二维气泡图：气泡面积编码第三维数值，支持颜色通道、
+  分类图例、数值标注（别名 `bubble`）
+- 新增 `plot_ridgeline` 山脊图：多组 KDE 分布堆叠对比，支持重叠比例、
+  中位数刻度线（别名 `ridgeline`）
+- 新增 `plot_hexbin` 六边形密度图：大样本二维密度可视化，支持 log 计数
+  （别名 `hexbin`）
+- `plot_heatmap` 新增 `annot_color` 参数：数值标注自动依据格子亮度选择
+  黑/白文字，保证对比度可读性
+
+### Changed
+
+- 主题系统：`setup_style()` 现在会读取 `set_defaults(theme=...)` 配置；
+  显式 `theme="light"` 会真正复位暗色参数；切换 venue 时保持当前主题；
+  `style_context()` 支持 theme 状态的保存与恢复
+- `plot_3d_scatter` 颜色参数鲁棒化：标量/字符串/单元素数组 c 不再崩溃，
+  c=None 时不再发出 cmap 忽略警告，颜色条仅在可映射数组时创建
+- `plot_radar` 接受 1D/2D ndarray 输入；`plot_density`/`plot_multi_density`/
+  `plot_ridgeline` 对常数序列退化为垂直线而非 KDE 崩溃；
+  `plot_bland_altman` 对单点数据给出明确校验
+
+### Fixed
+
+- 修复 `set_defaults(theme=...)` 被 `setup_style()` 忽略的问题
+- 修复从暗色主题切换回浅色主题时暗色参数残留的问题
+- 修复 `style_context` 退出时 theme 状态未恢复的问题
+- 修复 `plot_3d_scatter(c=标量)` 抛 ValueError 的问题
+- 修复 3D 散点 c=None 时 matplotlib 的 colormapping 警告
+
+---
+
 ## [1.9.1] - 2026-07-01
 
 ### Added

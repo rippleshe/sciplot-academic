@@ -427,6 +427,75 @@ fig, axes = sp.plot_scatter_matrix(data, columns=["特征A", "特征B", "特征C
 
 ---
 
+## 7.5 高级图表（v1.10.0 新增）
+
+### plot_bubble_heatmap（气泡热力图）
+
+```python
+sp.plot_bubble_heatmap(data, row_labels=None, col_labels=None, xlabel="", ylabel="",
+                       title="", cmap="viridis", background=True, bg_alpha=0.35,
+                       show_values=False, fmt=".2f", annot_color=None,
+                       bubble_scale=0.9, min_bubble_size=1.5, edgecolor="white",
+                       linewidth=0.8, vmin=None, vmax=None, colorbar_label="",
+                       aspect="auto", venue=None, palette=None, lang=None, **kwargs)
+```
+
+格子底色 + 气泡大小双重编码数值：大小编码 |值|（平方根缩放），颜色编码值（含正负）。
+零值不显示气泡，NaN 格子自动跳过，标注颜色依据气泡亮度自动选择黑/白。
+
+```python
+fig, ax = sp.plot_bubble_heatmap(expr, cmap="RdBu_r", vmin=0, vmax=10,
+                                 show_values=True, fmt=".0f")
+```
+
+### plot_bubble（二维气泡图）
+
+```python
+sp.plot_bubble(x, y, size, color=None, labels=None, xlabel="", ylabel="", title="",
+               cmap="viridis", vmin=None, vmax=None, size_scale=200.0,
+               min_size=2.0, alpha=0.7, edgecolor="white", linewidth=0.8,
+               show_values=False, fmt=".2f", colorbar_label="",
+               venue=None, palette=None, lang=None, **kwargs)
+```
+
+气泡面积编码 size（线性），颜色通道编码第四维；`labels` 提供分类图例（仅 color=None 时生效）。
+
+```python
+fig, ax = sp.plot_bubble(x, y, size=output, color=growth, colorbar_label="Growth")
+```
+
+### plot_hexbin（六边形密度图）
+
+```python
+sp.plot_hexbin(x, y, gridsize=30, bins=None, cmap="viridis", mincnt=1,
+               xlabel="", ylabel="", title="", colorbar_label="",
+               venue=None, palette=None, lang=None, **kwargs)
+```
+
+大样本二维密度可视化，`bins="log"` 使用对数计数。要求 x/y 等长且不含 NaN/Inf。
+
+```python
+fig, ax = sp.plot_hexbin(x, y, gridsize=40, bins="log")
+```
+
+### plot_ridgeline（山脊图）
+
+```python
+sp.plot_ridgeline(data_list, labels=None, xlabel="", ylabel="", title="",
+                  overlap=0.3, fill=True, alpha=0.55, bw_method=None,
+                  show_median=False, median_color="#444444", median_alpha=0.85,
+                  venue=None, palette=None, lang=None, **kwargs)
+```
+
+多组 KDE 分布沿 Y 轴堆叠对比（需要 scipy）。`overlap` 控制重叠比例（0~1），
+`show_median` 在各山脊上标注中位数刻度。常数序列自动退化为垂直线。
+
+```python
+fig, ax = sp.plot_ridgeline(groups, labels=["对照组", "处理A"], show_median=True)
+```
+
+---
+
 ## 8. ML 扩展（`pip install sciplot-academic[ml]`）
 
 ### plot_pca
@@ -527,6 +596,23 @@ sp.plot_wireframe(X, Y, Z, xlabel="", ylabel="", zlabel="", title="", color="#33
 
 ```python
 fig, ax = sp.plot_wireframe(X, Y, Z, rstride=2, cstride=2)
+```
+
+### plot_waterfall3d（3D 瀑布图，v1.10.0 新增）
+
+```python
+sp.plot_waterfall3d(x, y_list, labels=None, xlabel="", ylabel="", zlabel="",
+                    title="", fill=True, fill_alpha=0.3, linewidth=1.2,
+                    spacing=1.0, baseline=0.0, elev=25, azim=-60,
+                    venue=None, palette=None, lang=None, **kwargs)
+```
+
+多组曲线沿 Y 轴按 `spacing` 间隔堆叠，Z 轴为数值；可选在曲线与 `baseline`
+之间填充半透明色带，适合光谱/频谱多组对比。要求 x 一维且各组长度一致。
+
+```python
+fig, ax = sp.plot_waterfall3d(x, spectra, labels=["样品A", "样品B"],
+                              fill=True, fill_alpha=0.25)
 ```
 
 ---

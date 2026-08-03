@@ -1,4 +1,4 @@
-# SciPlot Academic — 科研绘图 Skill (v1.9.1)
+# SciPlot Academic — 科研绘图 Skill (v1.10.0)
 
 name: sciplot
 description: >
@@ -13,7 +13,7 @@ description: >
 | 维度 | 关键词模式 |
 |------|-----------|
 | **动作** | 画/绘/出图/可视化/plot/chart/figure/展示数据/做成图 |
-| **图表** | 折线/散点/柱状/箱线/热力/雷达/3D/网络/维恩/密度/QQ/残差 |
+| **图表** | 折线/散点/柱状/箱线/热力/气泡/山脊/瀑布/雷达/3D/网络/维恩/密度/QQ/残差/六边形 |
 | **场景** | 论文图/期刊图/竞赛图/PPT图/实验结果/对比分析/趋势/分布 |
 | **库名** | matplotlib/seaborn/plotly 提及 → 引导用 sciplot |
 | **隐含** | 上传 CSV/Excel + "分析"；数值结果 + "怎么展示" |
@@ -58,6 +58,11 @@ description: >
 | 频率分布 | `sp.plot_histogram()` | `sp.hist()` |
 | 密度估计 | `sp.plot_density()` | `sp.density()` |
 | 热力/相关矩阵 | `sp.plot_heatmap()` | `sp.heatmap()` |
+| 气泡热力图 | `sp.plot_bubble_heatmap()` | `sp.bubble_heatmap()` |
+| 二维气泡图 | `sp.plot_bubble()` | `sp.bubble()` |
+| 六边形密度图 | `sp.plot_hexbin()` | `sp.hexbin()` |
+| 山脊图(多分布堆叠) | `sp.plot_ridgeline()` | `sp.ridgeline()` |
+| 3D 瀑布图(多组堆叠) | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
 | 误差/不确定性 | `sp.plot_errorbar()` / `sp.plot_confidence()` | `sp.errorbar()` |
 | 时间序列 | `sp.plot_timeseries()` | `sp.timeseries()` |
 | 多维评估 | `sp.plot_radar()` | `sp.radar()` |
@@ -70,6 +75,7 @@ description: >
 | 混淆矩阵 | `sp.plot_confusion_matrix()` | — |
 | 特征重要性 | `sp.plot_feature_importance()` | — |
 | 3D 曲面 | `sp.plot_surface()` | — |
+| 3D 瀑布 | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
 | 等高线 | `sp.plot_contour()` | — |
 | 网络关系 | `sp.plot_network()` | — |
 | 聚类树 | `sp.plot_dendrogram()` | — |
@@ -300,8 +306,8 @@ sp.save(fig, "暗色主题图", formats=("png",), dpi=300)
 
 ## Showcase 展示案例
 
-> 以下 12 个案例覆盖 SciPlot 最常用图表类型，每个均可独立运行。
-> 展示图片位于 `showcases/` 目录。
+> 以下 17 个案例覆盖 SciPlot 最常用图表类型，每个均可独立运行。
+> 展示图片位于 `showcase/` 目录（01-12 为基础/统计/扩展，13-17 为高级图表）。
 
 ### 01. 多线对比图 (`01_multi_line.py`)
 
@@ -621,6 +627,119 @@ sp.add_panel_labels(axes, style="LETTER")
 sp.save(fig, "12_multi_panel", formats=("pdf", "png"))
 ```
 
+### 13. 气泡热力图 (`13_bubble_heatmap.py`)
+
+```python
+"""气泡热力图 — 大小+颜色双通道编码矩阵数据"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("nature", "ocean", lang="en")
+
+np.random.seed(42)
+expr = np.random.rand(8, 10) * 10
+
+fig, ax = sp.plot_bubble_heatmap(
+    expr,
+    row_labels=[f"Gene {i}" for i in range(8)],
+    col_labels=[f"Sample {i}" for i in range(10)],
+    cmap="RdBu_r", vmin=0, vmax=10,
+    show_values=True, fmt=".0f",
+    xlabel="Sample", ylabel="Gene",
+)
+sp.save(fig, "13_bubble_heatmap", formats=("pdf", "png"))
+```
+
+### 14. 3D 瀑布图 (`14_waterfall3d.py`)
+
+```python
+"""3D 瀑布图 — 多组光谱/信号堆叠对比"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("thesis", "pastel", lang="zh")
+
+x = np.linspace(400, 4000, 400)
+spectra = []
+for center in [1200, 1600, 2000, 2400]:
+    peak = np.exp(-((x - center) / 150) ** 2)
+    noise = 0.03 * np.random.default_rng(center).randn(400)
+    spectra.append(peak + noise)
+
+fig, ax = sp.plot_waterfall3d(
+    x, spectra, labels=[f"样品{i}" for i in range(4)],
+    xlabel="波数 (cm⁻¹)", ylabel="样品", zlabel="强度",
+    fill=True, fill_alpha=0.25,
+)
+sp.save(fig, "14_waterfall3d", formats=("png",), dpi=300)
+```
+
+### 15. 二维气泡图 (`15_bubble.py`)
+
+```python
+"""二维气泡图 — 面积编码第三维，颜色编码第四维"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("ieee", "pastel", lang="en")
+
+np.random.seed(42)
+n = 40
+x = np.random.uniform(0, 10, n)
+y = np.random.uniform(0, 10, n)
+output = np.random.uniform(1, 30, n)
+growth = np.random.uniform(-0.5, 1.5, n)
+
+fig, ax = sp.plot_bubble(
+    x, y, size=output, color=growth,
+    xlabel="Investment", ylabel="Labor",
+    colorbar_label="Growth rate",
+)
+sp.save(fig, "15_bubble", formats=("pdf", "png"))
+```
+
+### 16. 山脊图 (`16_ridgeline.py`)
+
+```python
+"""山脊图 — 多组分布堆叠对比"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("nature", "forest", lang="en")
+
+np.random.seed(42)
+groups = [np.random.normal(m, s, 400) for m, s in
+          [(0, 1.0), (0.8, 1.2), (1.6, 0.8), (2.2, 1.4)]]
+
+fig, ax = sp.plot_ridgeline(
+    groups, labels=["Control", "T1", "T2", "T3"],
+    xlabel="Response", ylabel="Group",
+    show_median=True,
+)
+sp.save(fig, "16_ridgeline", formats=("pdf", "png"))
+```
+
+### 17. 六边形密度图 (`17_hexbin.py`)
+
+```python
+"""六边形密度图 — 大样本二维密度"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("ieee", "ocean", lang="en")
+
+np.random.seed(42)
+x = np.random.randn(20000)
+y = 0.7 * x + 0.6 * np.random.randn(20000)
+
+fig, ax = sp.plot_hexbin(
+    x, y, gridsize=40, bins="log",
+    xlabel="PC1", ylabel="PC2",
+    colorbar_label="Count (log)",
+)
+sp.save(fig, "17_hexbin", formats=("pdf", "png"))
+```
+
 ---
 
 ## Nature 质量图表
@@ -875,6 +994,16 @@ with sp.style_context("ieee", palette="ocean"):
 
 子集: `pastel-2` 取前 2 色，`ocean-4` 取前 4 色。
 
+### 高级图表速查
+```python
+sp.plot_bubble_heatmap(data, cmap="viridis", background=True, show_values=True)
+sp.plot_bubble(x, y, size=values, color=colors, size_scale=200)
+sp.plot_hexbin(x, y, gridsize=30, bins="log")
+sp.plot_ridgeline(data_list, labels=[...], overlap=0.3, show_median=True)
+sp.plot_waterfall3d(x, y_list, labels=[...], spacing=1.0, fill=True)
+# 别名: sp.bubble_heatmap / sp.bubble / sp.hexbin / sp.ridgeline / sp.waterfall3d
+```
+
 ### 保存选项
 ```python
 sp.save(fig, "文件名")                                    # 默认 PDF + PNG 1200dpi
@@ -947,4 +1076,4 @@ sp.check_color_contrast("#FFF", "#000")      # 对比度检查
 
 ---
 
-版本: **1.9.1** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`
+版本: **1.10.0** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`
