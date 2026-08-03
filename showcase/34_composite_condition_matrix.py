@@ -39,8 +39,8 @@ mean_colors = {
     ("药物 B", "对照"): "#3A628F", ("药物 B", "低剂量"): "#3A628F", ("药物 B", "高剂量"): "#3A628F",
 }
 
-# ── 布局：2×3 条件矩阵 ────────────────────────────────────────
-fig, axes = sp.figure_panels(2, 3, venue="thesis", sharey=True, hspace=0.35, wspace=0.28)
+# ── 布局：2×3 条件矩阵（模板一键生成） ───────────────────────
+fig, axes = sp.figure_panels(template="condition_matrix", venue="thesis")
 
 for ax, (i, j) in zip(axes.flat, [(r, c) for r in range(2) for c in range(3)]):
     drug = drugs[i]

@@ -305,7 +305,7 @@ def ieee_context(
         palette: 配色方案，默认 "pastel"
         lang: 语言设置，"zh" 或 "en"
         theme: 主题模式，"light" 或 "dark"
-        **kwargs: 其他 matplotlib rcParams 参数
+        `**kwargs`: 其他 matplotlib rcParams 参数
 
     返回:
         StyleContext 上下文管理器
@@ -332,7 +332,7 @@ def nature_context(
         palette: 配色方案，默认 "pastel"
         lang: 语言设置，"zh" 或 "en"
         theme: 主题模式，"light" 或 "dark"
-        **kwargs: 其他 matplotlib rcParams 参数
+        `**kwargs`: 其他 matplotlib rcParams 参数
 
     返回:
         StyleContext 上下文管理器
@@ -357,7 +357,7 @@ def thesis_context(
         palette: 配色方案，默认 "pastel"
         lang: 语言设置，"zh" 或 "en"
         theme: 主题模式，"light" 或 "dark"
-        **kwargs: 其他 matplotlib rcParams 参数
+        `**kwargs`: 其他 matplotlib rcParams 参数
 
     返回:
         StyleContext 上下文管理器

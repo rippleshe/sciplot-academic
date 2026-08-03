@@ -203,7 +203,7 @@ class SciPlotConfig:
         设置全局默认值
 
         参数:
-            **kwargs: 配置项键值对
+            `**kwargs`: 配置项键值对
                 - venue: 期刊样式 ("nature", "ieee", "thesis")
                 - palette: 配色方案 ("pastel", "earth", "ocean")
                 - lang: 语言 ("zh", "en")
@@ -428,7 +428,7 @@ def set_defaults(**kwargs: Any) -> None:
     设置全局默认值
 
     参数:
-        **kwargs: 配置项键值对
+        `**kwargs`: 配置项键值对
 
     示例:
         >>> import sciplot as sp

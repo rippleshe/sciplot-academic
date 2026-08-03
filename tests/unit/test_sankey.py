@@ -117,3 +117,30 @@ def test_sankey_self_loop_no_hang(cleanup_figures):
     assert result.fig is not None
     result2 = sp.plot_sankey(["A"], ["A"], [10.0])
     assert result2.fig is not None
+
+
+def test_sankey_min_node_height(cleanup_figures):
+    """极小流量节点应提升到最小可见高度（不被间隙吞掉）。"""
+    from matplotlib.patches import Rectangle
+
+    src = ["A", "B", "C", "A", "B"]
+    tgt = ["X", "Y", "X", "Y", "X"]
+    val = [100.0, 1.0, 1.0, 60.0, 42.0]
+    result = sp.plot_sankey(src, tgt, val)
+    rects = [p for p in result.ax.patches if isinstance(p, Rectangle)]
+    assert len(rects) == 5
+    hs = sorted(r.get_height() for r in rects)
+    assert hs[0] >= 0.010, f"最小节点条高 {hs[0]:.4f} 不可见"
+
+
+def test_sankey_min_node_height_zero_disables(cleanup_figures):
+    """min_node_height=0 时不做最小高度提升（保持原始比例）。"""
+    from matplotlib.patches import Rectangle
+
+    src = ["A", "B"]
+    tgt = ["X", "Y"]
+    val = [100.0, 1.0]
+    result = sp.plot_sankey(src, tgt, val, min_node_height=0.0)
+    rects = [p for p in result.ax.patches if isinstance(p, Rectangle)]
+    hs = sorted(r.get_height() for r in rects)
+    assert hs[0] < 0.01  # 原始比例下小节点仍很小

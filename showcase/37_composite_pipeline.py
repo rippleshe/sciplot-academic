@@ -13,10 +13,10 @@ import sciplot as sp
 
 rng = np.random.default_rng(13)
 
-# ── 布局：1×5 流水线 ──────────────────────────────────────────
+# ── 布局：1×5 流水线（模板一键生成） ─────────────────────────
 sp.setup_style("thesis", "ocean", lang="zh")
-fig, axes = plt.subplots(1, 5, figsize=(9.5, 2.6),
-                         gridspec_kw=dict(wspace=0.62))
+fig, axes = sp.figure_panels(template="pipeline", venue="thesis")
+axes = np.atleast_1d(axes)
 for ax in axes:
     ax.tick_params(direction="in")
 
@@ -66,10 +66,5 @@ for i in range(4):
     )
     fig.add_artist(cp)
 
-# ── 面板标签 ─────────────────────────────────────────────────
-for ax, lbl in zip(axes, ["a", "b", "c", "d", "e"]):
-    ax.text(-0.14, 1.10, f"({lbl})", transform=ax.transAxes,
-            fontweight="bold", fontsize=11)
-
-# ── 保存 ──────────────────────────────────────────────────────
+# ── 保存（面板标签已由模板自动添加 8pt） ──────────────────────
 sp.save(fig, "showcase/37_composite_pipeline", formats=("png",), dpi=300)

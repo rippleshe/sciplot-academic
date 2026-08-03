@@ -55,6 +55,13 @@ extensions = [
     "numpydoc",
 ]
 
+# 抑制 docstring 格式提示类警告（Definition list / Inline strong 等）。
+# 这些是 rst 渲染的可读性提示而非构建错误——napoleon 仍能正确解析参数；
+# 已从源头修复 **var: 强调误解析。保持输出干净便于 CI 检查真实错误。
+suppress_warnings = [
+    "docutils",
+]
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 

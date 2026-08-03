@@ -124,7 +124,7 @@ def plot_confidence(
                  设为 1.96 可画出 95% 置信区间
         alpha  : 阴影透明度，默认 0.25
         fill_kwargs: 传递给 ax.fill_between() 的额外参数（如 hatch、edgecolor）
-        **kwargs: 传递给 ax.plot() 的额外参数（只影响线条）
+        `**kwargs`: 传递给 ax.plot() 的额外参数（只影响线条）
 
     示例:
         >>> fig, ax = sp.plot_confidence(

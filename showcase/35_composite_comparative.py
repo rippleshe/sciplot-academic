@@ -21,8 +21,8 @@ COLOR_BASE = "#A9B7C6"
 COLOR_PROP = "#2E6DA4"
 COLOR_PROP_DARK = "#1F4E79"
 
-# ── 布局：1×2 对照双列 ────────────────────────────────────────
-fig, axes = sp.figure_panels(1, 2, venue="thesis", widths=[1, 1], sharey=True, wspace=0.30)
+# ── 布局：1×2 对照双列（模板一键生成） ───────────────────────
+fig, axes = sp.figure_panels(template="comparative", venue="thesis")
 
 # 左：基线准确率（中性灰蓝柱 + 数值标注）
 x = np.arange(len(datasets))

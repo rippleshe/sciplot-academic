@@ -26,10 +26,9 @@ times = [1.0, 4.0, 12.0, 24.0]
 fields = [plume(t) for t in times]
 vmin, vmax = 0.0, float(np.max(fields[0]))
 
-# ── 布局：2×2 时间快照 ────────────────────────────────────────
+# ── 布局：2×2 时间快照（模板一键生成） ───────────────────────
 sp.setup_style("thesis", "ocean", lang="zh")
-fig, axes = plt.subplots(2, 2, figsize=(5.6, 5.0),
-                         gridspec_kw=dict(hspace=0.32, wspace=0.28))
+fig, axes = sp.figure_panels(template="time_march", venue="thesis")
 axes = np.atleast_2d(axes)
 
 cmap = plt.get_cmap("YlOrRd")
@@ -51,10 +50,5 @@ cbar = fig.colorbar(im, ax=axes, fraction=0.030, pad=0.06, aspect=40)
 cbar.set_label("浓度 (归一化)", fontsize=8)
 cbar.ax.tick_params(labelsize=7)
 
-# ── 面板标签 ─────────────────────────────────────────────────
-for ax, lbl in zip(axes.flat, ["a", "b", "c", "d"]):
-    ax.text(-0.14, 1.08, f"({lbl})", transform=ax.transAxes,
-            fontweight="bold", fontsize=11)
-
-# ── 保存 ──────────────────────────────────────────────────────
+# ── 保存（面板标签已由模板自动添加 8pt） ──────────────────────
 sp.save(fig, "showcase/38_composite_time_march", formats=("png",), dpi=300)

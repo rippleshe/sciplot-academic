@@ -7,6 +7,32 @@
 
 ---
 
+## [1.13.5] - 2026-08-04
+
+### Fixed
+
+- **桑基图极小节点不可见**：新增 `min_node_height` 参数（默认 0.012），
+  极小流量节点提升到最小可见高度（原先条高被 0.02 间隙吞掉只剩标签）；
+  布局/流带/标签统一使用提升后高度，收缩时保证最小节点仍可见
+- **docstring `**var:` 误解析**：9 处 `**kwargs:`/`**rc_params:` 参数行
+  改为反引号包裹，消除 Sphinx "Inline strong start-string without end-string"；
+  conf.py 加 `suppress_warnings=["docutils"]` 抑制 rst 可读性提示，
+  Sphinx 构建从 139 警告 → 0 警告
+
+### Changed
+
+- showcase 34/35/37/38 重构为 `figure_panels(template=...)` 一键模板：
+  34 条件矩阵、35 对照双列、37 流水线、38 时间推进，删除手写标签循环
+  （37 比例从超宽 2.98 修正为 1.32）
+- skill：recipes.md 追加 Meta 分析/UpSet/三联画/色盲安全配方
+
+### Tests
+
+- 新增桑基图 min_node_height 行为测试（提升生效 / 0 禁用）
+- 总数 1525 passed
+
+---
+
 ## [1.13.4] - 2026-08-03
 
 ### Fixed

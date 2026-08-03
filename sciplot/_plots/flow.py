@@ -29,6 +29,7 @@ def plot_sankey(
     node_alpha: float = 0.9,
     flow_alpha: float = 0.55,
     min_flow: float = 0.0,
+    min_node_height: float = 0.012,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -49,6 +50,8 @@ def plot_sankey(
         node_alpha : 节点不透明度
         flow_alpha : 流量带不透明度
         min_flow   : 小于该值的流被过滤（避免视觉噪音）
+        min_node_height: 节点最小可见高度（归一化，默认 0.012）。
+                       极小流量节点提升到此高度，避免条高被间隙吞掉只剩标签
 
     示例:
         >>> fig, ax = sp.plot_sankey(
@@ -156,14 +159,32 @@ def plot_sankey(
         layer_heights[lv] = h
         max_layer_h = max(max_layer_h, h)
 
+    # 节点高度：极小节点提升到 min_node_height（避免条高不可见）。
+    # 提升后各层高度相应扩张，保证 ∑节点高 + 间隙 ≈ 层高。
+    min_node_h = float(min_node_height)
+    node_h_eff: Dict[Any, float] = {}
+    for n in node_list:
+        raw_h = node_value[n] / total_value
+        node_h_eff[n] = max(raw_h, min_node_h)
+
     x_stride = node_width * 2.5
     node_pos: Dict[Any, Tuple[float, float]] = {}
+    node_h_display: Dict[Any, float] = {}  # 实际绘制高度（含最小提升与收缩）
     for lv, nodes in layers.items():
         x = lv * x_stride
-        y_cursor = (max_layer_h - layer_heights[lv]) / 2
+        # 层内节点高之和（含最小提升）+ 间隙
+        raw_layer_h = sum(node_value[n] for n in nodes) / total_value
+        eff_layer_h = sum(node_h_eff[n] for n in nodes)
+        n_gaps = len(nodes) - 1
+        # 若提升导致溢出，按比例收缩（保持相对大小）；
+        # 但保证提升后的最小节点不被收缩回阈值以下
+        avail = max(raw_layer_h, eff_layer_h + n_gaps * 0.02)
+        scale = raw_layer_h / avail if avail > 0 else 1.0
+        y_cursor = (max_layer_h - raw_layer_h) / 2
         for n in nodes:
-            h = node_value[n] / total_value
+            h = max(node_h_eff[n] * scale, min_node_h * 0.9)
             node_pos[n] = (x, y_cursor)
+            node_h_display[n] = h
             y_cursor += h + 0.02
 
     # 流出/流入偏移游标（用于流量带锚点）
@@ -178,8 +199,8 @@ def plot_sankey(
     for s, t, v in zip(src_arr, tgt_arr, val_arr):
         x_s, y_s = node_pos[s]
         x_t, y_t = node_pos[t]
-        h_s = node_value[s] / total_value
-        h_t = node_value[t] / total_value
+        h_s = node_h_display[s]
+        h_t = node_h_display[t]
         # 节点内流量占比（避免流入≠流出时流带溢出节点条）
         out_total = max(outflow[s], 1e-12)
         in_total = max(inflow[t], 1e-12)
@@ -216,7 +237,7 @@ def plot_sankey(
     # ── 节点矩形 ──
     for n in node_list:
         x, y = node_pos[n]
-        h = node_value[n] / total_value
+        h = node_h_display[n]
         ax.add_patch(Rectangle(
             (x, y), node_width, h,
             facecolor=color_of[n], alpha=node_alpha,
@@ -227,7 +248,7 @@ def plot_sankey(
     fs = max(7, plt.rcParams.get("font.size", 9) - 1)
     for n in node_list:
         x, y = node_pos[n]
-        h = node_value[n] / total_value
+        h = node_h_display[n]
         if level[n] == max_level:
             ax.text(x - 0.005, y + h / 2, label_of[n],
                     ha="right", va="center", fontsize=fs, zorder=4)
