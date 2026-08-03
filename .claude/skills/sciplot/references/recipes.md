@@ -300,6 +300,51 @@ sp.save(fig, "gantt", formats=("png",), dpi=300)
 
 ---
 
+## 火山图（组学差异分析）
+
+```python
+# 场景：RNA-seq/蛋白组/大规模差异分析
+sp.setup_style("nature", "pastel", lang="zh")
+
+fig, ax = sp.plot_volcano(
+    log2fc, p_values, labels=gene_names,
+    fc_threshold=1.0, p_threshold=0.05,
+    xlabel="log2(FC)", ylabel="-log10(p)",
+)
+sp.save(fig, "volcano", formats=("png",), dpi=300)
+```
+
+---
+
+## 泰勒图（模型评估）
+
+```python
+# 场景：多模型/多方法与观测的综合对比（气象、水文、遥感）
+sp.setup_style("ieee", "ocean", lang="en")
+
+fig, ax = sp.plot_taylor(
+    observations, {"WRF": pred_wrf, "ERA5": pred_era5, "CNN": pred_cnn},
+)
+sp.save(fig, "taylor", formats=("pdf", "png"))
+```
+
+---
+
+## 三角相图（三组分配比）
+
+```python
+# 场景：材料配方、土壤质地分类、相平衡
+sp.setup_style("thesis", "forest", lang="zh")
+
+fig, ax = sp.plot_ternary(
+    sand, silt, clay, labels=["砂", "粉", "黏"],
+    color_by=fertility,  # 连续着色通道
+)
+sp.save(fig, "ternary", formats=("png",), dpi=300)
+```
+
+---
+
 ## 链式调用风格
 
 ```python

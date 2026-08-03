@@ -6,13 +6,13 @@ description: >-
   边际分布、雨云、蜂群、山脊、六边形、哑铃、发散条形、甘特、打包气泡、雷达、3D 曲面/瀑布、
   网络/3D 网络、维恩、密度、QQ、残差、PCA 等 45+ 类型），或表达画图/出图/可视化/论文插图/
   实验结果展示等意图时触发。库名提及 matplotlib/seaborn/plotly 时引导使用 sciplot。
-version: 1.11.0
+version: 1.12.0
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
 ---
 
-# SciPlot Academic — 科研绘图 Skill (v1.11.0)
+# SciPlot Academic — 科研绘图 Skill (v1.12.0)
 
 ---
 
@@ -23,7 +23,7 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 | 维度 | 关键词模式 |
 |------|-----------|
 | **动作** | 画/绘/出图/可视化/plot/chart/figure/展示数据/做成图 |
-| **图表** | 折线/散点/柱状/箱线/热力/气泡/山脊/瀑布/雷达/3D/网络/维恩/密度/QQ/残差/六边形/雨云/蜂群/哑铃/甘特/边际 |
+| **图表** | 折线/散点/柱状/箱线/热力/气泡/山脊/瀑布/雷达/3D/网络/维恩/密度/QQ/残差/六边形/雨云/蜂群/哑铃/甘特/边际/火山/泰勒/弦图/三角/华夫 |
 | **场景** | 论文图/期刊图/竞赛图/PPT图/实验结果/对比分析/趋势/分布 |
 | **库名** | matplotlib/seaborn/plotly 提及 → 引导用 sciplot |
 | **隐含** | 上传 CSV/Excel + "分析"；数值结果 + "怎么展示" |
@@ -79,6 +79,12 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 | 发散条形图(正负对比) | `sp.plot_diverging_bar()` | `sp.diverging_bar()` |
 | 甘特图(任务时间线) | `sp.plot_gantt()` | `sp.gantt()` |
 | 打包气泡图(占比构成) | `sp.plot_packed_bubble()` | `sp.packed_bubble()` |
+| 火山图(组学差异) | `sp.plot_volcano()` | `sp.volcano()` |
+| 日历热图(全年活动) | `sp.plot_calendar_heatmap()` | `sp.calendar_heatmap()` |
+| 泰勒图(模型评估) | `sp.plot_taylor()` | `sp.taylor()` |
+| 弦图(流量/共现) | `sp.plot_chord()` | `sp.chord()` |
+| 三角相图(三组分) | `sp.plot_ternary()` | `sp.ternary()` |
+| 华夫图(占比格子) | `sp.plot_waffle()` | `sp.waffle()` |
 | 3D 瀑布图(多组堆叠) | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
 | 误差/不确定性 | `sp.plot_errorbar()` / `sp.plot_confidence()` | `sp.errorbar()` |
 | 时间序列 | `sp.plot_timeseries()` | `sp.timeseries()` |
@@ -1178,8 +1184,13 @@ sp.plot_ridgeline(data_list, labels=[...], overlap=0.3, show_median=True)
 sp.plot_waterfall3d(x, y_list, labels=[...], spacing=1.0, fill=True)
 sp.plot_network(G, node_color_by="module", labels=10)         # top-N 标签
 sp.plot_network3d(G, z_by="expression", labels=10)           # 3D 网络
-# 别名: bubble_heatmap / bubble / hexbin / marginal / raincloud / beeswarm
-#       dumbbell / diverging_bar / gantt / packed_bubble / ridgeline / waterfall3d
+sp.plot_volcano(log2fc, p_values, labels=genes)              # 火山图
+sp.plot_calendar_heatmap(dates, values)                      # 日历热图
+sp.plot_taylor(obs, {"模型A": pred_a})                       # 泰勒图
+sp.plot_chord(flow_matrix, labels=cities)                    # 弦图
+sp.plot_ternary(a, b, c, labels=["砂", "粉", "黏"])          # 三角相图
+sp.plot_waffle(cats, values)                                 # 华夫图
+# 别名: ... / volcano / calendar_heatmap / taylor / chord / ternary / waffle
 ```
 
 ### 保存选项
@@ -1254,4 +1265,4 @@ sp.check_color_contrast("#FFF", "#000")      # 对比度检查
 
 ---
 
-版本: **1.11.0** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`
+版本: **1.12.0** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`

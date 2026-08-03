@@ -7,6 +7,35 @@
 
 ---
 
+## [1.12.0] - 2026-08-03
+
+### Added
+
+- 新增 `plot_volcano` 火山图：组学差异分析，log2FC × -log10(p)，
+  三分类着色（上调/下调/不显著）、阈值参考线、top-N 标注、p=0 处理（别名 `volcano`）
+- 新增 `plot_calendar_heatmap` 日历热图：全年活动强度按周排列，
+  月份分隔线、跨年支持、字符串日期解析（别名 `calendar_heatmap`）
+- 新增 `plot_taylor` 泰勒图：模型综合评估，角度编码相关系数、
+  半径编码标准差比、距离编码 RMS 误差（别名 `taylor`）
+- 新增 `plot_chord` 弦图：节点间流量/共现关系，贝塞尔弦线、
+  弧长编码节点总量（别名 `chord`）
+- 新增 `plot_ternary` 三角相图：三组分占比投影，自动归一化、
+  平行网格、连续着色（别名 `ternary`）
+- 新增 `plot_waffle` 华夫图：rows×cols 格子占比构成，余数补齐、
+  百分比图例（别名 `waffle`）
+
+### Fixed
+
+- 修复 `plot_confidence` 接受纯 list 输入崩溃（内部转 numpy 数组），
+  并新增长度一致与 y_std 非负校验
+- 修复 `plot_bar` 显式 color 参数与自动配色冲突（kwargs 覆盖）
+- 修复 `plot_parallel` 对含分类列 DataFrame 崩溃：自动提取数值列，
+  color_by 分类列仅用于着色与图例；兼容 pandas 3.x StringDtype
+- 消除 boxplot 的 `vert` 弃用警告：新增 `boxplot_with_orientation` 兼容辅助，
+  raincloud/beeswarm/marginal 全部迁移
+
+---
+
 ## [1.11.1] - 2026-08-03
 
 ### Changed

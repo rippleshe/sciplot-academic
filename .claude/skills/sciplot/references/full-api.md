@@ -601,6 +601,95 @@ sp.plot_packed_bubble(labels, sizes, colors=None, xlabel="", ylabel="",
 fig, ax = sp.plot_packed_bubble(labels, np.array([40, 25, 15]))
 ```
 
+### plot_volcano（火山图，v1.12.0 新增）
+
+```python
+sp.plot_volcano(log2fc, p_values, labels=None, xlabel="log2(Fold Change)",
+                ylabel="-log10(p)", title="", fc_threshold=1.0, p_threshold=0.05,
+                color_up="#D62728", color_down="#1F77B4", color_ns="#BBBBBB",
+                alpha=0.6, annotate_top=True, top_n=8, show_thresholds=True,
+                venue=None, palette=None, lang=None, **kwargs)
+```
+
+组学差异分析：三分类着色 + 阈值线 + top-N 标注，p=0 自动处理。
+
+```python
+fig, ax = sp.plot_volcano(log2fc, p_values, labels=gene_names)
+```
+
+### plot_calendar_heatmap（日历热图，v1.12.0 新增）
+
+```python
+sp.plot_calendar_heatmap(dates, values, cmap="YlOrRd", vmin=None, vmax=None,
+                         colorbar_label="", xlabel="", ylabel="", title="",
+                         weekday_start=0, show_month_lines=True,
+                         lang=None, venue=None, palette=None, **kwargs)
+```
+
+全年活动强度按周排列，支持 datetime/date/字符串日期，跨年自动间隔。
+
+```python
+fig, ax = sp.plot_calendar_heatmap(dates, values, colorbar_label="事件数")
+```
+
+### plot_taylor（泰勒图，v1.12.0 新增）
+
+```python
+sp.plot_taylor(observations, models, xlabel="", ylabel="", title="",
+               obs_name="观测", marker="o", show_corr_lines=True,
+               show_std_lines=True, show_rms_lines=True, rms_levels=None,
+               venue=None, palette=None, lang=None, **kwargs)
+```
+
+模型综合评估：角度=相关系数、半径=标准差比、距离=归一化 RMS。
+
+```python
+fig, ax = sp.plot_taylor(obs, {"模型A": pred_a, "模型B": pred_b})
+```
+
+### plot_chord（弦图，v1.12.0 新增）
+
+```python
+sp.plot_chord(matrix, labels=None, title="", width=0.07, gap=0.01,
+              alpha=0.55, show_values=False,
+              venue=None, palette=None, lang=None, **kwargs)
+```
+
+节点间流量/共现关系：弧长编码总量，贝塞尔弦线宽度编码流量。
+
+```python
+fig, ax = sp.plot_chord(flow_matrix, labels=cities)
+```
+
+### plot_ternary（三角相图，v1.12.0 新增）
+
+```python
+sp.plot_ternary(a, b, c, labels=None, xlabel="", ylabel="", title="",
+                color_by=None, cmap="viridis", grid=True, grid_levels=4,
+                alpha=0.7, show_colorbar=True,
+                venue=None, palette=None, lang=None, **kwargs)
+```
+
+三组分占比投影：自动归一化、平行网格、顶点标签、连续着色。
+
+```python
+fig, ax = sp.plot_ternary(a, b, c, labels=["砂", "粉", "黏"])
+```
+
+### plot_waffle（华夫图，v1.12.0 新增）
+
+```python
+sp.plot_waffle(categories, values, rows=10, cols=10, xlabel="", ylabel="",
+               title="", colors=None, show_percent=True, percent_fmt=".0f",
+               square=True, venue=None, palette=None, lang=None, **kwargs)
+```
+
+rows×cols 格子占比构成，余数自动补齐，百分比图例。
+
+```python
+fig, ax = sp.plot_waffle(["训练", "验证", "测试"], np.array([70, 15, 15]))
+```
+
 ---
 
 ## 8. ML 扩展（`pip install sciplot-academic[ml]`）
