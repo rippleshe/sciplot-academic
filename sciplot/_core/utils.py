@@ -240,6 +240,23 @@ def apply_resolved_style(
     return effective_venue
 
 
+def new_styled_figure(
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> Tuple[Any, Any]:
+    """套用样式并创建图形（apply_resolved_style + new_figure 的固定组合）。
+
+    与 create_sciplot_figure 的区别：不额外修改 tick_params，严格等价于
+    ``effective_venue = apply_resolved_style(...); fig, ax = new_figure(...)``
+    两行，可安全替换各绘图函数中的手写配对。
+    """
+    from sciplot._core.layout import new_figure
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    return new_figure(effective_venue)
+
+
 def create_sciplot_figure(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
@@ -605,5 +622,6 @@ __all__ = [
     "contrast_text_color",
     "get_cmap_safe",
     "polar_to_cart",
+    "new_styled_figure",
 ]
 

@@ -15,8 +15,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.result import PlotResult
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
-from sciplot._core.layout import new_figure
+from sciplot._core.utils import apply_resolved_style, get_cycle_colors, new_styled_figure
 from sciplot._core.style import VENUES
 
 
@@ -187,8 +186,7 @@ def plot_contour(
             f"levels 必须是正整数或数值序列，实际类型: {type(levels).__name__}"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     if filled:
         cs = ax.contourf(X, Y, Z, levels=levels, cmap=cmap, **kwargs)

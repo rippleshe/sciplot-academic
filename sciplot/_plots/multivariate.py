@@ -13,9 +13,8 @@ import numpy as np
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 
-from sciplot._core.layout import new_figure
 from sciplot._core.style import VENUES, get_current_venue
-from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors
+from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -156,8 +155,7 @@ def plot_parallel(
     else:
         raise ValueError(f"未知的归一化方式: {normalize}。可选: 'minmax', 'zscore', 'none'")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     x = np.arange(n_features)
 

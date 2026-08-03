@@ -15,8 +15,7 @@ from matplotlib.patches import Patch
 import numpy as np
 from datetime import date, datetime, timedelta
 
-from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
+from sciplot._core.utils import get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -198,8 +197,7 @@ def plot_timeseries(
     events_normalized = _normalize_events(events)
     regions_normalized = _normalize_shade_regions(shade_regions)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     x_type = _detect_x_type(t)
     _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
@@ -309,8 +307,7 @@ def plot_multi_timeseries(
     events_normalized = _normalize_events(events)
     regions_normalized = _normalize_shade_regions(shade_regions)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     x_type = _detect_x_type(t)
     _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
@@ -398,8 +395,7 @@ def plot_slope(
     if not np.all(np.isfinite(before_arr)) or not np.all(np.isfinite(after_arr)):
         raise ValueError("before 和 after 不能包含 NaN 或 Inf")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
     if not colors:
@@ -556,8 +552,7 @@ def plot_gantt(
         if any(w <= 0 for w in widths):
             raise ValueError("end 必须全部大于 start")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = get_cycle_colors()
 
     # 颜色解析：color_by 为类别时按类别着色
@@ -792,8 +787,7 @@ def plot_calendar_heatmap(
             month_line_x.append(year_offset + (first_day.timetuple().tm_yday - 1) // 7 - 0.5)
             month_labels.append(f"{month}月")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     # 格子尺寸（像素）→ scatter 面积
     dpi = float(fig.dpi)

@@ -11,9 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
-    apply_resolved_style,
     create_sciplot_figure,
     create_plot_result,
     validate_dict_not_empty,
@@ -22,6 +20,7 @@ from sciplot._core.utils import (
     boxplot_with_orientation,
     contrast_text_color,
     get_cycle_colors as _get_cycle_colors,
+    new_styled_figure,
 )
 from sciplot._core.result import PlotResult, ComboPlotResult
 
@@ -152,8 +151,7 @@ def plot_grouped_bar(
     width = validate_positive_number(width, "width", allow_zero=False)
     gap = validate_positive_number(gap, "gap", allow_zero=True)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     n_series = len(normalized_data)
@@ -245,8 +243,7 @@ def plot_box(
         if not np.all(np.isfinite(data_arr)):
             raise ValueError("data 不能包含 NaN 或 Inf")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     bp = ax.boxplot(
@@ -322,8 +319,7 @@ def plot_violin(
             f"labels 长度 ({len(labels)}) 与数据组数 ({n_groups}) 不一致"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     parts = ax.violinplot(
@@ -384,8 +380,7 @@ def plot_histogram(
     if not isinstance(bins, int) or bins <= 0:
         raise ValueError(f"bins 必须为正整数，实际值: {bins!r}")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
     ax.hist(finite_values, bins=bins, density=density, alpha=alpha,
             color=colors[0], **kwargs)
@@ -461,8 +456,7 @@ def plot_stacked_bar(
             raise ValueError(f"数据系列 '{series_name}' 不能包含 NaN 或 Inf")
         normalized_data[series_name] = series_values
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     x = np.arange(n_groups)
@@ -547,8 +541,7 @@ def plot_horizontal_bar(
         raise ValueError("values 不能包含 NaN 或 Inf")
     height = validate_positive_number(height, "height", allow_zero=False)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     # 排序处理（升序，让最大值在顶部）
@@ -626,8 +619,7 @@ def plot_lollipop(
         categories = [categories[i] for i in order]
         values_arr = values_arr[order]
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
     main_color = colors[0]
 
@@ -737,8 +729,7 @@ def plot_combo(
                 raise ValueError(f"line_data['{name}'] 不能包含 NaN 或 Inf")
             normalized_line_data[name] = series_values
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax_bar = new_figure(effective_venue)
+    fig, ax_bar = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     n_bars = len(normalized_bar_data)
@@ -963,8 +954,7 @@ def plot_beeswarm(
             f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
     rng = np.random.default_rng(42)
@@ -1103,8 +1093,7 @@ def plot_dumbbell(
     starts = start_arr[order]
     ends = end_arr[order]
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     y = np.arange(len(cats))
@@ -1205,8 +1194,7 @@ def plot_diverging_bar(
     if not np.all(np.isfinite(values_arr)):
         raise ValueError("values 不能包含 NaN 或 Inf")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
 
     pos_color = positive_color if positive_color is not None else colors[0]
@@ -1310,8 +1298,7 @@ def plot_waffle(
         cycle = _get_cycle_colors()
         colors = [cycle[i % len(cycle)] for i in range(len(categories))]
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     # 按比例分配格数（最后一项补齐差额）
     n_cells = rows * cols

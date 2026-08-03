@@ -14,8 +14,7 @@ from matplotlib.figure import Figure
 from typing import Any, List, Optional, Tuple
 
 from sciplot._core.result import PlotResult
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
-from sciplot._core.layout import new_figure
+from sciplot._core.utils import get_cycle_colors, new_styled_figure
 
 
 def _check_sklearn() -> Tuple[Any, Any]:
@@ -96,8 +95,7 @@ def plot_pca(
 
     PCA, _ = _check_sklearn()
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     pca = PCA(n_components=n_components)
     proj = pca.fit_transform(data)
@@ -172,8 +170,7 @@ def plot_confusion_matrix(
     import itertools
     _, confusion_matrix = _check_sklearn()
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     cm = confusion_matrix(y_true, y_pred)
     if normalize:
@@ -247,8 +244,7 @@ def plot_feature_importance(
     if top_n is not None and top_n <= 0:
         raise ValueError(f"top_n 必须为正整数，实际值: {top_n}")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     # 优化排序逻辑：直接取最大的 top_n 个，然后升序排列（水平条形图从下到上）
     if top_n is not None and top_n < len(features):
@@ -320,8 +316,7 @@ def plot_learning_curve(
     if len(train_scores) == 0:
         raise ValueError("train_scores 和 val_scores 不能为空")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     if train_sizes is None:
         train_sizes = np.arange(1, len(train_scores) + 1)

@@ -11,7 +11,7 @@ from matplotlib.lines import Line2D
 
 from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, create_sciplot_figure, create_plot_result, get_cycle_colors, validate_labels_match_data
+from sciplot._core.utils import create_sciplot_figure, create_plot_result, get_cycle_colors, new_styled_figure, validate_labels_match_data
 from sciplot._core.result import PlotResult
 
 
@@ -166,8 +166,7 @@ def plot_multi_line(
     if not y_list:
         raise ValueError("参数 'y_list' 不能为空列表")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     labels = validate_labels_match_data(labels, y_list)
 
@@ -270,8 +269,7 @@ def plot_step(
     """
     _validate_xy_lengths(x, y)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     ax.step(x, y, where=where, label=label, **kwargs)  # type: ignore
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -319,8 +317,7 @@ def plot_area(
     """
     _validate_xy_lengths(x, y)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     (line,) = ax.plot(x, y, label=label, **kwargs)
 
@@ -377,8 +374,7 @@ def plot_multi_area(
     n = len(y_list)
     effective_palette = _resolve_auto_subset_palette(palette, n)
 
-    effective_venue = apply_resolved_style(venue, effective_palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, effective_palette, lang)
 
     labels = validate_labels_match_data(labels, y_list)
 

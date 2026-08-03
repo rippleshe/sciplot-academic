@@ -15,8 +15,7 @@ import numpy as np
 from matplotlib.colors import Normalize
 from matplotlib.patches import Patch
 
-from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors
+from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -245,8 +244,7 @@ def plot_network(
         layout_kw.setdefault("seed", seed)
     pos = _get_layout(G, layout, **layout_kw)
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
 
@@ -620,8 +618,7 @@ def plot_network_communities(
             detected = [list(G.nodes())]
         communities = [list(c) for c in detected]
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
 

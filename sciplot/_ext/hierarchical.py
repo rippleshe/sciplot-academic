@@ -15,9 +15,8 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from sciplot._core.layout import new_figure
 from sciplot._core.style import VENUES
-from sciplot._core.utils import apply_resolved_style
+from sciplot._core.utils import apply_resolved_style, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -114,8 +113,7 @@ def plot_dendrogram(
                 f"实际收到: type={type(data_or_linkage).__name__}"
             )
 
-    effective_venue = apply_resolved_style(venue, palette, lang=lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     if leaf_font_size is None:
         leaf_font_size = plt.rcParams.get("font.size", 9) - 1

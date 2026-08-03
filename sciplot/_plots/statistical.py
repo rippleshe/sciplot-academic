@@ -13,11 +13,10 @@ from statistics import NormalDist
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
-    apply_resolved_style,
     boxplot_with_orientation,
     get_cycle_colors as _get_cycle_colors,
+    new_styled_figure,
 )
 from sciplot._core.result import PlotResult
 
@@ -118,8 +117,7 @@ def plot_residuals(
 
     residuals = y_true - y_pred
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
 
@@ -200,8 +198,7 @@ def plot_qq(
             f"未知分布: {distribution}。可选: {sorted(dist_map)}"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
 
@@ -300,8 +297,7 @@ def plot_bland_altman(
     upper_loa = mean_diff + 1.96 * std_diff
     lower_loa = mean_diff - 1.96 * std_diff
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
 
@@ -367,8 +363,7 @@ def plot_density(
     if values.size < 2:
         raise ValueError("plot_density 至少需要 2 个有效数据点")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     if values.min() == values.max():
         # 常数序列：gaussian_kde 在零方差数据上会抛出 LinAlgError，
@@ -432,8 +427,7 @@ def plot_multi_density(
             f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     all_values = np.concatenate(normalized_data)
     x_eval = np.linspace(all_values.min(), all_values.max(), 256)
@@ -533,8 +527,7 @@ def plot_ridgeline(
             f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
 
@@ -658,8 +651,7 @@ def plot_raincloud(
             f"labels 长度 ({len(labels)}) 与 data_list 长度 ({len(normalized_data)}) 不一致"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
     rng = np.random.default_rng(42)
@@ -853,8 +845,7 @@ def plot_volcano(
     is_down = is_sig & (fc <= -fc_threshold)
     colors = np.where(is_up, color_up, np.where(is_down, color_down, color_ns))
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     ax.scatter(fc, neg_log10p, c=colors, alpha=alpha, s=18, edgecolors="none", **kwargs)
 

@@ -14,8 +14,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
+from sciplot._core.utils import get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -64,8 +63,7 @@ def plot_venn2(
     """
     venn2, _ = _check_venn()
 
-    effective_venue = apply_resolved_style(venue, palette, lang=lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
 
@@ -138,8 +136,7 @@ def plot_venn3(
     """
     _, venn3 = _check_venn()
 
-    effective_venue = apply_resolved_style(venue, palette, lang=lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = get_cycle_colors()
 

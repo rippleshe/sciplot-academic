@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
 
-from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
     apply_resolved_style,
     boxplot_with_orientation,
@@ -18,6 +17,7 @@ from sciplot._core.utils import (
     get_cmap_safe,
     get_cycle_colors,
     polar_to_cart,
+    new_styled_figure,
 )
 from sciplot._core.result import PlotResult
 
@@ -78,8 +78,7 @@ def plot_errorbar(
         if yerr_arr.ndim == 1 and len(yerr_arr) != len(y):
             raise ValueError(f"yerr 长度 ({len(yerr_arr)}) 与 y 长度 ({len(y)}) 不一致")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     ax.errorbar(
         x, y, yerr=yerr, fmt=fmt,
         capsize=capsize, markersize=markersize,
@@ -159,8 +158,7 @@ def plot_confidence(
         else:
             label_std = f"±{n_std:.2g}σ"
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
     (line,) = ax.plot(x, y_mean, label=label_mean, **kwargs)
     color = line.get_color()
     effective_fill_kwargs: Dict[str, Any] = dict(fill_kwargs or {})
@@ -241,8 +239,7 @@ def plot_heatmap(
             f"col_labels 长度 ({len(col_labels)}) 与列数 ({data.shape[1]}) 不一致"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     im = ax.imshow(data, cmap=cmap, aspect=aspect, vmin=vmin, vmax=vmax, **kwargs)
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -370,8 +367,7 @@ def plot_bubble_heatmap(
             f"bubble_scale 必须在 (0, 1] 范围内，实际值: {bubble_scale!r}"
         )
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     finite_data = data[np.isfinite(data)]
     if finite_data.size == 0:
@@ -604,8 +600,7 @@ def plot_packed_bubble(
     if not 0 < min_size_frac < 1:
         raise ValueError(f"min_size_frac 必须在 (0, 1) 范围内，实际值: {min_size_frac!r}")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     pos, radii = _pack_bubbles(sizes_arr, min_size_frac=min_size_frac)
     fontsize = plt.rcParams.get("font.size", 9)
@@ -1074,8 +1069,7 @@ def plot_hexbin(
     if not isinstance(mincnt, int) or mincnt < 0:
         raise ValueError(f"mincnt 必须为非负整数，实际值: {mincnt!r}")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     hb = ax.hexbin(
         x_arr, y_arr, gridsize=gridsize, bins=bins, cmap=cmap,
@@ -1187,8 +1181,7 @@ def plot_bubble(
     if not isinstance(size_scale, (int, float)) or size_scale <= 0:
         raise ValueError(f"size_scale 必须为正数，实际值: {size_scale!r}")
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     # 气泡面积 ∝ |size|（线性缩放）
     max_abs = float(np.max(np.abs(size_arr))) if n_points else 1.0
