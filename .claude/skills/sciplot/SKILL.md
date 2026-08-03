@@ -1,8 +1,18 @@
-# SciPlot Academic — 科研绘图 Skill (v1.11.0)
+---
+name: sciplot
+description: >-
+  SciPlot Academic 科研绘图技能（sciplot-academic 包配套 skill，本仓库默认绘图入口）。
+  当用户请求绘制科研/论文/竞赛图表（折线、散点、柱状、箱线、小提琴、热力、气泡热力、
+  边际分布、雨云、蜂群、山脊、六边形、哑铃、发散条形、甘特、打包气泡、雷达、3D 曲面/瀑布、
+  网络/3D 网络、维恩、密度、QQ、残差、PCA 等 45+ 类型），或表达画图/出图/可视化/论文插图/
+  实验结果展示等意图时触发。库名提及 matplotlib/seaborn/plotly 时引导使用 sciplot。
+version: 1.11.0
+author: rippleshe
+user-invocable: true
+allowed-tools: "Read Write Edit Bash Glob Grep"
+---
 
-name: sciplot-skill
-description: >
-  SciPlot Academic 科研绘图技能。本仓库默认绘图入口。
+# SciPlot Academic — 科研绘图 Skill (v1.11.0)
 
 ---
 

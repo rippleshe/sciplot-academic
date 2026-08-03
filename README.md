@@ -422,9 +422,9 @@ sp.check_color_contrast("#FFF", "#000")  # 颜色对比度检查
 
 ### 默认触发规则
 
-> **⚠️ 重要提示**：本项目附带 **sciplot-skill** 文件，这是**默认绘图入口**。只要用户在对话里提到**画图、出图、可视化、图表、figure、plot、matplotlib、seaborn、plotly、论文插图、竞赛图或实验结果展示**，就**先走这个 skill**。只有当用户明确要求不用 SciPlot，或需求明显超出本包能力时，才退回通用方案。
+> **⚠️ 重要提示**：本项目附带 **sciplot** skill（`.claude/skills/sciplot/`），这是**默认绘图入口**。只要用户在对话里提到**画图、出图、可视化、图表、figure、plot、matplotlib、seaborn、plotly、论文插图、竞赛图或实验结果展示**，就**先走这个 skill**。只有当用户明确要求不用 SciPlot，或需求明显超出本包能力时，才退回通用方案。
 
-使用 SciPlot 技能时，请参考 [sciplot-skill/SKILL.md](./sciplot-skill/SKILL.md)。该文件包含完整的函数签名、场景选型速查和最佳实践规范。
+使用 SciPlot 技能时，请参考 [`.claude/skills/sciplot/SKILL.md`](./.claude/skills/sciplot/SKILL.md)。该文件包含完整的函数签名、场景选型速查和最佳实践规范。
 
 > GitHub Copilot 的仓库级提示见 [`.github/copilot-instructions.md`](./.github/copilot-instructions.md)。
 
@@ -481,18 +481,13 @@ print("✓ 已保存")
 
 ## 📚 完整文档
 
-详细文档请查阅 [sciplot-skill/references/](./sciplot-skill/references/) 目录：
+详细文档请查阅 [`.claude/skills/sciplot/references/`](./.claude/skills/sciplot/references/) 目录：
 
 | 文档 | 说明 |
 |------|------|
-| [quickstart.md](./sciplot-skill/references/quickstart.md) | 快速上手与安装 |
-| [syntax-sugar.md](./sciplot-skill/references/syntax-sugar.md) | 语法糖功能详解 |
-| [core-functions.md](./sciplot-skill/references/core-functions.md) | 核心函数参考 |
-| [charts.md](./sciplot-skill/references/charts.md) | 图表类型完整列表 |
-| [color-schemes.md](./sciplot-skill/references/color-schemes.md) | 配色方案系统 |
-| [layouts.md](./sciplot-skill/references/layouts.md) | 布局与多子图 |
-| [extensions.md](./sciplot-skill/references/extensions.md) | ML 与 3D 扩展 |
-| [best-practices.md](./sciplot-skill/references/best-practices.md) | 最佳实践与场景速查 |
+| [full-api.md](./.claude/skills/sciplot/references/full-api.md) | 完整 API 参考（全部函数签名） |
+| [recipes.md](./.claude/skills/sciplot/references/recipes.md) | 场景配方（论文/期刊/竞赛/PPT） |
+| [color-style.md](./.claude/skills/sciplot/references/color-style.md) | 配色方案与样式详解 |
 
 ---
 
