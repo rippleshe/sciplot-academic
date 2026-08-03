@@ -47,10 +47,9 @@ from sciplot._plots.advanced import (
     plot_marginal,
     plot_packed_bubble,
     plot_chord,
-    plot_sankey,
-    plot_treemap,
-    plot_donut,
 )
+from sciplot._plots.flow import plot_sankey
+from sciplot._plots.proportions import plot_treemap, plot_donut
 from sciplot._plots.polar import (
     plot_radar,
     plot_taylor,

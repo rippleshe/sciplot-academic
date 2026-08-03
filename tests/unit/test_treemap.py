@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 import sciplot as sp
-from sciplot._plots.advanced import _treemap_layout
+from sciplot._plots.proportions import _treemap_layout
 
 
 def test_treemap_basic(cleanup_figures):
