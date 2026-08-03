@@ -850,7 +850,10 @@ def plot_volcano(
         neg_log10p = np.full(n, 10.0)
     else:
         min_log = -np.log10(float(nonzero_p.min()))
-        neg_log10p = np.where(p > 0, -np.log10(p), min_log + 0.5)
+        # 避免对 p==0 计算 log10（np.where 会全量求值）
+        safe_p = np.where(p > 0, p, 1.0)
+        with np.errstate(divide="ignore"):
+            neg_log10p = np.where(p > 0, -np.log10(safe_p), min_log + 0.5)
 
     # 三分类着色
     is_sig = p <= p_threshold

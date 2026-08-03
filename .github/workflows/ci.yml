@@ -77,10 +77,11 @@ jobs:
       shell: bash
       run: |
         set +e
-        uv run pytest tests/ -v --tb=short --cov=sciplot --cov-report=xml --cov-report=term-missing 2>&1 | tee pytest_output.log
+        uv run pytest tests/ -v --tb=line --cov=sciplot --cov-report=xml --cov-report=term-missing 2>&1 | tee pytest_output.log
         exit_code=${PIPESTATUS[0]}
         if [ $exit_code -ne 0 ]; then
-          echo "::error title=Test failures on ${{ matrix.os }} py${{ matrix.python-version }}::$(tail -n 80 pytest_output.log | tr '\n' ' ' | head -c 4000)"
+          failures=$(grep -E "^(FAILED|ERROR)" pytest_output.log | head -20 | tr '\n' ' ')
+          echo "::error title=Failed tests on ${{ matrix.os }} py${{ matrix.python-version }}::$failures"
         fi
         exit $exit_code
 
