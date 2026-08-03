@@ -302,3 +302,123 @@ def plot_taylor(
 
 __all__ = ["plot_radar", "plot_taylor"]
 
+
+# ============================================================================
+# 环形条形图（Circular Barplot，Ranking 家族）
+# ============================================================================
+
+def plot_circular_barplot(
+    categories: List[str],
+    values: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    colors: Optional[List[str]] = None,
+    sort: bool = True,
+    start_angle: float = 90.0,
+    max_radius: float = 1.0,
+    bar_width: float = 0.75,
+    show_values: bool = False,
+    fmt: str = ".1f",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制环形条形图（Circular Barplot，环形排名）。
+
+    条形围绕圆周排列，长度编码数值（Python Graph Gallery 的
+    Ranking 家族经典类型）。适合类别多、想突破普通条形视觉的场景。
+
+    参数:
+        categories : 类别名列表
+        values     : 数值（非负）
+        colors     : 颜色列表（与类别等长）；默认取当前配色循环
+        sort       : 是否按值降序排列（默认 True，提升可读性）
+        start_angle: 起始角度（度）
+        max_radius : 最长条形的半径
+        bar_width  : 条形占每个角度槽位的比例（0~1）
+        show_values: 是否在条形末端显示数值
+
+    示例:
+        >>> fig, ax = sp.plot_circular_barplot(
+        ...     ["A", "B", "C", "D"], [4, 9, 7, 3],
+        ... )
+    """
+    cat_arr = list(categories)
+    val_arr = np.asarray(values, dtype=float).ravel()
+    if len(cat_arr) != len(val_arr):
+        raise ValueError(
+            f"categories 长度 ({len(cat_arr)}) 与 values 长度 ({len(val_arr)}) 不一致"
+        )
+    if len(cat_arr) == 0:
+        raise ValueError("categories/values 不能为空")
+    if not np.all(np.isfinite(val_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if np.any(val_arr < 0):
+        raise ValueError("values 不能包含负值")
+    if not (0.0 < bar_width <= 1.0):
+        raise ValueError(f"bar_width 必须在 (0, 1] 范围内，实际值: {bar_width!r}")
+
+    order = np.argsort(-val_arr) if sort else np.arange(len(val_arr))
+    cat_ordered = [cat_arr[i] for i in order]
+    val_ordered = val_arr[order]
+
+    if colors is not None:
+        if len(colors) != len(cat_arr):
+            raise ValueError(
+                f"colors 长度 ({len(colors)}) 与 categories 长度 ({len(cat_arr)}) 不一致"
+            )
+        color_ordered = [colors[i] for i in order]
+    else:
+        cycle = get_cycle_colors()
+        color_ordered = [cycle_color(cycle, i) for i in range(len(cat_arr))]
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    from sciplot._core.style import VENUES
+    w, h = VENUES.get(effective_venue or "nature", VENUES["nature"]).figsize
+    size = max(w, h)
+    fig = plt.figure(figsize=(size, size))
+    ax = fig.add_subplot(111, projection="polar")
+
+    n = len(cat_arr)
+    theta = np.linspace(0, 2 * np.pi, n, endpoint=False) + np.deg2rad(start_angle)
+    width = 2 * np.pi / n * bar_width
+
+    vmax = float(np.max(val_arr)) if n else 1.0
+    radii = val_ordered / vmax * max_radius
+
+    bars = ax.bar(theta, radii, width=width, bottom=0.08,
+                  color=color_ordered, alpha=0.92, edgecolor="white",
+                  linewidth=0.8, **kwargs)
+    for b in bars:
+        b.set_zorder(3)
+
+    # 同心圆网格
+    for r_grid in [0.25, 0.5, 0.75, 1.0]:
+        ax.plot(np.linspace(0, 2 * np.pi, 200), np.full(200, r_grid * max_radius + 0.08),
+                color="#DDDDDD", linewidth=0.5, zorder=0)
+
+    # 类别标签（外圈，水平对齐）
+    fs = max(7, plt.rcParams.get("font.size", 9) - 1)
+    for t, cat in zip(theta, cat_ordered):
+        x = np.cos(t)
+        y = np.sin(t)
+        ha = "left" if x >= 0 else "right"
+        va = "bottom" if y >= 0 else "top"
+        ax.text(t, max_radius * 1.22 + 0.08, cat, ha=ha, va=va,
+                fontsize=fs, rotation=0, zorder=5)
+
+    # 数值标注（条形末端）
+    if show_values:
+        for t, r, v in zip(theta, radii, val_ordered):
+            ax.text(t, r + 0.12 + 0.08, f"{v:{fmt}}", ha="center",
+                    fontsize=fs - 1, color="#444444", zorder=5)
+
+    ax.set_ylim(0, max_radius * 1.5)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.spines["polar"].set_visible(False)
+    if title:
+        ax.set_title(title, pad=20)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

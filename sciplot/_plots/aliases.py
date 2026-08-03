@@ -53,6 +53,7 @@ from sciplot._plots.proportions import plot_treemap, plot_donut
 from sciplot._plots.polar import (
     plot_radar,
     plot_taylor,
+    plot_circular_barplot,
 )
 from sciplot._plots.multivariate import (
     plot_ternary,
@@ -150,6 +151,7 @@ combo = _make_alias(plot_combo)
 # ═══════════════════════════════════════════════════════════════
 radar = _make_alias(plot_radar)
 taylor = _make_alias(plot_taylor)
+circular_barplot = _make_alias(plot_circular_barplot)
 ternary = _make_alias(plot_ternary)
 timeseries = _make_alias(plot_timeseries)
 multi_timeseries = _make_alias(plot_multi_timeseries)
@@ -172,7 +174,7 @@ __all__ = [
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph",
-    "radar", "taylor", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
+    "radar", "taylor", "circular_barplot", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "waterfall3d",
 ]

@@ -273,6 +273,7 @@ from sciplot._plots.timeseries import plot_streamgraph
 from sciplot._plots.polar import (
     plot_radar,
     plot_taylor,
+    plot_circular_barplot,
 )
 from sciplot._plots.timeseries import (
     plot_timeseries,
@@ -352,6 +353,7 @@ from sciplot._plots.aliases import (
     combo,
     # 极坐标 / 时序 / 统计别名
     radar,
+    circular_barplot,
     timeseries,
     multi_timeseries,
     gantt,
@@ -638,7 +640,7 @@ __all__ = [
     "combo", "lollipop",
 
     # ── 极坐标 / 时序 / 统计（简洁别名）──
-    "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap", "taylor",
+    "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap", "taylor", "circular_barplot",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline",
     "ternary", "raincloud", "volcano",
@@ -650,7 +652,7 @@ __all__ = [
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph",
 
     # ── 极坐标图表 ──
-    "plot_radar", "plot_taylor",
+    "plot_radar", "plot_taylor", "plot_circular_barplot",
 
     # ── 时序图表 ──
     "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap",
