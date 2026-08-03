@@ -591,4 +591,159 @@ def plot_gantt(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt"]
+def plot_calendar_heatmap(
+    dates: Union[Sequence[Any], np.ndarray],
+    values: Union[Sequence[float], np.ndarray],
+    cmap: str = "YlOrRd",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    colorbar_label: str = "",
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    weekday_start: int = 0,
+    show_month_lines: bool = True,
+    lang: Optional[str] = None,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制日历热图（Calendar Heatmap，全年活动强度按周排列）
+
+    每天一个格子：横轴为周序号，纵轴为星期，颜色编码数值，
+    适合展示全年规律性活动（打卡、提交、流量、事件密度）。
+
+    参数:
+        dates          : 日期序列（datetime/date 或字符串日期）
+        values         : 与日期对应的数值（等长，允许 0）
+        cmap           : 颜色映射，默认 "YlOrRd"
+        vmin / vmax    : 颜色映射范围
+        colorbar_label : 颜色条标签
+        weekday_start  : 周起始日（0=周一，6=周日），默认 0
+        show_month_lines: 是否绘制月份分隔线
+        lang           : 语言设置（星期标签语言，默认跟随当前）
+
+    示例:
+        >>> import datetime
+        >>> dates = [datetime.date(2024, 1, 1) + datetime.timedelta(days=i)
+        ...          for i in range(366)]
+        >>> values = np.random.poisson(2, 366)
+        >>> fig, ax = sp.plot_calendar_heatmap(
+        ...     dates, values, colorbar_label="事件数",
+        ... )
+        >>> sp.save(fig, "calendar")
+    """
+    dates_arr = list(dates)
+    values_arr = np.asarray(values, dtype=float).ravel()
+    if len(dates_arr) != len(values_arr):
+        raise ValueError(
+            f"dates 长度 ({len(dates_arr)}) 与 values 长度 ({len(values_arr)}) 不一致"
+        )
+    if len(dates_arr) == 0:
+        raise ValueError("dates/values 不能为空")
+    if not np.all(np.isfinite(values_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if weekday_start not in {0, 6}:
+        raise ValueError(f"weekday_start 仅支持 0（周一）或 6（周日），实际值: {weekday_start!r}")
+
+    # 统一转为 datetime.date
+    parsed_dates: List[date] = []
+    for d in dates_arr:
+        if isinstance(d, np.datetime64):
+            parsed_dates.append(d.astype("M8[D]").astype(object))  # type: ignore[arg-type]
+        elif isinstance(d, datetime):
+            parsed_dates.append(d.date())
+        elif isinstance(d, date):
+            parsed_dates.append(d)
+        elif isinstance(d, str):
+            try:
+                parsed_dates.append(datetime.strptime(d, "%Y-%m-%d").date())
+            except ValueError:
+                raise ValueError(f"无法解析日期字符串: {d!r}（需要 YYYY-MM-DD 格式）")
+        else:
+            raise TypeError(
+                f"dates 元素必须是 datetime/date/字符串，实际类型: {type(d).__name__}"
+            )
+
+    first_year = min(d.year for d in parsed_dates)
+    last_year = max(d.year for d in parsed_dates)
+    weeks_per_year = 54  # 53 周 + 1 格年间隔
+
+    xs: List[float] = []
+    ys: List[int] = []
+    vals: List[float] = []
+    for d, v in zip(parsed_dates, values_arr):
+        year_offset = (d.year - first_year) * weeks_per_year
+        day_of_year = d.timetuple().tm_yday - 1
+        week = day_of_year // 7
+        weekday = d.weekday()
+        # 调整周起始日：0=周一保持，6=周日时把周日移到首
+        y_pos = (weekday + 1) % 7 if weekday_start == 0 else weekday
+        xs.append(float(year_offset + week))
+        ys.append(y_pos)
+        vals.append(float(v))
+
+    # 月份分隔线位置
+    month_line_x: List[float] = []
+    month_labels: List[str] = []
+    for year in range(first_year, last_year + 1):
+        for month in range(1, 13):
+            try:
+                first_day = date(year, month, 1)
+            except ValueError:
+                continue
+            year_offset = (year - first_year) * weeks_per_year
+            month_line_x.append(year_offset + (first_day.timetuple().tm_yday - 1) // 7 - 0.5)
+            month_labels.append(f"{month}月")
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    fig, ax = new_figure(effective_venue)
+
+    # 格子尺寸（像素）→ scatter 面积
+    dpi = float(fig.dpi)
+    x_px = float(np.abs(ax.transData.transform((1, 0))[0] - ax.transData.transform((0, 0))[0]))
+    y_px = float(np.abs(ax.transData.transform((0, 1))[1] - ax.transData.transform((0, 0))[1]))
+    cell_px = min(x_px, y_px) * 0.92
+    px_per_pt = dpi / 72.0
+    cell_size_pt2 = (cell_px / px_per_pt) ** 2
+
+    scatter = ax.scatter(
+        xs, ys, c=vals, cmap=cmap, vmin=vmin, vmax=vmax,
+        marker="s", s=cell_size_pt2, edgecolors="none", **kwargs,
+    )
+    cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+    if colorbar_label:
+        cbar.set_label(colorbar_label)
+
+    if show_month_lines and month_line_x:
+        for x_pos in month_line_x:
+            ax.axvline(x=x_pos, color="#999999", linewidth=0.6, alpha=0.5)
+        # 月份刻度：取每月线位置，标签用月份
+        ax.set_xticks(month_line_x)
+        ax.set_xticklabels(month_labels, fontsize=max(5, plt.rcParams.get("font.size", 9) - 3))
+    else:
+        ax.set_xticks([])
+
+    # 星期标签
+    weekday_names_zh = ["一", "二", "三", "四", "五", "六", "日"]
+    weekday_names_en = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    if weekday_start == 6:
+        weekday_names_zh = ["日", "一", "二", "三", "四", "五", "六"]
+        weekday_names_en = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    from sciplot._core.style import get_current_lang
+
+    active_lang = lang or get_current_lang() or "zh"
+    names = weekday_names_zh if active_lang in {"zh", "zh-cn"} else weekday_names_en
+    ax.set_yticks(range(7))
+    ax.set_yticklabels(names, fontsize=max(5, plt.rcParams.get("font.size", 9) - 3))
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap"]

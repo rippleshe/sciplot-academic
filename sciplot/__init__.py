@@ -272,6 +272,7 @@ from sciplot._plots.timeseries import (
     plot_multi_timeseries,
     plot_slope,
     plot_gantt,
+    plot_calendar_heatmap,
 )
 from sciplot._plots.multivariate import (
     plot_parallel,
@@ -340,6 +341,7 @@ from sciplot._plots.aliases import (
     timeseries,
     multi_timeseries,
     gantt,
+    calendar_heatmap,
     density,
     multi_density,
     residuals,
@@ -620,7 +622,7 @@ __all__ = [
     "combo", "lollipop",
 
     # ── 极坐标 / 时序 / 统计（简洁别名）──
-    "radar", "timeseries", "multi_timeseries", "gantt",
+    "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline", "raincloud", "volcano",
 
@@ -634,7 +636,7 @@ __all__ = [
     "plot_radar",
 
     # ── 时序图表 ──
-    "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt",
+    "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap",
 
     # ── 多维图表 ──
     "plot_parallel", "plot_scatter_matrix",

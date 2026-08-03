@@ -53,6 +53,7 @@ from sciplot._plots.timeseries import (
     plot_timeseries,
     plot_multi_timeseries,
     plot_gantt,
+    plot_calendar_heatmap,
 )
 from sciplot._plots.statistical import (
     plot_density,
@@ -136,6 +137,7 @@ radar = _make_alias(plot_radar)
 timeseries = _make_alias(plot_timeseries)
 multi_timeseries = _make_alias(plot_multi_timeseries)
 gantt = _make_alias(plot_gantt)
+calendar_heatmap = _make_alias(plot_calendar_heatmap)
 density = _make_alias(plot_density)
 multi_density = _make_alias(plot_multi_density)
 residuals = _make_alias(plot_residuals)
@@ -153,7 +155,7 @@ __all__ = [
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "combo",
-    "radar", "timeseries", "multi_timeseries", "gantt",
+    "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "waterfall3d",
 ]
