@@ -94,9 +94,6 @@ def new_figure(
     figsize: Optional[Tuple[float, float]] = None,
     **kwargs: Any,
 ) -> Tuple[Figure, Axes]:
-    # 图形创建是取色安全入口：空颜色循环会导致 matplotlib 内部 nth-color
-    # 取色时 ZeroDivisionError，故在任何 subplots 前保证 prop_cycle 非空
-    _ensure_non_empty_prop_cycle()
     """
     创建新图形，自动套用 venue 默认尺寸
 
@@ -114,6 +111,10 @@ def new_figure(
         >>> fig, ax = sp.new_figure(figsize=(5.0, 3.5))
         >>> fig, axes = sp.new_figure("thesis", nrows=1, ncols=2, sharex=True)
     """
+    # 图形创建是取色安全入口：空颜色循环会导致 matplotlib 内部 nth-color
+    # 取色时 ZeroDivisionError，故在任何 subplots 前保证 prop_cycle 非空
+    _ensure_non_empty_prop_cycle()
+
     if venue is None:
         if figsize is None:
             return cast(Tuple[Figure, Axes], plt.subplots(**kwargs))
