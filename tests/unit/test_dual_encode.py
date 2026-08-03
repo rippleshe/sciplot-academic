@@ -4,10 +4,16 @@ Round-45 tests for dual_encode_colors (双编码配色).
 
 from __future__ import annotations
 
+import colorsys
+
 import matplotlib.colors as mcolors
 import pytest
 
 import sciplot as sp
+
+
+def _hls(color: str):
+    return colorsys.rgb_to_hls(*mcolors.to_rgb(color))
 
 
 def test_dual_encode_shape():
@@ -22,7 +28,7 @@ def test_dual_encode_monotonic_lightness():
     colors = sp.dual_encode_colors(["#E07B54"], 4)
     lightness = []
     for c in colors[0]:
-        h, l, s = mcolors.rgb_to_hls(*mcolors.to_rgb(c))
+        h, l, s = _hls(c)
         lightness.append(l)
     for i in range(len(lightness) - 1):
         assert lightness[i] > lightness[i + 1]
@@ -33,7 +39,7 @@ def test_dual_encode_hue_preserved():
     colors = sp.dual_encode_colors(["#5B7DB1"], 3)
     hues = set()
     for c in colors[0]:
-        h, l, s = mcolors.rgb_to_hls(*mcolors.to_rgb(c))
+        h, l, s = _hls(c)
         hues.add(round(h, 3))
     assert len(hues) == 1
 
