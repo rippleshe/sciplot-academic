@@ -23,11 +23,16 @@ effects = {
     ("药物 B", "低剂量"): rng.normal(0.62, 0.06, 40),
     ("药物 B", "高剂量"): rng.normal(0.70, 0.08, 40),
 }
-# 双编码配色：行（药物）= 色相，列（剂量）= 明度梯度
-# 药物 A（暖色系）：浅 → 深；药物 B（冷色系）：浅 → 深
-dose_colors = {
-    ("药物 A", "对照"): "#F5C9AB", ("药物 A", "低剂量"): "#E79B6B", ("药物 A", "高剂量"): "#D96A3A",
-    ("药物 B", "对照"): "#BCD0E6", ("药物 B", "低剂量"): "#7FA8D0", ("药物 B", "高剂量"): "#4A7DB8",
+# 双编码配色：行（药物）= 色相，列（剂量）= 明度梯度（库函数生成）
+# 药物 A（暖色系）浅→深；药物 B（冷色系）浅→深
+dose_colors = sp.dual_encode_colors(["#E07B54", "#5B7DB1"], 3)
+color_by_key = {
+    ("药物 A", "对照"): dose_colors[0][0],
+    ("药物 A", "低剂量"): dose_colors[0][1],
+    ("药物 A", "高剂量"): dose_colors[0][2],
+    ("药物 B", "对照"): dose_colors[1][0],
+    ("药物 B", "低剂量"): dose_colors[1][1],
+    ("药物 B", "高剂量"): dose_colors[1][2],
 }
 mean_colors = {
     ("药物 A", "对照"): "#B85C2E", ("药物 A", "低剂量"): "#B85C2E", ("药物 A", "高剂量"): "#B85C2E",
@@ -44,7 +49,7 @@ for ax, (i, j) in zip(axes.flat, [(r, c) for r in range(2) for c in range(3)]):
     # 蜂群式抖动散点 + 均值线（面板内 matplotlib 原生）
     x_jitter = rng.normal(0, 0.02, len(data))
     ax.scatter(np.full(len(data), 0) + x_jitter, data,
-               s=14, alpha=0.65, color=dose_colors[(drug, dose)],
+               s=14, alpha=0.65, color=color_by_key[(drug, dose)],
                edgecolors="white", linewidths=0.4)
     ax.axhline(float(np.mean(data)), color=mean_colors[(drug, dose)],
                linestyle="--", linewidth=1.0)
