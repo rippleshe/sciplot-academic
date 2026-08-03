@@ -56,19 +56,39 @@ def plot_radar(
     """
     if not categories:
         raise ValueError("参数 'categories' 不能为空列表")
+
+    # 兼容 ndarray 输入：1D 视为单组，2D 视为多组
+    if isinstance(values_list, np.ndarray):
+        if values_list.ndim == 1:
+            values_list = [values_list.tolist()]
+        elif values_list.ndim == 2:
+            values_list = values_list.tolist()
+        else:
+            raise ValueError(
+                f"values_list 必须是 1D（单组）或 2D（多组）数据，当前维度: {values_list.ndim}"
+            )
+
     if not values_list:
         raise ValueError("参数 'values_list' 不能为空列表")
 
     n_cats = len(categories)
+    normalized_values: List[List[float]] = []
     for i, values in enumerate(values_list):
-        if len(values) != n_cats:
+        values_arr = np.asarray(values, dtype=float)
+        if values_arr.ndim != 1:
             raise ValueError(
-                f"values_list[{i}] 长度 ({len(values)}) "
+                f"values_list[{i}] 必须是一维数据，当前维度: {values_arr.ndim}"
+            )
+        if len(values_arr) != n_cats:
+            raise ValueError(
+                f"values_list[{i}] 长度 ({len(values_arr)}) "
                 f"与 categories 长度 ({n_cats}) 不一致"
             )
-        numeric_values = np.asarray(values, dtype=float)
-        if not np.all(np.isfinite(numeric_values)):
+        if not np.all(np.isfinite(values_arr)):
             raise ValueError(f"values_list[{i}] 包含 NaN 或 Inf，无法绘制雷达图")
+        normalized_values.append(values_arr.tolist())
+
+    values_list = normalized_values
 
     if labels is None:
         labels = [f"系列 {i+1}" for i in range(len(values_list))]

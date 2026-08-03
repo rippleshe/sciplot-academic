@@ -287,6 +287,10 @@ def plot_bland_altman(
         raise ValueError(
             f"y1 长度 ({len(y1)}) 与 y2 长度 ({len(y2)}) 不一致"
         )
+    if len(y1) < 2:
+        raise ValueError(
+            f"Bland-Altman 分析至少需要 2 个数据点，当前: {len(y1)}"
+        )
 
     mean_vals = (y1 + y2) / 2
     diff_vals = y1 - y2
@@ -365,17 +369,23 @@ def plot_density(
     if values.size < 2:
         raise ValueError("plot_density 至少需要 2 个有效数据点")
 
-    kde = stats.gaussian_kde(values, bw_method=bw_method)
-    x_eval = np.linspace(values.min(), values.max(), 256)
-    y_eval = kde(x_eval)
-
     effective_venue = apply_resolved_style(venue, palette, lang)
     _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
-    (line,) = ax.plot(x_eval, y_eval, **kwargs)
-    if fill:
-        ax.fill_between(x_eval, y_eval, alpha=alpha, color=line.get_color())
+    if values.min() == values.max():
+        # 常数序列：gaussian_kde 在零方差数据上会抛出 LinAlgError，
+        # 退化为绘制垂直线，表示全部质量集中于此点。
+        colors = _get_cycle_colors()
+        ax.axvline(x=float(values[0]), color=colors[0], linestyle="--", linewidth=1.5)
+    else:
+        kde = stats.gaussian_kde(values, bw_method=bw_method)
+        x_eval = np.linspace(values.min(), values.max(), 256)
+        y_eval = kde(x_eval)
+
+        (line,) = ax.plot(x_eval, y_eval, **kwargs)
+        if fill:
+            ax.fill_between(x_eval, y_eval, alpha=alpha, color=line.get_color())
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -433,6 +443,10 @@ def plot_multi_density(
     x_eval = np.linspace(all_values.min(), all_values.max(), 256)
 
     for values, label in zip(normalized_data, labels):
+        if values.min() == values.max():
+            # 常数序列：KDE 退化，绘制垂直线表示质量集中。
+            ax.axvline(x=float(values[0]), linestyle="--", linewidth=1.5, label=label)
+            continue
         kde = stats.gaussian_kde(values, bw_method=bw_method)
         y_eval = kde(x_eval)
         (line,) = ax.plot(x_eval, y_eval, label=label, **kwargs)
