@@ -36,7 +36,6 @@ fig, ax = sp.plot_violin(
     labels=labels,
     xlabel="施肥处理",
     ylabel="水稻产量 (t/ha)",
-    title="不同施肥处理对水稻产量分布的影响",
     showmeans=True,
     palette="pastel",
 )

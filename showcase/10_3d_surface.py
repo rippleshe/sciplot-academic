@@ -36,7 +36,6 @@ result = sp.plot_surface(
     xlabel="X 坐标 (μm)",
     ylabel="Y 坐标 (μm)",
     zlabel="归一化强度",
-    title="二维 sinc 函数曲面（圆孔衍射模型）",
     cmap="viridis",
     alpha=0.9,
     elev=35,        # 仰角

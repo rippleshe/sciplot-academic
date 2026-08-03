@@ -42,7 +42,6 @@ fig, ax = sp.plot_multi(
     labels=["匹配滤波器", "自适应波束成形", "深度学习检测器", "本文方法"],
     xlabel="信噪比 (dB)",
     ylabel="检测概率",
-    title="不同信噪比下各算法检测性能对比",
     palette="pastel",
 )
 

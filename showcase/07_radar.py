@@ -34,7 +34,6 @@ fig, ax = sp.plot_radar(
     labels=labels,
     fill=True,
     alpha=0.25,
-    title="分类模型性能对比",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

@@ -39,7 +39,6 @@ fig, ax = sp.plot_multi_density(
     labels=labels,
     xlabel="细胞直径 (μm)",
     ylabel="概率密度",
-    title="不同处理条件下细胞直径分布",
     fill=True,
     alpha=0.3,
 )

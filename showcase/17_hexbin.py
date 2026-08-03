@@ -40,7 +40,6 @@ fig, ax = sp.plot_hexbin(
     xlabel="t-SNE 维度 1",
     ylabel="t-SNE 维度 2",
     colorbar_label="样本数 (log)",
-    title="高维数据投影密度分布",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

@@ -69,7 +69,6 @@ fig, ax = sp.plot_network_communities(
     G,
     communities_relabeled,
     layout="spring",
-    title="科研合作网络社区结构",
     venue="nature",
     palette="pastel",
 )

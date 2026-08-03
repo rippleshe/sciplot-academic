@@ -29,6 +29,7 @@ from typing import Dict, List, Optional, Any, Literal, cast
 from contextlib import contextmanager
 from types import TracebackType
 import threading
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
@@ -105,8 +106,12 @@ class StyleContext:
 
     def __enter__(self) -> StyleContext:
         """进入上下文，保存当前状态并应用新样式"""
-        # 使用浅拷贝保存 rcParams，避免 deepcopy 带来的性能和兼容问题。
-        self._saved_state = dict(rcParams)
+        # 深拷贝保存 rcParams：浅拷贝无法隔离嵌套修改（如列表项 append 会污染外部状态）。
+        # 个别值若不可深拷贝（极端情况），回退为浅拷贝。
+        try:
+            self._saved_state = deepcopy(rcParams)
+        except Exception:
+            self._saved_state = dict(rcParams)
         self._saved_lang = get_current_lang()
         self._saved_venue = get_current_venue()
         self._saved_palette = get_current_palette()
@@ -187,6 +192,10 @@ class StyleContext:
 
         if self._saved_state is not None:
             saved_state = self._saved_state
+            # 删除进入后新增的 rcParams 键，再整体恢复快照
+            for key in list(rcParams.keys()):
+                if key not in saved_state:
+                    del rcParams[key]
             rcParams.update(saved_state)
 
         set_current_lang(self._saved_lang)

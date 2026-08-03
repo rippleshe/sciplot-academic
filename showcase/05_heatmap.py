@@ -58,7 +58,6 @@ fig, ax = sp.plot_heatmap(
     show_values=True,
     fmt=".2f",
     colorbar_label="相关系数",
-    title="气象变量相关系数矩阵",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

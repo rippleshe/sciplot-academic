@@ -394,14 +394,18 @@ def add_panel_labels(
         # 根据 x 坐标自动推断对齐方式
         ha = "right" if x <= 0 else "left"
         kw: Dict[str, Any] = dict(
-            transform=ax.transAxes,
             fontweight=fontweight,
             va="top",
             ha=ha,
         )
         if fontsize is not None:
             kw["fontsize"] = fontsize
-        ax.text(x, y, lbl, **kw)
+        if hasattr(ax, "get_zlabel"):
+            # 3D 子图：Axes3D.text() 签名不同，使用 text2D 以 axes 坐标定位
+            ax.text2D(x, y, lbl, transform=ax.transAxes, **kw)
+        else:
+            kw["transform"] = ax.transAxes
+            ax.text(x, y, lbl, **kw)
 
 
 # ============================================================================
@@ -482,6 +486,19 @@ def save(
     name_path = Path(name)
     if name_path.name in {"", ".", ".."}:
         raise ValueError("name 必须是有效文件名")
+
+    # Windows 保留设备名检查：CON/PRN/AUX/NUL/COM1-9/LPT1-9
+    # （含带扩展名的变体，如 CON.png），避免写入控制台设备或产生不可索引文件
+    _WINDOWS_RESERVED_NAMES = {
+        "con", "prn", "aux", "nul",
+        *(f"com{i}" for i in range(1, 10)),
+        *(f"lpt{i}" for i in range(1, 10)),
+    }
+    stem_lower = name_path.stem.lower()
+    if stem_lower in _WINDOWS_RESERVED_NAMES:
+        raise ValueError(
+            f"name 使用了 Windows 保留设备名 '{stem_lower}'，请更换文件名"
+        )
 
     if dir:
         if name_path.is_absolute():

@@ -38,7 +38,6 @@ fig, ax = sp.plot_bubble_heatmap(
     colorbar_label="log10(IC50)",
     xlabel="细胞系",
     ylabel="药物",
-    title="药物-细胞系敏感性矩阵",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

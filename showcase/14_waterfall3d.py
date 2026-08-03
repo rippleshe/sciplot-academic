@@ -41,7 +41,6 @@ fig, ax = sp.plot_waterfall3d(
     fill=True,
     fill_alpha=0.25,
     spacing=1.0,
-    title="不同合成温度下的拉曼光谱",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

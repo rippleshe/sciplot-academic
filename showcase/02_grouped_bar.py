@@ -33,7 +33,6 @@ fig, ax = sp.plot_grouped_bar(
     data=model_data,
     xlabel="数据集",
     ylabel="Top-1 准确率 (%)",
-    title="各模型在基准数据集上的分类性能对比",
     show_values=True,
     value_fmt=".1f",
     palette="pastel",

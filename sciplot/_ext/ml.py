@@ -207,7 +207,7 @@ def plot_confusion_matrix(
 def plot_feature_importance(
     features: List[str],
     importance: np.ndarray,
-    title: str = "Feature Importance",
+    title: str = "",
     top_n: Optional[int] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,

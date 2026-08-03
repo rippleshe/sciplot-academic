@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, List, Optional
 
 import matplotlib.pyplot as plt
@@ -30,6 +31,17 @@ def _check_networkx():
             "或: pip install networkx\n"
             "或安装完整扩展: uv pip install sciplot-academic[network]"
         ) from e
+
+
+def _coerce_numeric_attr(values) -> Optional[dict]:
+    """尝试将属性字典的值全部转为数值；含非数值项时返回 None。"""
+    coerced = {}
+    for k, v in values.items():
+        try:
+            coerced[k] = float(v)
+        except (TypeError, ValueError):
+            return None
+    return coerced
 
 
 def _get_layout(G, layout: str, **kwargs):
@@ -121,18 +133,20 @@ def plot_network(
             color_values = nx.get_node_attributes(G, node_color_by)
 
         if color_values:
+            numeric_attr = _coerce_numeric_attr(color_values)
             unique_values = set(color_values.values())
-            if len(unique_values) <= 10:
+            if numeric_attr is None or len(unique_values) <= 10:
+                # 分类着色：非数值属性或类别数较少时按类别映射
                 color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
                 node_colors = [color_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
             else:
-                norm = Normalize(min(color_values.values()), max(color_values.values()))
+                norm = Normalize(min(numeric_attr.values()), max(numeric_attr.values()))
                 try:
                     cmap = plt.colormaps.get_cmap("viridis")
                 except AttributeError:
                     # 低版本matplotlib兼容
                     cmap = plt.cm.get_cmap("viridis")
-                node_colors = [cmap(norm(color_values.get(n, 0))) for n in G.nodes()]
+                node_colors = [cmap(norm(numeric_attr.get(n, 0))) for n in G.nodes()]
         else:
             node_colors = colors[0]
     else:
@@ -145,16 +159,25 @@ def plot_network(
             size_values = nx.get_node_attributes(G, node_size_by)
 
         if size_values:
-            min_size, max_size = min(size_values.values()), max(size_values.values())
-            if max_size > min_size:
-                size_range = 100, 1000
-                node_sizes = [
-                    size_range[0] + (size_values.get(n, min_size) - min_size) /
-                    (max_size - min_size) * (size_range[1] - size_range[0])
-                    for n in G.nodes()
-                ]
+            numeric_size = _coerce_numeric_attr(size_values)
+            if numeric_size is None:
+                # 属性非数值：回退默认尺寸并给出提示
+                warnings.warn(
+                    f"节点属性 '{node_size_by}' 包含非数值项，已回退为默认节点大小。",
+                    UserWarning, stacklevel=2,
+                )
+                node_sizes = node_size
             else:
-                node_sizes = [node_size] * G.number_of_nodes()
+                min_size, max_size = min(numeric_size.values()), max(numeric_size.values())
+                if max_size > min_size:
+                    size_range = 100, 1000
+                    node_sizes = [
+                        size_range[0] + (numeric_size.get(n, min_size) - min_size) /
+                        (max_size - min_size) * (size_range[1] - size_range[0])
+                        for n in G.nodes()
+                    ]
+                else:
+                    node_sizes = [node_size] * G.number_of_nodes()
         else:
             node_sizes = node_size
     else:
@@ -163,16 +186,24 @@ def plot_network(
     if edge_weight_by is not None:
         weight_values = nx.get_edge_attributes(G, edge_weight_by)
         if weight_values:
-            min_w, max_w = min(weight_values.values()), max(weight_values.values())
-            if max_w > min_w:
-                width_range = 0.5, 3.0
-                edge_widths = [
-                    width_range[0] + (weight_values.get(e, min_w) - min_w) /
-                    (max_w - min_w) * (width_range[1] - width_range[0])
-                    for e in G.edges()
-                ]
+            numeric_weight = _coerce_numeric_attr(weight_values)
+            if numeric_weight is None:
+                warnings.warn(
+                    f"边属性 '{edge_weight_by}' 包含非数值项，已回退为默认边宽。",
+                    UserWarning, stacklevel=2,
+                )
+                edge_widths = edge_width
             else:
-                edge_widths = [edge_width] * G.number_of_edges()
+                min_w, max_w = min(numeric_weight.values()), max(numeric_weight.values())
+                if max_w > min_w:
+                    width_range = 0.5, 3.0
+                    edge_widths = [
+                        width_range[0] + (numeric_weight.get(e, min_w) - min_w) /
+                        (max_w - min_w) * (width_range[1] - width_range[0])
+                        for e in G.edges()
+                    ]
+                else:
+                    edge_widths = [edge_width] * G.number_of_edges()
         else:
             edge_widths = edge_width
     else:

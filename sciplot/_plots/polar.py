@@ -39,7 +39,7 @@ def plot_radar(
         fill       : 是否填充区域，默认 True
         alpha      : 填充透明度，默认 0.3
         show_grid  : 是否显示网格线
-        show_labels: 是否在顶点显示数值标签
+        show_labels: 是否在顶点显示数值标签（仅单组数据时生效）
 
     示例:
         >>> categories = ["准确率", "召回率", "F1", "速度", "稳定性"]

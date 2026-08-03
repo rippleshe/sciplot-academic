@@ -66,7 +66,6 @@ fig, ax = sp.plot_timeseries(
     rolling_mean=14,
     xlabel="日期",
     ylabel="日均气温 (°C)",
-    title="2024 年日均气温变化",
     label="日均气温",
 )
 

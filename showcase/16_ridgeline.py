@@ -30,7 +30,6 @@ fig, ax = sp.plot_ridgeline(
     ylabel="实验组",
     overlap=0.35,
     show_median=True,
-    title="不同剂量组标志物浓度分布",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

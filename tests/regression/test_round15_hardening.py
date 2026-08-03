@@ -90,6 +90,14 @@ def test_save_absolute_name_with_dir_raises(tmp_path, cleanup_figures):
         sp.save(fig, str(tmp_path / "abs"), dir=str(tmp_path), formats=("png",))
 
 
+def test_save_windows_reserved_name_raises(tmp_path, cleanup_figures):
+    """Windows 保留设备名（CON/PRN/NUL/COM1 等）必须被拒绝。"""
+    fig, ax = plt.subplots()
+    for bad_name in ["CON", "con.png", "PRN", "NUL", "COM1", "LPT3.pdf"]:
+        with pytest.raises(ValueError, match="保留设备名"):
+            sp.save(fig, str(tmp_path / bad_name), formats=("png",))
+
+
 # ═══════════════════════════════════════════════════════════════
 # 链式调用护栏
 # ═══════════════════════════════════════════════════════════════

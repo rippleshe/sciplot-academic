@@ -46,7 +46,6 @@ fig, ax = sp.plot_scatter(
     soc, respiration,
     xlabel="土壤有机碳含量 (g/kg)",
     ylabel="微生物呼吸速率 (mg CO2/kg/h)",
-    title="土壤有机碳与微生物呼吸速率的关系",
     label="实测样本",
     s=25,
     alpha=0.7,
