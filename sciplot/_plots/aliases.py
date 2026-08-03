@@ -37,6 +37,7 @@ from sciplot._plots.advanced import (
     plot_errorbar,
     plot_confidence,
     plot_heatmap,
+    plot_bubble_heatmap,
 )
 from sciplot._plots.polar import (
     plot_radar,
@@ -104,6 +105,7 @@ lollipop = _make_alias(plot_lollipop)
 errorbar = _make_alias(plot_errorbar)
 confidence = _make_alias(plot_confidence)
 heatmap = _make_alias(plot_heatmap)
+bubble_heatmap = _make_alias(plot_bubble_heatmap)
 combo = _make_alias(plot_combo)
 
 # ═══════════════════════════════════════════════════════════════
@@ -124,7 +126,7 @@ __all__ = [
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "lollipop",
-    "errorbar", "confidence", "heatmap", "combo",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
     "residuals", "qq", "bland_altman",
