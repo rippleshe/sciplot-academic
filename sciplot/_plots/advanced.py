@@ -1661,3 +1661,128 @@ def plot_treemap(
     if title:
         ax.set_title(title)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+# ============================================================================
+# 环形图（Donut，Part-of-a-whole 家族）
+# ============================================================================
+
+def plot_donut(
+    categories: List[str],
+    values: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    colors: Optional[Sequence[str]] = None,
+    hole_ratio: float = 0.6,
+    show_values: bool = True,
+    fmt: str = ".1f",
+    show_percent: bool = True,
+    percent_fmt: str = ".1f",
+    start_angle: float = 90.0,
+    label_radius: float = 1.15,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制环形图（Donut Chart，占比构成）。
+
+    饼图的变体：中心挖空形成环形，常被 Nature 风格图表用于
+    “整体构成 + 高亮关键份额”。纯 matplotlib 实现。
+
+    参数:
+        categories   : 类别名列表
+        values       : 数值（非负，和必须大于 0）
+        colors       : 颜色列表（与类别等长）；默认取当前配色循环
+        hole_ratio   : 中心空洞占比（0~1），越大环越细
+        show_values  : 是否在环内显示数值
+        show_percent : 是否在类别标签后附百分比
+        start_angle  : 起始角度（度，默认 90 从正上方开始）
+        label_radius : 类别标签的半径位置
+
+    示例:
+        >>> fig, ax = sp.plot_donut(
+        ...     ["A", "B", "C"], [55, 30, 15],
+        ... )
+    """
+    cat_arr = list(categories)
+    val_arr = np.asarray(values, dtype=float).ravel()
+    if len(cat_arr) != len(val_arr):
+        raise ValueError(
+            f"categories 长度 ({len(cat_arr)}) 与 values 长度 ({len(val_arr)}) 不一致"
+        )
+    if len(cat_arr) == 0:
+        raise ValueError("categories/values 不能为空")
+    if not np.all(np.isfinite(val_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if np.any(val_arr < 0):
+        raise ValueError("values 不能包含负值")
+    if float(val_arr.sum()) <= 0:
+        raise ValueError("values 之和必须大于 0")
+    if not (0.0 < hole_ratio < 1.0):
+        raise ValueError(f"hole_ratio 必须在 (0, 1) 范围内，实际值: {hole_ratio!r}")
+
+    if colors is not None:
+        if len(colors) != len(cat_arr):
+            raise ValueError(
+                f"colors 长度 ({len(colors)}) 与 categories 长度 ({len(cat_arr)}) 不一致"
+            )
+        color_list = list(colors)
+    else:
+        cycle = get_cycle_colors()
+        color_list = [cycle_color(cycle, i) for i in range(len(cat_arr))]
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+
+    total = float(val_arr.sum())
+    autopct = None
+    pct_txt = None
+    if show_percent:
+        def pct_txt(pct: float) -> str:
+            return f"{pct:{percent_fmt}}%"
+
+    wedges, _ = ax.pie(
+        val_arr,
+        colors=color_list,
+        startangle=start_angle,
+        wedgeprops=dict(width=1.0 - hole_ratio, edgecolor="white", linewidth=1.5),
+        autopct=pct_txt,
+        pctdistance=1.0 - hole_ratio / 2,
+        labels=None,
+        **kwargs,
+    )
+    for w in wedges:
+        w.set_zorder(2)
+
+    # 数值放环内中部
+    if show_values:
+        fs = max(7, plt.rcParams.get("font.size", 9) - 1)
+        for w, v in zip(wedges, val_arr):
+            ang = np.deg2rad((w.theta1 + w.theta2) / 2)
+            r = 1.0 - hole_ratio / 2
+            ax.text(r * np.cos(ang), r * np.sin(ang), f"{v:{fmt}}",
+                    ha="center", va="center", fontsize=fs,
+                    color="white", fontweight="bold", zorder=5)
+
+    # 类别标签放外圈
+    fs_label = max(7, plt.rcParams.get("font.size", 9) - 1)
+    for w, cat in zip(wedges, cat_arr):
+        ang = np.deg2rad((w.theta1 + w.theta2) / 2)
+        x = label_radius * np.cos(ang)
+        y = label_radius * np.sin(ang)
+        ha = "left" if x >= 0 else "right"
+        va = "bottom" if y >= 0 else "top"
+        ax.text(x, y, cat, ha=ha, va=va, fontsize=fs_label, zorder=5)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-label_radius * 1.15, label_radius * 1.15)
+    ax.set_ylim(-label_radius * 1.15, label_radius * 1.15)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
