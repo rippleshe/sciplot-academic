@@ -451,14 +451,22 @@ def plot_bubble_heatmap(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-def _pack_bubbles(sizes: np.ndarray, max_tries: int = 3000) -> Tuple[np.ndarray, np.ndarray]:
+def _pack_bubbles(
+    sizes: np.ndarray,
+    max_tries: int = 3000,
+    min_size_frac: float = 0.22,
+) -> Tuple[np.ndarray, np.ndarray]:
     """贪心圆形打包：按大小降序，沿黄金角螺旋放置并检测碰撞。
 
     返回 (positions, radii)，位置已归一化到 [-1, 1] 区间。
+    min_size_frac 保证最小气泡可见（相对最大气泡的半径下限）。
     """
     n = len(sizes)
     order = np.argsort(sizes)[::-1]
     radii = np.sqrt(sizes / float(np.max(sizes)))
+    # 小气泡半径下限：避免跨数量级数据时小类完全不可见
+    min_r = float(radii.max()) * min_size_frac
+    radii = np.maximum(radii, min_r)
 
     # 面积和决定整体尺度：让打包区域大致落在单位圆内
     total_area = float(np.sum(np.pi * radii**2))
@@ -507,14 +515,16 @@ def plot_packed_bubble(
     labels: List[str],
     sizes: np.ndarray,
     colors: Optional[List[str]] = None,
+    color_by: Optional[List[str]] = None,
     xlabel: str = "",
     ylabel: str = "",
     title: str = "",
-    alpha: float = 0.85,
+    alpha: float = 0.88,
     show_values: bool = True,
     fmt: str = ".0f",
     min_font: float = 6.0,
     max_font: float = 16.0,
+    min_size_frac: float = 0.22,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -524,20 +534,23 @@ def plot_packed_bubble(
     绘制打包气泡图（Packed Bubble，圆面积编码数值的紧凑占比展示）
 
     圆形面积与数值成正比，按大小降序贪心打包（黄金角螺旋 + 碰撞检测），
-    适合展示占比/规模构成（如经费分配、品类份额）。
+    气泡带浅阴影与白色描边；文字依据底色亮度自动选黑/白保证对比度。
 
     参数:
-        labels     : 各项标签（等长）
-        sizes      : 各项数值（等长，>0）
-        colors     : 每项颜色；None 用当前配色循环
-        show_values: 是否在气泡内显示数值
-        fmt        : 数值格式
+        labels      : 各项标签（等长）
+        sizes       : 各项数值（等长，>0）
+        colors      : 每项颜色；None 用当前配色循环
+        color_by    : 类别标签（等长）；提供时按类别着色并生成图例
+        show_values : 是否在气泡内显示数值
+        fmt         : 数值格式
         min_font / max_font: 气泡内文字字号随面积缩放的范围
+        min_size_frac: 最小气泡半径相对最大气泡的比例（保证小类可见）
 
     示例:
         >>> fig, ax = sp.plot_packed_bubble(
         ...     ["计算", "存储", "网络", "人力", "运维"],
         ...     np.array([40, 25, 15, 12, 8]),
+        ...     color_by=["核心", "核心", "支撑", "支撑", "支撑"],
         ... )
         >>> sp.save(fig, "packed_bubble")
     """
@@ -562,34 +575,70 @@ def plot_packed_bubble(
         cycle = get_cycle_colors()
         colors = [cycle[i % len(cycle)] for i in range(len(labels))]
 
+    categorical_legend = None
+    if color_by is not None:
+        if len(color_by) != len(labels):
+            raise ValueError(
+                f"color_by 长度 ({len(color_by)}) 与 labels 长度 ({len(labels)}) 不一致"
+            )
+        # 类别优先：color_by 覆盖 colors 分配（按输入首次出现顺序）
+        unique_groups = list(dict.fromkeys(color_by))
+        cycle = get_cycle_colors()
+        group_map = {g: cycle[i % len(cycle)] for i, g in enumerate(unique_groups)}
+        colors = [group_map[g] for g in color_by]
+        categorical_legend = group_map
+    if not 0 < min_size_frac < 1:
+        raise ValueError(f"min_size_frac 必须在 (0, 1) 范围内，实际值: {min_size_frac!r}")
+
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
 
-    pos, radii = _pack_bubbles(sizes_arr)
+    pos, radii = _pack_bubbles(sizes_arr, min_size_frac=min_size_frac)
     fontsize = plt.rcParams.get("font.size", 9)
+
+    from matplotlib.colors import to_rgb
 
     for i, (label, size) in enumerate(zip(labels, sizes_arr)):
         r = radii[i]
+        # 浅阴影（右下偏移的暗圆）
+        shadow = plt.Circle(
+            (pos[i][0] - 0.015, pos[i][1] - 0.015), r,
+            facecolor="#000000", alpha=0.10, edgecolor="none", zorder=0,
+        )
+        ax.add_patch(shadow)
         circle = plt.Circle(
             pos[i], r, facecolor=colors[i], alpha=alpha,
-            edgecolor="white", linewidth=1.0, **kwargs,
+            edgecolor="white", linewidth=1.2, zorder=1, **kwargs,
         )
         ax.add_patch(circle)
+        # 文字对比度：依据底色亮度选黑/白
+        rr, gg, bb = to_rgb(colors[i])
+        luminance = 0.299 * rr + 0.587 * gg + 0.114 * bb
+        text_color = "black" if luminance > 0.62 else "white"
         fs = max(min_font, min(max_font, fontsize * (0.7 + 1.3 * (r / max(radii)))))
         ax.text(
             pos[i][0], pos[i][1], label,
-            ha="center", va="center", fontsize=fs, color="white",
+            ha="center", va="center", fontsize=fs, color=text_color,
             fontweight="bold", zorder=3,
         )
         if show_values:
             ax.text(
                 pos[i][0], pos[i][1] - r * 0.45, f"{size:{fmt}}",
                 ha="center", va="center", fontsize=max(5, fs - 2),
-                color="white", zorder=3,
+                color=text_color, zorder=3,
             )
 
-    ax.set_xlim(-1.2, 1.2)
-    ax.set_ylim(-1.2, 1.2)
+    if categorical_legend is not None:
+        from matplotlib.patches import Patch
+
+        handles = [
+            Patch(facecolor=c, label=str(g), alpha=alpha)
+            for g, c in categorical_legend.items()
+        ]
+        ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=8)
+
+    ax.set_xlim(-1.25, 1.25)
+    ax.set_ylim(-1.25, 1.25)
     ax.set_aspect("equal")
     ax.set_axis_off()
     if title:
