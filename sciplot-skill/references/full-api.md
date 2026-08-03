@@ -494,6 +494,113 @@ sp.plot_ridgeline(data_list, labels=None, xlabel="", ylabel="", title="",
 fig, ax = sp.plot_ridgeline(groups, labels=["对照组", "处理A"], show_median=True)
 ```
 
+### plot_marginal（边际分布图，v1.11.0 新增）
+
+```python
+sp.plot_marginal(x, y, marginal="hist", bins=30, color=None, alpha=0.6,
+                 size_ratio=0.22, show_corr=False, xlabel="", ylabel="",
+                 title="", venue=None, palette=None, lang=None, **kwargs)
+```
+
+主散点 + 顶部/右侧边缘分布（"hist" 直方图 / "box" 箱线 / "kde" KDE），
+`show_corr` 在主图标注皮尔逊相关系数。
+
+```python
+fig, ax = sp.plot_marginal(x, y, marginal="hist", show_corr=True)
+```
+
+### plot_raincloud（雨云图，v1.11.0 新增）
+
+```python
+sp.plot_raincloud(data_list, labels=None, xlabel="", ylabel="", title="",
+                  orientation="h", show_points=True, show_box=True,
+                  show_violin=True, show_median=True, point_alpha=0.35,
+                  point_size=4.0, point_jitter=0.08, box_width=0.15,
+                  violin_scale=0.35, violin_alpha=0.45, bw_method=None,
+                  venue=None, palette=None, lang=None, **kwargs)
+```
+
+原始数据点 + 箱线 + 半小提琴三合一（需要 scipy），`orientation` 支持 "h"/"v"。
+
+```python
+fig, ax = sp.plot_raincloud(groups, labels=["对照", "处理"], show_median=True)
+```
+
+### plot_beeswarm（蜂群图，v1.11.0 新增）
+
+```python
+sp.plot_beeswarm(data_list, labels=None, xlabel="", ylabel="", title="",
+                 method="swarm", orient="v", point_size=4.0, alpha=0.6,
+                 jitter_width=0.25, show_box=False,
+                 venue=None, palette=None, lang=None, **kwargs)
+```
+
+确定性 swarm 布局或随机抖动（method="jitter"），`show_box` 叠加箱线。
+
+```python
+fig, ax = sp.plot_beeswarm(groups, labels=["A", "B"], show_box=True)
+```
+
+### plot_dumbbell（哑铃图，v1.11.0 新增）
+
+```python
+sp.plot_dumbbell(categories, start, end, xlabel="", ylabel="", title="",
+                 start_label="Before", end_label="After", show_values=False,
+                 fmt=".1f", sort_by="delta", line_alpha=0.5, marker_size=8.0,
+                 venue=None, palette=None, lang=None, **kwargs)
+```
+
+两时点前后对比，`sort_by` 支持 "delta"/"start"/"end"/None。
+
+```python
+fig, ax = sp.plot_dumbbell(cats, before, after, show_values=True)
+```
+
+### plot_diverging_bar（发散条形图，v1.11.0 新增）
+
+```python
+sp.plot_diverging_bar(categories, values, xlabel="", ylabel="", title="",
+                      threshold=0.0, positive_color=None, negative_color=None,
+                      show_values=False, fmt=".1f", sort=True,
+                      venue=None, palette=None, lang=None, **kwargs)
+```
+
+以 threshold 分界的正负双向水平条形。
+
+```python
+fig, ax = sp.plot_diverging_bar(cats, np.array([42, -18, 35]), show_values=True)
+```
+
+### plot_gantt（甘特图，v1.11.0 新增）
+
+```python
+sp.plot_gantt(tasks, start, duration=None, end=None, xlabel="", ylabel="",
+              title="", color_by=None, show_labels=True, alpha=0.85,
+              venue=None, palette=None, lang=None, **kwargs)
+```
+
+任务时间线，支持数值与 datetime 双轴；`duration` 与 `end` 二选一；
+`color_by` 提供类别着色图例。
+
+```python
+fig, ax = sp.plot_gantt(tasks, start=[0, 10], duration=[10, 20])
+```
+
+### plot_packed_bubble（打包气泡图，v1.11.0 新增）
+
+```python
+sp.plot_packed_bubble(labels, sizes, colors=None, xlabel="", ylabel="",
+                      title="", alpha=0.85, show_values=True, fmt=".0f",
+                      min_font=6.0, max_font=16.0,
+                      venue=None, palette=None, lang=None, **kwargs)
+```
+
+圆形面积编码数值，黄金角螺旋贪心打包保证无重叠。
+
+```python
+fig, ax = sp.plot_packed_bubble(labels, np.array([40, 25, 15]))
+```
+
 ---
 
 ## 8. ML 扩展（`pip install sciplot-academic[ml]`）
@@ -613,6 +720,39 @@ sp.plot_waterfall3d(x, y_list, labels=None, xlabel="", ylabel="", zlabel="",
 ```python
 fig, ax = sp.plot_waterfall3d(x, spectra, labels=["样品A", "样品B"],
                               fill=True, fill_alpha=0.25)
+```
+
+### plot_network3d（3D 网络图，v1.11.0 新增）
+
+```python
+sp.plot_network3d(G, layout="spring", node_color_by=None, node_size_by=None,
+                  z_by=None, labels=True, node_size=200, node_alpha=0.85,
+                  edge_alpha=0.35, edge_width=1.0, title="", seed=42,
+                  layout_kwargs=None, node_size_range=(60, 600),
+                  show_colorbar=False, show_legend=True,
+                  venue=None, palette=None, lang=None, **kwargs)
+```
+
+3D 网络图：2D 布局映射 X/Y，`z_by` 节点属性决定 Z 坐标（"degree" 或任意数值属性），
+支持分类图例与连续 colorbar。
+
+```python
+fig, ax = sp.plot_network3d(G, z_by="expression", node_color_by="module")
+```
+
+### plot_network_communities（升级）
+
+```python
+sp.plot_network_communities(G, communities=None, layout="spring", labels=True,
+                            node_size=300, title="", seed=42, layout_kwargs=None,
+                            venue=None, palette=None, lang=None, **kwargs)
+```
+
+社区网络图：`communities=None` 时自动用 greedy_modularity_communities 检测，
+自动生成社区图例，`labels` 支持 top-N。
+
+```python
+fig, ax = sp.plot_network_communities(G)  # 自动检测社区
 ```
 
 ---

@@ -252,6 +252,54 @@ sp.save(fig, "ridgeline", formats=("pdf", "png"))
 
 ---
 
+## 边际分布图（散点 + 边缘分布）
+
+```python
+# 场景：两变量关系 + 各自分布，论文高频组合
+sp.setup_style("nature", "ocean", lang="zh")
+
+fig, ax = sp.plot_marginal(
+    gdp, consumption,
+    marginal="hist", bins=35, show_corr=True,
+    xlabel="GDP (亿元)", ylabel="人均消费 (千元)",
+)
+sp.save(fig, "marginal", formats=("png",), dpi=300)
+```
+
+---
+
+## 雨云图（点+箱线+半小提琴）
+
+```python
+# 场景：需要同时展示原始数据与统计摘要的分布对比
+sp.setup_style("nature", "forest", lang="zh")
+
+fig, ax = sp.plot_raincloud(
+    yields, labels=["对照组", "方案A", "方案B"],
+    xlabel="产量 (t/ha)", ylabel="处理组",
+    show_median=True,
+)
+sp.save(fig, "raincloud", formats=("png",), dpi=300)
+```
+
+---
+
+## 甘特图（任务时间线）
+
+```python
+# 场景：项目计划、实验排期
+sp.setup_style("thesis", "pastel", lang="zh")
+
+fig, ax = sp.plot_gantt(
+    tasks, start=[0, 1, 2], duration=[1.5, 3, 2.5],
+    color_by=["前期", "中期", "后期"],
+    xlabel="周次", ylabel="任务",
+)
+sp.save(fig, "gantt", formats=("png",), dpi=300)
+```
+
+---
+
 ## 链式调用风格
 
 ```python

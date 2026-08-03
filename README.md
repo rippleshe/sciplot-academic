@@ -116,6 +116,38 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/17_hexbin.png" width="100%">
       <br><b>六边形密度图</b>
     </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/18_marginal.png" width="100%">
+      <br><b>边际分布图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/19_raincloud.png" width="100%">
+      <br><b>雨云图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/20_beeswarm.png" width="100%">
+      <br><b>蜂群图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/21_dumbbell.png" width="100%">
+      <br><b>哑铃图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/22_gantt.png" width="100%">
+      <br><b>甘特图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/23_packed_bubble.png" width="100%">
+      <br><b>打包气泡图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/24_network3d.png" width="100%">
+      <br><b>3D 网络图</b>
+    </td>
   </tr>
 </table>
 

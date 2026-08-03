@@ -7,6 +7,46 @@
 
 ---
 
+## [1.11.0] - 2026-08-03
+
+### Added
+
+- 新增 `plot_marginal` 边际分布图：主散点 + 顶部/右侧边缘分布
+  （直方图/箱线/KDE 可选），支持相关系数标注（别名 `marginal`）
+- 新增 `plot_raincloud` 雨云图：原始数据点 + 箱线 + 半小提琴三合一
+  （Allen et al., 2021），支持水平/垂直两种方向（别名 `raincloud`）
+- 新增 `plot_beeswarm` 蜂群图：确定性 swarm 布局或随机抖动，
+  可叠加箱线（别名 `beeswarm`）
+- 新增 `plot_dumbbell` 哑铃图：两时点前后对比，支持 delta/start/end 排序
+  （别名 `dumbbell`）
+- 新增 `plot_diverging_bar` 发散条形图：正负双向水平条形（别名 `diverging_bar`）
+- 新增 `plot_gantt` 甘特图：任务时间线，数值/datetime 双轴，支持类别着色
+  （别名 `gantt`）
+- 新增 `plot_packed_bubble` 打包气泡图：圆形面积编码占比，
+  黄金角螺旋贪心打包保证无重叠（别名 `packed_bubble`）
+- 新增 `plot_network3d` 3D 网络图：节点 Z 轴映射属性，分类图例/连续 colorbar
+- `plot_network` 系统性升级：top-N 标签（按度降序，大图友好）、seed 可复现、
+  layout_kwargs 透传、映射范围参数化、分类图例、连续 colorbar、确定性配色
+- `plot_network_communities` 升级：社区自动检测（greedy_modularity）、
+  社区图例、标签控制、seed/layout_kwargs
+
+### Changed
+
+- 图表默认无标题原则：`plot_feature_importance`/`plot_residuals`/`plot_qq`/
+  `plot_bland_altman` 默认 title 改为空字符串，showcase 全部去标题
+- `setup_style()` 新增 `usetex` 参数：默认关闭（避免中文混排触发 latex 崩溃），
+  显式 True 启用（无 LaTeX 时警告回退），中文模式强制禁用
+
+### Fixed
+
+- 修复 `add_panel_labels` 对 3D 子图崩溃（改用 text2D）
+- 修复 `StyleContext` 浅拷贝 rcParams 导致嵌套列表修改污染外部状态（改深拷贝）
+- 修复 `plot_network` 字符串属性（node_size_by/edge_weight_by）崩溃
+- 修复 `save()` 对 Windows 保留设备名（CON/PRN/NUL/COM1 等）写入控制台
+- 修复英文模式自动开启 LaTeX 后中文标签保存崩溃
+
+---
+
 ## [1.10.0] - 2026-08-03
 
 ### Added

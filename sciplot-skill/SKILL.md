@@ -1,4 +1,4 @@
-# SciPlot Academic — 科研绘图 Skill (v1.10.0)
+# SciPlot Academic — 科研绘图 Skill (v1.11.0)
 
 name: sciplot-skill
 description: >
@@ -13,7 +13,7 @@ description: >
 | 维度 | 关键词模式 |
 |------|-----------|
 | **动作** | 画/绘/出图/可视化/plot/chart/figure/展示数据/做成图 |
-| **图表** | 折线/散点/柱状/箱线/热力/气泡/山脊/瀑布/雷达/3D/网络/维恩/密度/QQ/残差/六边形 |
+| **图表** | 折线/散点/柱状/箱线/热力/气泡/山脊/瀑布/雷达/3D/网络/维恩/密度/QQ/残差/六边形/雨云/蜂群/哑铃/甘特/边际 |
 | **场景** | 论文图/期刊图/竞赛图/PPT图/实验结果/对比分析/趋势/分布 |
 | **库名** | matplotlib/seaborn/plotly 提及 → 引导用 sciplot |
 | **隐含** | 上传 CSV/Excel + "分析"；数值结果 + "怎么展示" |
@@ -62,6 +62,13 @@ description: >
 | 二维气泡图 | `sp.plot_bubble()` | `sp.bubble()` |
 | 六边形密度图 | `sp.plot_hexbin()` | `sp.hexbin()` |
 | 山脊图(多分布堆叠) | `sp.plot_ridgeline()` | `sp.ridgeline()` |
+| 雨云图(点+箱线+半小提琴) | `sp.plot_raincloud()` | `sp.raincloud()` |
+| 蜂群图(原始数据分布) | `sp.plot_beeswarm()` | `sp.beeswarm()` |
+| 边际分布图(散点+边缘分布) | `sp.plot_marginal()` | `sp.marginal()` |
+| 哑铃图(前后对比) | `sp.plot_dumbbell()` | `sp.dumbbell()` |
+| 发散条形图(正负对比) | `sp.plot_diverging_bar()` | `sp.diverging_bar()` |
+| 甘特图(任务时间线) | `sp.plot_gantt()` | `sp.gantt()` |
+| 打包气泡图(占比构成) | `sp.plot_packed_bubble()` | `sp.packed_bubble()` |
 | 3D 瀑布图(多组堆叠) | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
 | 误差/不确定性 | `sp.plot_errorbar()` / `sp.plot_confidence()` | `sp.errorbar()` |
 | 时间序列 | `sp.plot_timeseries()` | `sp.timeseries()` |
@@ -78,6 +85,8 @@ description: >
 | 3D 瀑布 | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
 | 等高线 | `sp.plot_contour()` | — |
 | 网络关系 | `sp.plot_network()` | — |
+| 3D 网络 | `sp.plot_network3d()` | — |
+| 社区网络 | `sp.plot_network_communities()` | — |
 | 聚类树 | `sp.plot_dendrogram()` | — |
 | 集合交集 | `sp.plot_venn2()` / `sp.plot_venn3()` | — |
 
@@ -306,8 +315,8 @@ sp.save(fig, "暗色主题图", formats=("png",), dpi=300)
 
 ## Showcase 展示案例
 
-> 以下 17 个案例覆盖 SciPlot 最常用图表类型，每个均可独立运行。
-> 展示图片位于 `showcase/` 目录（01-12 为基础/统计/扩展，13-17 为高级图表）。
+> 以下 24 个案例覆盖 SciPlot 最常用图表类型，每个均可独立运行。
+> 展示图片位于 `showcase/` 目录（01-12 基础/统计/扩展，13-17 第一轮高级图，18-24 第二轮高级图）。
 
 ### 01. 多线对比图 (`01_multi_line.py`)
 
@@ -740,6 +749,155 @@ fig, ax = sp.plot_hexbin(
 sp.save(fig, "17_hexbin", formats=("pdf", "png"))
 ```
 
+### 18. 边际分布图 (`18_marginal.py`)
+
+```python
+"""边际分布图 — 散点 + 边缘直方图 + 相关系数"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("nature", "ocean", lang="zh")
+
+np.random.seed(42)
+n = 400
+gdp = np.random.lognormal(mean=5.0, sigma=0.6, size=n)
+consumption = np.clip(0.35 * gdp + np.random.normal(0, 20, n), 5, None)
+
+fig, ax = sp.plot_marginal(
+    gdp, consumption, marginal="hist", bins=35, show_corr=True,
+    xlabel="GDP (亿元)", ylabel="人均消费 (千元)",
+)
+sp.save(fig, "18_marginal", formats=("png",), dpi=300)
+```
+
+### 19. 雨云图 (`19_raincloud.py`)
+
+```python
+"""雨云图 — 原始数据点+箱线+半小提琴三合一"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("nature", "forest", lang="zh")
+
+rng = np.random.default_rng(42)
+yields = [
+    rng.normal(5.2, 0.6, 150),
+    rng.normal(6.1, 0.8, 150),
+    rng.normal(6.8, 0.7, 150),
+]
+
+fig, ax = sp.plot_raincloud(
+    yields, labels=["对照组", "方案A", "方案B"],
+    xlabel="产量 (t/ha)", ylabel="处理组",
+    show_median=True,
+)
+sp.save(fig, "19_raincloud", formats=("png",), dpi=300)
+```
+
+### 20. 蜂群图 (`20_beeswarm.py`)
+
+```python
+"""蜂群图 — 原始数据紧凑分布 + 箱线摘要"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("ieee", "pastel", lang="zh")
+
+rng = np.random.default_rng(42)
+scores = [rng.normal(m, s, n) for m, s, n in
+          [(72, 12, 90), (78, 10, 85), (75, 15, 95), (83, 9, 80)]]
+
+fig, ax = sp.plot_beeswarm(
+    scores, labels=["1班", "2班", "3班", "4班"],
+    ylabel="考试成绩 (分)", show_box=True,
+)
+sp.save(fig, "20_beeswarm", formats=("png",), dpi=300)
+```
+
+### 21. 哑铃图 (`21_dumbbell.py`)
+
+```python
+"""哑铃图 — 培训前后成绩对比"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("thesis", "ocean", lang="zh")
+
+students = ["学员A", "学员B", "学员C", "学员D", "学员E", "学员F"]
+before = np.array([62, 71, 55, 68, 74, 58])
+after = np.array([81, 79, 74, 85, 83, 76])
+
+fig, ax = sp.plot_dumbbell(
+    students, before, after,
+    xlabel="测评分数 (分)", ylabel="学员",
+    start_label="培训前", end_label="培训后",
+    show_values=True, sort_by="delta",
+)
+sp.save(fig, "21_dumbbell", formats=("png",), dpi=300)
+```
+
+### 22. 甘特图 (`22_gantt.py`)
+
+```python
+"""甘特图 — 项目任务时间线（类别着色）"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("thesis", "pastel", lang="zh")
+
+tasks = ["文献调研", "数据采集", "模型开发", "实验验证", "论文撰写", "投稿准备"]
+start = [0, 1, 2, 4, 5, 7]
+duration = [1.5, 3, 2.5, 2, 1.5, 1]
+phases = ["前期", "前期", "中期", "中期", "后期", "后期"]
+
+fig, ax = sp.plot_gantt(
+    tasks, start=start, duration=duration, color_by=phases,
+    xlabel="周次", ylabel="任务",
+)
+sp.save(fig, "22_gantt", formats=("png",), dpi=300)
+```
+
+### 23. 打包气泡图 (`23_packed_bubble.py`)
+
+```python
+"""打包气泡图 — 经费构成占比"""
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("presentation", "ocean", lang="zh")
+
+directions = ["设备购置", "人才引进", "基础研究", "应用开发", "学术交流", "运维保障"]
+budgets = np.array([480, 260, 320, 180, 90, 70])
+
+fig, ax = sp.plot_packed_bubble(
+    directions, budgets, show_values=True, fmt=".0f",
+)
+sp.save(fig, "23_packed_bubble", formats=("png",), dpi=300)
+```
+
+### 24. 3D 网络图 (`24_network3d.py`)
+
+```python
+"""3D 网络图 — 节点高度编码表达量，颜色编码模块"""
+import networkx as nx
+import numpy as np
+import sciplot as sp
+
+sp.setup_style("thesis", "sunset", lang="zh")
+
+G = nx.barabasi_albert_graph(40, 2, seed=42)
+expression = np.random.lognormal(mean=1.0, sigma=0.7, size=40)
+modules = [f"模块{chr(ord('A') + (i % 4))}" for i in range(40)]
+nx.set_node_attributes(G, {i: float(expression[i]) for i in G.nodes}, "expression")
+nx.set_node_attributes(G, {i: modules[i] for i in G.nodes}, "module")
+
+fig, ax = sp.plot_network3d(
+    G, z_by="expression", node_color_by="module",
+    node_size_by="expression", labels=10,
+)
+sp.save(fig, "24_network3d", formats=("png",), dpi=300)
+```
+
 ---
 
 ## Nature 质量图表
@@ -999,9 +1157,19 @@ with sp.style_context("ieee", palette="ocean"):
 sp.plot_bubble_heatmap(data, cmap="viridis", background=True, show_values=True)
 sp.plot_bubble(x, y, size=values, color=colors, size_scale=200)
 sp.plot_hexbin(x, y, gridsize=30, bins="log")
+sp.plot_marginal(x, y, marginal="hist", show_corr=True)      # 散点+边缘分布
+sp.plot_raincloud(data_list, labels=[...], show_median=True)  # 雨云图
+sp.plot_beeswarm(data_list, method="swarm", show_box=True)   # 蜂群图
+sp.plot_dumbbell(cats, before, after, sort_by="delta")       # 哑铃图
+sp.plot_diverging_bar(cats, values, threshold=0)              # 发散条形
+sp.plot_gantt(tasks, start=..., duration=...)                 # 甘特图
+sp.plot_packed_bubble(labels, sizes)                          # 打包气泡
 sp.plot_ridgeline(data_list, labels=[...], overlap=0.3, show_median=True)
 sp.plot_waterfall3d(x, y_list, labels=[...], spacing=1.0, fill=True)
-# 别名: sp.bubble_heatmap / sp.bubble / sp.hexbin / sp.ridgeline / sp.waterfall3d
+sp.plot_network(G, node_color_by="module", labels=10)         # top-N 标签
+sp.plot_network3d(G, z_by="expression", labels=10)           # 3D 网络
+# 别名: bubble_heatmap / bubble / hexbin / marginal / raincloud / beeswarm
+#       dumbbell / diverging_bar / gantt / packed_bubble / ridgeline / waterfall3d
 ```
 
 ### 保存选项
@@ -1076,4 +1244,4 @@ sp.check_color_contrast("#FFF", "#000")      # 对比度检查
 
 ---
 
-版本: **1.10.0** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`
+版本: **1.11.0** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`
