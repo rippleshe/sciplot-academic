@@ -1680,7 +1680,8 @@ def plot_donut(
     show_percent: bool = True,
     percent_fmt: str = ".1f",
     start_angle: float = 90.0,
-    label_radius: float = 1.15,
+    label_radius: float = 1.08,
+    center_text: Optional[str] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -1700,10 +1701,12 @@ def plot_donut(
         show_percent : 是否在类别标签后附百分比
         start_angle  : 起始角度（度，默认 90 从正上方开始）
         label_radius : 类别标签的半径位置
+        center_text  : 环中心显示的文字（如总和）；None 不显示
 
     示例:
         >>> fig, ax = sp.plot_donut(
         ...     ["A", "B", "C"], [55, 30, 15],
+        ...     center_text="100",
         ... )
     """
     cat_arr = list(categories)
@@ -1748,10 +1751,13 @@ def plot_donut(
     for w in wedges:
         w.set_zorder(2)
 
-    # 数值放环内中部
+    # 数值放环内中部（扇区角度过小时跳过，避免文字溢出扇区）
     if show_values:
         fs = max(7, plt.rcParams.get("font.size", 9) - 1)
         for w, v in zip(wedges, val_arr):
+            arc_deg = abs(w.theta2 - w.theta1)
+            if arc_deg < 22.0:
+                continue  # 过窄扇区不写数值，避免溢出
             ang = np.deg2rad((w.theta1 + w.theta2) / 2)
             r = 1.0 - hole_ratio / 2
             ax.text(r * np.cos(ang), r * np.sin(ang), f"{v:{fmt}}",
@@ -1764,7 +1770,14 @@ def plot_donut(
         ang = np.deg2rad((w.theta1 + w.theta2) / 2)
         x = label_radius * np.cos(ang)
         y = label_radius * np.sin(ang)
-        ha = "left" if x >= 0 else "right"
+        # 标签从环边向外延伸：右侧 ha=left，左侧 ha=right，
+        # 并预留足够的画布余量避免文字被裁剪
+        if np.cos(ang) >= 0:
+            ha = "left"
+            x = x + 0.02
+        else:
+            ha = "right"
+            x = x - 0.02
         va = "bottom" if y >= 0 else "top"
         if show_percent:
             pct = v / total * 100.0
@@ -1773,9 +1786,16 @@ def plot_donut(
             label_txt = cat
         ax.text(x, y, label_txt, ha=ha, va=va, fontsize=fs_label, zorder=5)
 
+    # 环中心文字（如总和/主指标）
+    if center_text is not None:
+        fs_center = max(11, plt.rcParams.get("font.size", 9) + 3)
+        ax.text(0, 0, center_text, ha="center", va="center",
+                fontsize=fs_center, fontweight="bold", color="#333333", zorder=6)
+
     ax.set_aspect("equal")
-    ax.set_xlim(-label_radius * 1.15, label_radius * 1.15)
-    ax.set_ylim(-label_radius * 1.15, label_radius * 1.15)
+    margin = label_radius + 0.6  # 为外圈标签预留文字空间
+    ax.set_xlim(-margin, margin)
+    ax.set_ylim(-margin, margin)
     ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():

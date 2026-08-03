@@ -21,6 +21,7 @@ fig, ax = sp.plot_donut(
     hole_ratio=0.62,
     fmt=".1f",
     show_percent=True,
+    center_text="100 百万元",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────
