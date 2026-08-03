@@ -544,6 +544,11 @@ def get_cmap_safe(name: str):
         return plt.cm.get_cmap(name)  # type: ignore[attr-defined]
 
 
+def polar_to_cart(theta: float, r: float) -> Tuple[float, float]:
+    """极坐标转笛卡尔坐标。"""
+    return r * np.cos(theta), r * np.sin(theta)
+
+
 def boxplot_with_orientation(
     ax: Any,
     data: Any,
@@ -598,5 +603,7 @@ __all__ = [
     "get_cycle_colors",
     "boxplot_with_orientation",
     "contrast_text_color",
+    "get_cmap_safe",
+    "polar_to_cart",
 ]
 

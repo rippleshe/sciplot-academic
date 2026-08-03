@@ -17,6 +17,7 @@ from sciplot._core.utils import (
     contrast_text_color,
     get_cmap_safe,
     get_cycle_colors,
+    polar_to_cart,
 )
 from sciplot._core.result import PlotResult
 
@@ -765,9 +766,6 @@ def plot_chord(
         arc_ends.append(angle + arc_len)
         angle += arc_len
 
-    def _polar_to_cart(theta: float, r: float) -> Tuple[float, float]:
-        return r * np.cos(theta), r * np.sin(theta)
-
     # ── 外圈弧段 ──
     for i in range(n):
         start, end = arc_starts[i], arc_ends[i]
@@ -811,10 +809,10 @@ def plot_chord(
             tgt_theta = arc_starts[j] + (arc_ends[j] - arc_starts[j]) * 0.35
             # 源端宽度 ∝ 流量，目标端固定窄宽（视觉层次）
             half_w = max(0.004, flow / max_flow * 0.03)
-            p0a = _polar_to_cart(src_theta - half_w, 1.0)
-            p0b = _polar_to_cart(src_theta + half_w, 1.0)
-            p3a = _polar_to_cart(tgt_theta - 0.007, 1.0)
-            p3b = _polar_to_cart(tgt_theta + 0.007, 1.0)
+            p0a = polar_to_cart(src_theta - half_w, 1.0)
+            p0b = polar_to_cart(src_theta + half_w, 1.0)
+            p3a = polar_to_cart(tgt_theta - 0.007, 1.0)
+            p3b = polar_to_cart(tgt_theta + 0.007, 1.0)
             bx_top, by_top = _bezier_curve(p0a, p3a)
             bx_bot, by_bot = _bezier_curve(p0b, p3b)
             poly_x = np.concatenate([bx_top, bx_bot[::-1]])
@@ -827,7 +825,7 @@ def plot_chord(
     fontsize = max(7, plt.rcParams.get("font.size", 9) - 1)
     for i in range(n):
         mid = (arc_starts[i] + arc_ends[i]) / 2
-        x, y = _polar_to_cart(mid, label_r)
+        x, y = polar_to_cart(mid, label_r)
         ha = "left" if np.cos(mid) >= 0 else "right"
         va = "bottom" if np.sin(mid) >= 0 else "top"
         ax.text(x, y, labels[i], ha=ha, va=va, fontsize=fontsize,

@@ -20,6 +20,7 @@ from sciplot._core.utils import (
     validate_array_like,
     validate_positive_number,
     boxplot_with_orientation,
+    contrast_text_color,
     get_cycle_colors as _get_cycle_colors,
 )
 from sciplot._core.result import PlotResult, ComboPlotResult
@@ -482,7 +483,7 @@ def plot_stacked_bar(
                         f"{v:{value_fmt}}",
                         ha="center", va="center",
                         fontsize=plt.rcParams.get("font.size", 9) - 1,
-                        color="white" if _is_dark_color(color) else "black",
+                        color=contrast_text_color(color),
                     )
         bottom += values
 
@@ -1381,16 +1382,4 @@ def plot_waffle(
 # ============================================================================
 
 # _get_cycle_colors 已从 sciplot._core.utils.get_cycle_colors 导入
-
-
-def _is_dark_color(color: str) -> bool:
-    """判断颜色是否为深色（用于决定文字用白色还是黑色）"""
-    try:
-        import matplotlib.colors as mcolors
-        rgb = mcolors.to_rgb(color)
-        r, g, b = rgb
-        # 计算亮度（YIQ 公式）
-        brightness = (r * 299 + g * 587 + b * 114) / 1000
-        return brightness < 0.502  # 归一化后的阈值
-    except (ValueError, AttributeError):
-        return False
+# 文字对比色判断统一使用 sciplot._core.utils.contrast_text_color
