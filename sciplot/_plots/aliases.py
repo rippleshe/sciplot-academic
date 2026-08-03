@@ -40,6 +40,7 @@ from sciplot._plots.advanced import (
     plot_bubble_heatmap,
     plot_bubble,
     plot_hexbin,
+    plot_marginal,
 )
 from sciplot._plots.polar import (
     plot_radar,
@@ -114,6 +115,7 @@ heatmap = _make_alias(plot_heatmap)
 bubble_heatmap = _make_alias(plot_bubble_heatmap)
 bubble = _make_alias(plot_bubble)
 hexbin = _make_alias(plot_hexbin)
+marginal = _make_alias(plot_marginal)
 combo = _make_alias(plot_combo)
 
 # ═══════════════════════════════════════════════════════════════
@@ -136,7 +138,7 @@ __all__ = [
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "lollipop",
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "combo",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "combo",
     "radar", "timeseries", "multi_timeseries",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "waterfall3d",

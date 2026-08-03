@@ -446,7 +446,152 @@ __all__ = [
     "plot_bubble_heatmap",
     "plot_bubble",
     "plot_hexbin",
+    "plot_marginal",
 ]
+
+
+def plot_marginal(
+    x: np.ndarray,
+    y: np.ndarray,
+    marginal: str = "hist",
+    bins: int = 30,
+    color: Optional[str] = None,
+    alpha: float = 0.6,
+    size_ratio: float = 0.22,
+    show_corr: bool = False,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制边际分布图（主散点 + 顶部/右侧边缘分布，论文高频组合）
+
+    主区域展示两个变量的散点关系，顶部与右侧分别展示 X/Y 的边缘分布
+    （直方图 / 箱线图 / KDE 曲线），可一键叠加相关系数标注。
+
+    参数:
+        x, y      : 坐标数组（等长，不含 NaN/Inf）
+        marginal  : 边缘分布类型："hist" 直方图 | "box" 箱线图 | "kde" KDE 曲线
+        bins      : 直方图柱数（marginal="hist" 时生效），默认 30
+        color     : 主色；None 时取当前配色第一色
+        alpha     : 散点透明度，默认 0.6
+        size_ratio: 边缘图占对应轴的比例，默认 0.22
+        show_corr : 是否在主图标注皮尔逊相关系数 r，默认 False
+        **kwargs  : 传递给 ax.scatter() 的额外参数
+
+    示例:
+        >>> fig, ax = sp.plot_marginal(
+        ...     height, weight,
+        ...     marginal="hist", bins=40,
+        ...     xlabel="身高 (cm)", ylabel="体重 (kg)",
+        ...     show_corr=True,
+        ... )
+        >>> sp.save(fig, "marginal")
+    """
+    x_arr = np.asarray(x, dtype=float).ravel()
+    y_arr = np.asarray(y, dtype=float).ravel()
+
+    n_points = len(x_arr)
+    if len(y_arr) != n_points:
+        raise ValueError(f"x 长度 ({n_points}) 与 y 长度 ({len(y_arr)}) 不一致")
+    if n_points == 0:
+        raise ValueError("x/y 不能为空")
+    if not np.all(np.isfinite(x_arr)) or not np.all(np.isfinite(y_arr)):
+        raise ValueError("x 和 y 不能包含 NaN 或 Inf")
+
+    if marginal not in {"hist", "box", "kde"}:
+        raise ValueError(
+            f"marginal 仅支持 'hist' / 'box' / 'kde'，实际值: {marginal!r}"
+        )
+    if not isinstance(bins, int) or bins <= 0:
+        raise ValueError(f"bins 必须为正整数，实际值: {bins!r}")
+    if not 0.0 < size_ratio < 1.0:
+        raise ValueError(f"size_ratio 必须在 (0, 1) 范围内，实际值: {size_ratio!r}")
+
+    kde_module = None
+    if marginal == "kde":
+        try:
+            from scipy import stats as kde_module
+        except ImportError as exc:
+            raise ImportError(
+                "marginal='kde' 需要安装 scipy。请运行: uv pip install scipy"
+            ) from exc
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    from sciplot._core.style import VENUES
+
+    venue_cfg = VENUES.get(effective_venue or "nature", VENUES["nature"])
+    fig = plt.figure(figsize=venue_cfg.figsize)
+
+    main_ratio = 1.0 - size_ratio
+    gs = fig.add_gridspec(
+        2, 2,
+        width_ratios=(main_ratio, size_ratio),
+        height_ratios=(size_ratio, main_ratio),
+        wspace=0.06, hspace=0.06,
+    )
+    ax_main = fig.add_subplot(gs[1, 0])
+    ax_x = fig.add_subplot(gs[0, 0], sharex=ax_main)
+    ax_y = fig.add_subplot(gs[1, 1], sharey=ax_main)
+
+    colors = get_cycle_colors()
+    main_color = color if color is not None else colors[0]
+
+    ax_main.scatter(x_arr, y_arr, s=20, alpha=alpha, color=main_color, **kwargs)
+
+    # ── X 边缘分布（顶部） ──
+    if marginal == "hist":
+        ax_x.hist(x_arr, bins=bins, color=main_color, alpha=0.8)
+    elif marginal == "box":
+        ax_x.boxplot(x_arr, vert=False, patch_artist=True, widths=0.6)
+        for patch in ax_x.patches[:1]:
+            patch.set_facecolor(main_color)
+            patch.set_alpha(0.6)
+    else:
+        x_kde = kde_module.gaussian_kde(x_arr)
+        x_eval = np.linspace(x_arr.min(), x_arr.max(), 200)
+        ax_x.plot(x_eval, x_kde(x_eval), color=main_color)
+        ax_x.fill_between(x_eval, x_kde(x_eval), color=main_color, alpha=0.3)
+
+    # ── Y 边缘分布（右侧） ──
+    if marginal == "hist":
+        ax_y.hist(y_arr, bins=bins, orientation="horizontal", color=main_color, alpha=0.8)
+    elif marginal == "box":
+        ax_y.boxplot(y_arr, vert=True, patch_artist=True, widths=0.6)
+        for patch in ax_y.patches[:1]:
+            patch.set_facecolor(main_color)
+            patch.set_alpha(0.6)
+    else:
+        y_kde = kde_module.gaussian_kde(y_arr)
+        y_eval = np.linspace(y_arr.min(), y_arr.max(), 200)
+        ax_y.plot(y_kde(y_eval), y_eval, color=main_color)
+        ax_y.fill_betweenx(y_eval, y_kde(y_eval), color=main_color, alpha=0.3)
+
+    # 边缘轴清理
+    ax_x.tick_params(labelbottom=False)
+    ax_y.tick_params(labelleft=False)
+    for m_ax in (ax_x, ax_y):
+        m_ax.tick_params(direction="in")
+        m_ax.grid(False)
+
+    if show_corr:
+        r_value = float(np.corrcoef(x_arr, y_arr)[0, 1])
+        ax_main.text(
+            0.05, 0.95, f"r = {r_value:.3f}",
+            transform=ax_main.transAxes, ha="left", va="top",
+            fontsize=plt.rcParams.get("font.size", 9) + 1,
+        )
+
+    ax_main.set_xlabel(xlabel)
+    ax_main.set_ylabel(ylabel)
+    if title:
+        ax_main.set_title(title)
+    ax_main.tick_params(direction="in")
+    return PlotResult(fig, ax_main, metadata={"venue": venue, "palette": palette})
 
 
 def plot_hexbin(
