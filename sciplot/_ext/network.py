@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,13 +80,19 @@ def plot_network(
     node_color_by: Optional[str] = None,
     node_size_by: Optional[str] = None,
     edge_weight_by: Optional[str] = None,
-    labels: bool = True,
+    labels: Union[bool, int] = True,
     node_size: float = 300,
     node_alpha: float = 0.8,
     edge_alpha: float = 0.5,
     edge_width: float = 1.0,
     with_arrows: bool = True,
     title: str = "",
+    seed: Optional[int] = 42,
+    layout_kwargs: Optional[Dict[str, Any]] = None,
+    node_size_range: Tuple[float, float] = (100, 1000),
+    edge_width_range: Tuple[float, float] = (0.5, 3.0),
+    show_colorbar: bool = False,
+    show_legend: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -104,12 +110,20 @@ def plot_network(
                        - "shell": 同心圆布局
                        - "kamada_kawai": Kamada-Kawai 布局
                        - "random": 随机布局
-        node_color_by: 按节点属性着色（如 "degree"）
-        node_size_by : 按节点属性调整大小
-        edge_weight_by: 按边权重调整粗细
-        labels       : 是否显示节点标签
+        node_color_by: 按节点属性着色（"degree" 或任意属性）；
+                       数值属性类别 >10 时连续着色，否则/非数值时分类着色
+        node_size_by : 按节点属性调整大小（须为数值属性）
+        edge_weight_by: 按边权重调整粗细（须为数值属性）
+        labels       : 节点标签；True 全部显示，False 不显示，
+                       整数 N 时只显示度最大的前 N 个节点（大图性能友好）
         node_size    : 基础节点大小，默认 300
         with_arrows  : 有向图是否显示箭头
+        seed         : 布局随机种子，None 则每次随机；默认 42 保证可复现
+        layout_kwargs: 透传给布局函数的额外参数（如 spring 的 k、iterations）
+        node_size_range: 属性映射到节点大小的范围，默认 (100, 1000)
+        edge_width_range: 属性映射到边宽的范围，默认 (0.5, 3.0)
+        show_colorbar: 连续着色时是否显示颜色条，默认 False
+        show_legend  : 分类着色时是否显示图例，默认 True
         lang         : 语言设置（如 "zh", "en"），用于中文字体支持
 
     示例:
@@ -119,13 +133,19 @@ def plot_network(
         >>> sp.save(fig, "network")
     """
     nx = _check_networkx()
-    pos = _get_layout(G, layout, seed=42)
+    layout_kw = dict(layout_kwargs or {})
+    if seed is not None:
+        layout_kw.setdefault("seed", seed)
+    pos = _get_layout(G, layout, **layout_kw)
 
     effective_venue = apply_resolved_style(venue, palette, lang)
     fig, ax = new_figure(effective_venue)
 
     colors = get_cycle_colors()
 
+    # ── 节点着色 ──
+    categorical_colors: Optional[Dict[Any, str]] = None
+    continuous_mappable = None
     if node_color_by is not None:
         if node_color_by == "degree":
             color_values = dict(G.degree())
@@ -134,24 +154,29 @@ def plot_network(
 
         if color_values:
             numeric_attr = _coerce_numeric_attr(color_values)
-            unique_values = set(color_values.values())
+            unique_values = sorted(set(color_values.values()), key=str)  # 确定性排序
             if numeric_attr is None or len(unique_values) <= 10:
-                # 分类着色：非数值属性或类别数较少时按类别映射
+                # 分类着色：非数值属性或类别数较少时按类别映射（顺序稳定）
                 color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
                 node_colors = [color_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
+                categorical_colors = color_map
             else:
                 norm = Normalize(min(numeric_attr.values()), max(numeric_attr.values()))
                 try:
                     cmap = plt.colormaps.get_cmap("viridis")
                 except AttributeError:
-                    # 低版本matplotlib兼容
-                    cmap = plt.cm.get_cmap("viridis")
+                    cmap = plt.cm.get_cmap("viridis")  # type: ignore[attr-defined]
                 node_colors = [cmap(norm(numeric_attr.get(n, 0))) for n in G.nodes()]
+                if show_colorbar:
+                    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+                    sm.set_array([])
+                    continuous_mappable = sm
         else:
             node_colors = colors[0]
     else:
         node_colors = colors[0]
 
+    # ── 节点大小 ──
     if node_size_by is not None:
         if node_size_by == "degree":
             size_values = dict(G.degree())
@@ -161,7 +186,6 @@ def plot_network(
         if size_values:
             numeric_size = _coerce_numeric_attr(size_values)
             if numeric_size is None:
-                # 属性非数值：回退默认尺寸并给出提示
                 warnings.warn(
                     f"节点属性 '{node_size_by}' 包含非数值项，已回退为默认节点大小。",
                     UserWarning, stacklevel=2,
@@ -170,7 +194,7 @@ def plot_network(
             else:
                 min_size, max_size = min(numeric_size.values()), max(numeric_size.values())
                 if max_size > min_size:
-                    size_range = 100, 1000
+                    size_range = node_size_range
                     node_sizes = [
                         size_range[0] + (numeric_size.get(n, min_size) - min_size) /
                         (max_size - min_size) * (size_range[1] - size_range[0])
@@ -183,6 +207,7 @@ def plot_network(
     else:
         node_sizes = node_size
 
+    # ── 边宽 ──
     if edge_weight_by is not None:
         weight_values = nx.get_edge_attributes(G, edge_weight_by)
         if weight_values:
@@ -196,7 +221,7 @@ def plot_network(
             else:
                 min_w, max_w = min(numeric_weight.values()), max(numeric_weight.values())
                 if max_w > min_w:
-                    width_range = 0.5, 3.0
+                    width_range = edge_width_range
                     edge_widths = [
                         width_range[0] + (numeric_weight.get(e, min_w) - min_w) /
                         (max_w - min_w) * (width_range[1] - width_range[0])
@@ -226,22 +251,54 @@ def plot_network(
         alpha=node_alpha,
     )
 
-    if labels:
+    # ── 节点标签：支持 top-N（按度降序）与大图性能 ──
+    label_nodes: Optional[set] = None
+    if isinstance(labels, int) and not isinstance(labels, bool):
+        if labels > 0:
+            top_nodes = sorted(G.nodes(), key=lambda n: G.degree(n), reverse=True)[:labels]
+            label_nodes = set(top_nodes)
+    elif labels is True:
+        label_nodes = None  # 全部
+
+    if label_nodes is not None or labels is True:
         # 获取字体设置，确保中文正常显示
         font_family = plt.rcParams.get("font.family", "serif")
         if isinstance(font_family, list):
             font_family = font_family[0]
-        # 如果是 serif，尝试获取具体的 serif 字体列表中的第一个
         if font_family == "serif":
             serif_fonts = plt.rcParams.get("font.serif", [])
             if serif_fonts:
                 font_family = serif_fonts[0]
 
-        nx.draw_networkx_labels(
-            G, pos, ax=ax,
-            font_size=plt.rcParams.get("font.size", 9) - 1,
-            font_family=font_family,
-        )
+        if label_nodes is not None:
+            label_dict = {n: str(n) for n in label_nodes}
+            nx.draw_networkx_labels(
+                G, pos, labels=label_dict, ax=ax,
+                font_size=plt.rcParams.get("font.size", 9) - 1,
+                font_family=font_family,
+            )
+        else:
+            nx.draw_networkx_labels(
+                G, pos, ax=ax,
+                font_size=plt.rcParams.get("font.size", 9) - 1,
+                font_family=font_family,
+            )
+
+    # ── 连续着色的颜色条 ──
+    if continuous_mappable is not None:
+        cbar = fig.colorbar(continuous_mappable, ax=ax, fraction=0.046, pad=0.04)
+        if node_color_by is not None:
+            cbar.set_label(node_color_by)
+
+    # ── 分类着色的图例 ──
+    if categorical_colors is not None and show_legend:
+        from matplotlib.patches import Patch
+
+        handles = [
+            Patch(facecolor=c, label=str(v), alpha=node_alpha)
+            for v, c in categorical_colors.items()
+        ]
+        ax.legend(handles=handles, loc="best", frameon=False)
 
     ax.set_axis_off()
     if title:
