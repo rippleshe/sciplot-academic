@@ -23,7 +23,16 @@ effects = {
     ("药物 B", "低剂量"): rng.normal(0.62, 0.06, 40),
     ("药物 B", "高剂量"): rng.normal(0.70, 0.08, 40),
 }
-colors = {"药物 A": "#E07B54", "药物 B": "#5B7DB1"}
+# 双编码配色：行（药物）= 色相，列（剂量）= 明度梯度
+# 药物 A（暖色系）：浅 → 深；药物 B（冷色系）：浅 → 深
+dose_colors = {
+    ("药物 A", "对照"): "#F5C9AB", ("药物 A", "低剂量"): "#E79B6B", ("药物 A", "高剂量"): "#D96A3A",
+    ("药物 B", "对照"): "#BCD0E6", ("药物 B", "低剂量"): "#7FA8D0", ("药物 B", "高剂量"): "#4A7DB8",
+}
+mean_colors = {
+    ("药物 A", "对照"): "#B85C2E", ("药物 A", "低剂量"): "#B85C2E", ("药物 A", "高剂量"): "#B85C2E",
+    ("药物 B", "对照"): "#3A628F", ("药物 B", "低剂量"): "#3A628F", ("药物 B", "高剂量"): "#3A628F",
+}
 
 # ── 布局：2×3 条件矩阵 ────────────────────────────────────────
 fig, axes = sp.figure_panels(2, 3, venue="thesis", sharey=True, hspace=0.35, wspace=0.28)
@@ -35,8 +44,10 @@ for ax, (i, j) in zip(axes.flat, [(r, c) for r in range(2) for c in range(3)]):
     # 蜂群式抖动散点 + 均值线（面板内 matplotlib 原生）
     x_jitter = rng.normal(0, 0.02, len(data))
     ax.scatter(np.full(len(data), 0) + x_jitter, data,
-               s=14, alpha=0.55, color=colors[drug], edgecolors="white", linewidths=0.4)
-    ax.axhline(float(np.mean(data)), color="#444444", linestyle="--", linewidth=1.0)
+               s=14, alpha=0.65, color=dose_colors[(drug, dose)],
+               edgecolors="white", linewidths=0.4)
+    ax.axhline(float(np.mean(data)), color=mean_colors[(drug, dose)],
+               linestyle="--", linewidth=1.0)
     ax.set_ylim(0.0, 1.05)
     ax.set_xticks([])
     ax.tick_params(direction="in")
