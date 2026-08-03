@@ -597,6 +597,25 @@ def get_cmap_safe(name: str):
         return plt.cm.get_cmap(name)  # type: ignore[attr-defined]
 
 
+def relative_fontsize(offset: int = -1, floor: int = 5) -> int:
+    """基于当前 rcParams 字号计算相对字号（带下限保护）。
+
+    各绘图函数内部标注/刻度标签使用统一字号策略：
+    正文基础字号 ± 偏移，且不低于 floor（Nature 最小 5pt 规范）。
+
+    参数:
+        offset: 相对当前 font.size 的偏移（负为更小）
+        floor : 字号下限（默认 5pt，Nature 规范）
+
+    示例:
+        >>> fs = sp.relative_fontsize(-1)   # 正文 -1pt
+        >>> fs = sp.relative_fontsize(2)    # 正文 +2pt
+    """
+    import matplotlib.pyplot as plt
+
+    return max(floor, int(plt.rcParams.get("font.size", 9)) + offset)
+
+
 def polar_to_cart(theta: float, r: float) -> Tuple[float, float]:
     """极坐标转笛卡尔坐标。"""
     return r * np.cos(theta), r * np.sin(theta)

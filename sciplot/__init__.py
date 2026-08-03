@@ -149,6 +149,9 @@ from sciplot._core.layout import (
     add_panel_labels,
     save,
     list_paper_layouts,
+    list_composite_templates,
+    hero_layout,
+    list_hero_templates,
     PAPER_LAYOUTS,
 )
 
@@ -185,6 +188,7 @@ from sciplot._core.utils import (
     validate_positive_number,
     validate_choice,
     validate_dict_not_empty,
+    relative_fontsize,
 )
 
 # ── 配置系统 (Configuration) ────────────────────────────────────
@@ -195,6 +199,17 @@ from sciplot._core.config import (
     load_config,
     reset_config,
 )
+
+# ── 色盲安全 (Colorblind Safety) ───────────────────────────────
+from sciplot._core.colorblind import (
+    simulate_colorblind,
+    check_colorblind_safe,
+    audit_palette,
+    OKABE_ITO,
+)
+
+# ── 质量审计 (Figure Audit) ────────────────────────────────────
+from sciplot._core.audit import audit_figure
 
 # ── 类型定义 (Type Definitions) ─────────────────────────────────
 from sciplot._core.types import (
@@ -268,9 +283,10 @@ from sciplot._plots.advanced import (
     plot_packed_bubble,
     plot_chord,
 )
-from sciplot._plots.flow import plot_sankey, plot_waterfall
-from sciplot._plots.proportions import plot_treemap, plot_donut
-from sciplot._plots.timeseries import plot_streamgraph
+from sciplot._plots.flow import plot_sankey, plot_waterfall, plot_alluvial
+from sciplot._plots.proportions import plot_treemap, plot_donut, plot_sunburst
+from sciplot._plots.sets import plot_upset
+from sciplot._plots.timeseries import plot_streamgraph, plot_bump
 from sciplot._plots.polar import (
     plot_radar,
     plot_taylor,
@@ -297,6 +313,8 @@ from sciplot._plots.statistical import (
     plot_ridgeline,
     plot_raincloud,
     plot_volcano,
+    plot_forest,
+    plot_funnel,
 )
 
 # ── 扩展模块 (Extensions) ──────────────────────────────────────
@@ -351,7 +369,11 @@ from sciplot._plots.aliases import (
     waterfall,
     treemap,
     donut,
+    sunburst,
+    upset,
     streamgraph,
+    bump,
+    alluvial,
     combo,
     # 极坐标 / 时序 / 统计别名
     radar,
@@ -372,6 +394,8 @@ from sciplot._plots.aliases import (
     ridgeline,
     raincloud,
     volcano,
+    forest,
+    funnel,
 )
 
 # ── 工具 ──────────────────────────────────────────────────────
@@ -600,7 +624,8 @@ __all__ = [
     # ── 布局 ──
     "new_figure", "save",
     "create_subplots", "paper_subplots", "figure_panels", "create_gridspec", "create_twinx",
-    "add_panel_labels", "list_paper_layouts",
+    "add_panel_labels", "list_paper_layouts", "list_composite_templates",
+    "hero_layout", "list_hero_templates",
 
     # ── 链式调用 ──
     "style", "palette", "chain", "inspect",
@@ -617,9 +642,16 @@ __all__ = [
     # ── 验证工具 ──
     "validate_array_like", "validate_labels_match_data",
     "validate_positive_number", "validate_choice", "validate_dict_not_empty",
+    "relative_fontsize",
 
     # ── 配置系统 ──
     "SciPlotConfig", "set_defaults", "get_config", "load_config", "reset_config",
+
+    # ── 色盲安全 ──
+    "simulate_colorblind", "check_colorblind_safe", "audit_palette", "OKABE_ITO",
+
+    # ── 质量审计 ──
+    "audit_figure",
 
     # ── 折线 / 散点 / 面积（完整名称）──
     "plot", "plot_line", "plot_multi", "plot_multi_line",
@@ -645,25 +677,25 @@ __all__ = [
     "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap", "taylor", "circular_barplot",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline",
-    "ternary", "raincloud", "volcano",
+    "ternary", "raincloud", "volcano", "forest", "funnel",
 
     # ── 高级（完整名称）──
-    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph", "plot_waterfall",
+    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph", "plot_waterfall", "plot_alluvial", "plot_bump", "plot_sunburst", "plot_upset",
 
     # ── 高级（简洁别名）──
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph", "waterfall",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
 
     # ── 极坐标图表 ──
     "plot_radar", "plot_taylor", "plot_circular_barplot",
 
     # ── 时序图表 ──
-    "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap",
+    "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_bump",
 
     # ── 多维图表 ──
     "plot_parallel", "plot_scatter_matrix", "plot_ternary",
 
     # ── 统计图表 ──
-    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano",
+    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano", "plot_forest", "plot_funnel",
 
     # ── 机器学习扩展 ──
     "plot_pca", "plot_confusion_matrix",

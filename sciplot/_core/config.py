@@ -90,6 +90,7 @@ _CONFIG_TYPES: Dict[str, Tuple[Type[Any], ...]] = {
     "dpi": (int,),
     "formats": (tuple, list),
     "theme": (str,),
+    "audit": (bool,),
 }
 
 _DEFAULTS_TEMPLATE: Dict[str, Any] = {
@@ -99,6 +100,7 @@ _DEFAULTS_TEMPLATE: Dict[str, Any] = {
     "dpi": 1200,
     "formats": ("pdf", "png"),
     "theme": "light",
+    "audit": True,
 }
 
 

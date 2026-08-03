@@ -176,6 +176,8 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/30_waffle.png" width="100%">
       <br><b>华夫图</b>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="33%">
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/31_sankey.png" width="100%">
       <br><b>桑基图</b>
@@ -184,12 +186,12 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/32_treemap.png" width="100%">
       <br><b>矩形树图</b>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="33%">
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/33_donut.png" width="100%">
       <br><b>环形图</b>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="33%">
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/34_composite_condition_matrix.png" width="100%">
       <br><b>复合图：条件矩阵</b>
@@ -226,6 +228,48 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/41_waterfall.png" width="100%">
       <br><b>瀑布图</b>
     </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/42_forest.png" width="100%">
+      <br><b>森林图（Meta 分析）</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/43_funnel.png" width="100%">
+      <br><b>漏斗图（发表偏倚）</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/44_bump.png" width="100%">
+      <br><b>排名变化图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/45_alluvial.png" width="100%">
+      <br><b>冲积图（队列迁移）</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/46_sunburst.png" width="100%">
+      <br><b>旭日图（分层占比）</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/47_upset.png" width="100%">
+      <br><b>UpSet 图（集合交集）</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/48_composite_triptych.png" width="100%">
+      <br><b>复合图：临床三联画</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/49_colorblind_okabe_ito.png" width="100%">
+      <br><b>色盲安全：Okabe-Ito</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/50_composite_hero.png" width="100%">
+      <br><b>复合图：Hero 主导面板</b>
+    </td>
   </tr>
 </table>
 
@@ -247,8 +291,10 @@
 | **🀄 中文优化** | 默认宋体中文环境，IEEE 中文字号自动调优 |
 | **📄 论文级输出** | Nature/IEEE/APS/Springer/Thesis 预置尺寸，Word/LaTeX 一键切换 |
 | **🧠 智能配色** | ≤6 条线自动选择最优子集，支持自定义配色方案 |
-| **📊 丰富图表** | 35+ 图表类型：折线/散点/柱状/箱线/小提琴/热力/气泡热力/气泡/山脊/六边形/瀑布/雷达/网络/3D 等 |
+| **📊 丰富图表** | 40+ 图表类型：折线/散点/柱状/箱线/小提琴/热力/气泡/山脊/六边形/瀑布/雷达/网络/3D/森林/漏斗/冲积/旭日/UpSet 等 |
+| **🧠 复合图模板** | `figure_panels(template=...)` 一键生成 Nature 级多面板：条件矩阵/时间推进/对照双列/流水线/临床三联画 |
 | **✨ 智能辅助** | 自动标签旋转、智能图例、布局优化、颜色对比度检查、标注自动对比色 |
+| **🎯 色盲安全** | Okabe-Ito 色盲安全调色板 + `simulate_colorblind()`/`audit_palette()` 配色防线 |
 | **🔌 扩展模块** | ML 可视化（PCA/混淆矩阵）+ 3D 可视化（曲面/等高线/散点/瀑布） |
 | **🚀 增强 API** | `PlotResult` 链式调用、语法糖别名、上下文管理器 |
 | **🌙 暗色主题** | `theme="dark"` 一键切换深色背景，适合演示与屏幕展示 |

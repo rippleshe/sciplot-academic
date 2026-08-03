@@ -263,18 +263,212 @@ def add_colorbar(
     return cbar
 
 
+# ============================================================================
+# 复合图模板（Nature 级多面板布局原型）
+# ============================================================================
+
+COMPOSITE_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    "condition_matrix": {
+        "description": "条件矩阵：行/列双因子组合实验（如药物×剂量）",
+        "nrows": 2, "ncols": 3,
+        "widths": None, "heights": None,
+        "hspace": 0.35, "wspace": 0.28,
+        "sharex": False, "sharey": True,
+        "label_size": 8,
+    },
+    "time_march": {
+        "description": "时间推进：同一系统随时间演化的快照序列",
+        "nrows": 2, "ncols": 2,
+        "widths": None, "heights": None,
+        "hspace": 0.32, "wspace": 0.28,
+        "sharex": False, "sharey": False,
+        "label_size": 8,
+    },
+    "comparative": {
+        "description": "对照双列：基线 vs 改进方法的并排对比",
+        "nrows": 1, "ncols": 2,
+        "widths": [1, 1], "heights": None,
+        "hspace": 0.30, "wspace": 0.30,
+        "sharex": False, "sharey": True,
+        "label_size": 8,
+    },
+    "pipeline": {
+        "description": "流水线：方法学论文的流程叙事（阶段间用箭头连接）",
+        "nrows": 1, "ncols": 5,
+        "widths": None, "heights": None,
+        "hspace": 0.30, "wspace": 0.62,
+        "sharex": False, "sharey": False,
+        "label_size": 8,
+    },
+    "triptych": {
+        "description": "临床三联画：上行时序、中行森林图、下行汇总柱（Nature 高频页面）",
+        "nrows": 3, "ncols": 2,
+        "widths": [1, 1], "heights": [1.0, 0.9, 0.7],
+        "hspace": 0.50, "wspace": 0.30,
+        "sharex": False, "sharey": False,
+        "label_size": 8,
+    },
+}
+
+
+def list_composite_templates() -> Dict[str, Dict[str, Any]]:
+    """列出所有内置复合图模板及其规格。
+
+    返回:
+        {模板名: {description, nrows, ncols, hspace, wspace, ...}}
+
+    示例:
+        >>> sp.list_composite_templates()
+        {'condition_matrix': {'description': ..., 'nrows': 2, ...}}
+    """
+    return {name: dict(cfg) for name, cfg in COMPOSITE_TEMPLATES.items()}
+
+
+# ============================================================================
+# 不对称 Hero 布局（主面板 + 卫星面板）
+# ============================================================================
+
+HERO_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    "hero_right": {
+        "description": "左侧主面板 + 右侧 2×1 卫星（主图占 2/3 宽）",
+        "grid": (2, 2),
+        "width_ratios": [2.0, 1.0],
+        "height_ratios": [1.0, 1.0],
+        "hero": (slice(0, 2), 0),
+        "satellites": [(0, 1), (1, 1)],
+        "hspace": 0.30, "wspace": 0.25,
+    },
+    "hero_top": {
+        "description": "顶部通栏主面板 + 底部 3 列卫星",
+        "grid": (2, 3),
+        "width_ratios": [1.0, 1.0, 1.0],
+        "height_ratios": [1.3, 1.0],
+        "hero": (0, slice(0, 3)),
+        "satellites": [(1, 0), (1, 1), (1, 2)],
+        "hspace": 0.35, "wspace": 0.25,
+    },
+    "hub_spoke": {
+        "description": "3×3 网格：中心主面板 + 上/左/右/下四个卫星",
+        "grid": (3, 3),
+        "width_ratios": [1.0, 1.0, 1.0],
+        "height_ratios": [1.0, 1.0, 1.0],
+        "hero": (1, 1),
+        "satellites": [(0, 1), (1, 0), (1, 2), (2, 1)],
+        "hspace": 0.45, "wspace": 0.35,
+    },
+}
+
+
+def list_hero_templates() -> Dict[str, Dict[str, Any]]:
+    """列出所有内置不对称 Hero 布局模板。
+
+    返回:
+        {模板名: {description, grid, hero, satellites, ...}}
+
+    示例:
+        >>> sp.list_hero_templates()
+        {'hero_right': {'description': ..., 'grid': (2, 2), ...}}
+    """
+    return {name: dict(cfg) for name, cfg in HERO_TEMPLATES.items()}
+
+
+def hero_layout(
+    template: str = "hero_right",
+    venue: str = "nature",
+    panel_labels: bool = True,
+    label_style: str = "letter",
+    label_size: Optional[int] = 8,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    **kwargs: Any,
+) -> "GridSpecResult":
+    """创建不对称 Hero 布局：一个主导面板 + 若干卫星面板。
+
+    Nature 高频页面原型：主图承载核心结论（Hero），卫星面板
+    回答次要问题。非等分网格避免 dashboard 感。
+
+    模板:
+        - 'hero_right': 左侧主面板（2/3 宽）+ 右侧 2×1 卫星
+        - 'hero_top'  : 顶部通栏主面板 + 底部 3 列卫星
+        - 'hub_spoke' : 3×3 中心主面板 + 四向卫星
+
+    返回:
+        GridSpecResult，支持:
+        - .fig  / .figure
+        - .ax_hero          （主面板）
+        - .ax_satellite(i)  （第 i 个卫星面板）
+        - .satellites       （卫星列表）
+
+    示例:
+        >>> fig, gs = sp.hero_layout("hero_right", venue="thesis")
+        >>> sp.plot_scatter(x, y, ax=gs.ax_hero)
+        >>> sp.plot_box(data, ax=gs.ax_satellite(0))
+        >>> sp.save(fig, "fig_hero")
+    """
+    from sciplot._core.result import GridSpecResult
+    from sciplot._core.style import VENUES
+
+    if template not in HERO_TEMPLATES:
+        raise ValueError(
+            f"未知 hero template '{template}'，可用选项: {list(HERO_TEMPLATES.keys())}"
+        )
+
+    apply_resolved_style(venue, palette, lang)
+    cfg = HERO_TEMPLATES[template]
+    nrows, ncols = cfg["grid"]
+    if figsize is None and venue in VENUES:
+        figsize = VENUES[venue].figsize
+
+    fig = plt.figure(figsize=figsize)
+    gs = GridSpec(
+        nrows, ncols,
+        figure=fig,
+        width_ratios=cfg["width_ratios"],
+        height_ratios=cfg["height_ratios"],
+        hspace=cfg["hspace"],
+        wspace=cfg["wspace"],
+        **kwargs,
+    )
+
+    result = GridSpecResult(fig, gs)
+
+    # 主面板与卫星
+    hero_spec = cfg["hero"]
+    ax_hero = fig.add_subplot(gs[hero_spec[0], hero_spec[1]])
+    ax_hero.tick_params(direction="in")
+    ax_hero.grid(False)
+    result._ax_hero = ax_hero  # type: ignore[attr-defined]
+
+    sat_axes: List[Axes] = []
+    for (r, c) in cfg["satellites"]:
+        ax = fig.add_subplot(gs[r, c])
+        ax.tick_params(direction="in")
+        ax.grid(False)
+        sat_axes.append(ax)
+    result._satellites = sat_axes  # type: ignore[attr-defined]
+
+    if panel_labels:
+        add_panel_labels([ax_hero, *sat_axes], style=label_style,
+                         fontsize=label_size)
+
+    return result
+
+
 def figure_panels(
     nrows: int = 1,
     ncols: int = 1,
     venue: str = "nature",
+    template: Optional[str] = None,
     widths: Optional[Sequence[float]] = None,
     heights: Optional[Sequence[float]] = None,
-    hspace: float = 0.30,
-    wspace: float = 0.25,
+    hspace: Optional[float] = None,
+    wspace: Optional[float] = None,
     panel_labels: bool = True,
     label_style: str = "letter",
-    sharex: bool = False,
-    sharey: bool = False,
+    label_size: Optional[int] = None,
+    sharex: Optional[bool] = None,
+    sharey: Optional[bool] = None,
     figsize: Optional[Tuple[float, float]] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -283,20 +477,29 @@ def figure_panels(
     """创建 Nature 级多面板复合图布局（面板自动编号 a/b/c）。
 
     设计规范（对齐 Nature 投稿惯例）：
-    - 面板按阅读顺序自动加粗标签 (a) (b) (c)…
+    - 面板按阅读顺序自动加粗标签 (a) (b) (c)…，默认 8pt（Nature 规范）
     - widths/heights 控制行列相对比例（如主面板 2/3、注释面板 1/3）
     - hspace/wspace 控制面板间距，默认大于 Matplotlib 默认值以避免标签挤压
     - venue 决定基准 figsize（nature 双栏 183mm 宽等）
 
+    template 参数（复合图模板，一次性获得顶刊级网格结构）：
+    - 'condition_matrix': 2×3 条件矩阵（行/列双因子，共享 y 轴）
+    - 'time_march'      : 2×2 时间推进快照
+    - 'comparative'     : 1×2 对照双列（基线 vs 改进，共享 y 轴）
+    - 'pipeline'        : 1×5 流水线（阶段叙事）
+    - 'triptych'        : 3×2 临床三联画（时序 + 森林 + 汇总）
+
     参数:
-        nrows/ncols: 面板行列数
+        nrows/ncols: 面板行列数（template 未指定时生效）
         venue       : 期刊预设（默认 nature）
+        template    : 复合图模板名；None 时使用手动网格参数
         widths      : 各列相对宽度，如 [1, 1.5]；None 时等宽
         heights     : 各行相对高度；None 时等高
-        hspace/wspace: 面板垂直/水平间距
+        hspace/wspace: 面板垂直/水平间距（None 用模板或默认值）
         panel_labels: 是否自动加面板标签
         label_style : 标签样式（letter/LETTER/number/roman）
-        sharex/sharey: 面板间共享轴
+        label_size  : 面板标签字号（pt）；None 时模板优先，再继承 rcParams
+        sharex/sharey: 面板间共享轴（None 用模板或默认 False）
         figsize     : 自定义尺寸；None 用 venue 默认
 
     示例:
@@ -305,8 +508,48 @@ def figure_panels(
         >>> sp.plot_scatter(x1, y1, ax=axes[0])
         >>> sp.plot_box(data, ax=axes[1])
         >>> sp.save(fig, "fig_composite")
+
+        >>> # 使用条件矩阵模板（2×3，共享 y 轴，8pt 标签）
+        >>> fig, axes = sp.figure_panels(template="condition_matrix", venue="thesis")
+        >>> for ax in axes.flat:
+        ...     ax.scatter(x, y)
+        >>> sp.save(fig, "fig_condition_matrix")
     """
     from sciplot._core.style import VENUES
+
+    # ── 模板解析：template 优先，显式参数覆盖模板值 ──
+    tmpl: Optional[Dict[str, Any]] = None
+    if template is not None:
+        if template not in COMPOSITE_TEMPLATES:
+            raise ValueError(
+                f"未知 template '{template}'，可用选项: {list(COMPOSITE_TEMPLATES.keys())}"
+            )
+        tmpl = COMPOSITE_TEMPLATES[template]
+        nrows = int(tmpl["nrows"])
+        ncols = int(tmpl["ncols"])
+        if widths is None:
+            widths = tmpl.get("widths")
+        if heights is None:
+            heights = tmpl.get("heights")
+        if hspace is None:
+            hspace = float(tmpl.get("hspace", 0.30))
+        if wspace is None:
+            wspace = float(tmpl.get("wspace", 0.25))
+        if sharex is None:
+            sharex = bool(tmpl.get("sharex", False))
+        if sharey is None:
+            sharey = bool(tmpl.get("sharey", False))
+        if label_size is None:
+            label_size = tmpl.get("label_size")
+
+    if hspace is None:
+        hspace = 0.30
+    if wspace is None:
+        wspace = 0.25
+    if sharex is None:
+        sharex = False
+    if sharey is None:
+        sharey = False
 
     if nrows <= 0 or ncols <= 0:
         raise ValueError(f"nrows/ncols 必须为正整数，实际: {nrows}x{ncols}")
@@ -335,7 +578,7 @@ def figure_panels(
     )
 
     if panel_labels:
-        add_panel_labels(axes, style=label_style)
+        add_panel_labels(axes, style=label_style, fontsize=label_size)
     return fig, axes
 
 
@@ -548,6 +791,7 @@ def save(
     bbox_inches: str = "tight",
     dir: Optional[str] = None,
     close: bool = False,
+    audit: Optional[bool] = None,
     **kwargs: Any,
 ) -> List[Path]:
     """
@@ -562,6 +806,8 @@ def save(
         bbox_inches: 默认 "tight"，自动裁剪多余白边
         dir        : 保存目录；为 None 则保存到当前工作目录
         close      : 保存后是否自动关闭图形释放内存，默认 False
+        audit      : 保存前是否执行投稿质量审计（审稿七宗罪防线）；
+                     None 时读取配置默认值（默认 True）
 
     返回:
         List[Path]: 已保存文件的路径列表
@@ -573,6 +819,7 @@ def save(
         >>> sp.save(fig, "fig", dir="outputs/figures")        # 保存到指定目录
         >>> sp.save(fig, "nested/dir/fig")                    # 自动创建嵌套目录
         >>> sp.save(fig, "batch", close=True)                 # 保存后自动关闭
+        >>> sp.save(fig, "fig", audit=False)                  # 跳过质量审计
     """
     from sciplot._core.config import get_config
 
@@ -591,6 +838,20 @@ def save(
     if any(fmt not in VECTOR_FORMATS for fmt in normalized_formats):
         if not isinstance(resolved_dpi, (int, float)) or resolved_dpi <= 0:
             raise ValueError(f"dpi 必须为正数，实际值: {resolved_dpi!r}")
+
+    # 保存前投稿质量审计（审稿七宗罪防线，不中断保存）
+    # 默认只检查必拒项：字号下限 + 多面板标签缺失；
+    # 轴标签等软性检查请显式调用 sp.audit_figure() 全量审计。
+    if audit is None:
+        cfg_audit = get_config("audit")
+        audit = bool(cfg_audit) if isinstance(cfg_audit, bool) else True
+    if audit:
+        try:
+            from sciplot._core.audit import audit_figure
+
+            audit_figure(fig, verbose=True, check_axis_labels=False)
+        except Exception:
+            pass
 
     # 处理 name 可能包含路径的情况
     name_path = Path(name)

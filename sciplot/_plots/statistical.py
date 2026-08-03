@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from statistics import NormalDist
 
 import matplotlib.pyplot as plt
@@ -18,6 +18,7 @@ from sciplot._core.utils import (
     get_cycle_colors as _get_cycle_colors,
     cycle_color,
     new_styled_figure,
+    relative_fontsize,
     _try_import_optional,
     _require_optional,
 )
@@ -888,6 +889,285 @@ def plot_volcano(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_forest(
+    effect: np.ndarray,
+    ci_low: np.ndarray,
+    ci_high: np.ndarray,
+    labels: Optional[List[str]] = None,
+    summary: Optional[Tuple[float, float, float]] = None,
+    reference: float = 0.0,
+    xlabel: str = "效应量 (95% CI)",
+    title: str = "",
+    summary_label: Optional[str] = None,
+    show_value_labels: bool = True,
+    value_format: str = "{:.2f}",
+    color: Optional[str] = None,
+    summary_color: str = "#C0392B",
+    band_alpha: float = 0.35,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制森林图（Forest Plot，Meta 分析 / 多队列效应对比）
+
+    每行一项研究/队列：点表示效应量，横线表示 95% 置信区间；
+    中心竖线为参考线（如无效线 0 或合并效应），
+    底部可加菱形表示合并效应（summary 参数）。
+    行背景交替灰色带，便于跨行对比（Nature 高频排版）。
+
+    参数:
+        effect   : 各研究效应量数组
+        ci_low   : 各研究 95% CI 下限（与 effect 等长）
+        ci_high  : 各研究 95% CI 上限（与 effect 等长）
+        labels   : 研究名称（等长）；None 时用序号
+        summary  : (合并效应, CI下限, CI上限)；None 则不绘制合并菱形
+        reference: 参考线位置（默认 0.0，即无效线）
+        xlabel   : 横轴标签
+        title    : 图标题
+        summary_label: 合并行标签（默认 "汇总" / "Summary"，跟随语言）
+        show_value_labels: 是否在右侧显示数值标签
+        value_format: 数值标签格式
+        color    : 点/线颜色；None 用主题色循环第一个
+        summary_color: 合并菱形颜色（默认深红，突出 Meta 结论）
+        band_alpha: 交替行背景透明度
+
+    示例:
+        >>> # Meta 分析：各研究效应量与合并效应
+        >>> fig, ax = sp.plot_forest(
+        ...     effect=[0.8, 0.5, 1.1, 0.6, 0.9],
+        ...     ci_low=[0.3, 0.1, 0.7, 0.2, 0.5],
+        ...     ci_high=[1.3, 0.9, 1.5, 1.0, 1.3],
+        ...     labels=["研究 1", "研究 2", "研究 3", "研究 4", "研究 5"],
+        ...     summary=(0.72, 0.52, 0.92),
+        ... )
+        >>> sp.save(fig, "forest")
+    """
+    eff = np.asarray(effect, dtype=float).ravel()
+    lo = np.asarray(ci_low, dtype=float).ravel()
+    hi = np.asarray(ci_high, dtype=float).ravel()
+
+    n = len(eff)
+    if n == 0:
+        raise ValueError("effect 不能为空")
+    if len(lo) != n or len(hi) != n:
+        raise ValueError(
+            f"ci_low/ci_high 长度 ({len(lo)}/{len(hi)}) 与 effect ({n}) 不一致"
+        )
+    if not np.all(np.isfinite(eff)) or not np.all(np.isfinite(lo)) or not np.all(np.isfinite(hi)):
+        raise ValueError("effect/ci_low/ci_high 不能包含 NaN 或 Inf")
+    if np.any(lo > hi):
+        raise ValueError("ci_low 必须小于等于 ci_high")
+    if labels is not None and len(labels) != n:
+        raise ValueError(f"labels 长度 ({len(labels)}) 与数据长度 ({n}) 不一致")
+    if summary is not None:
+        if len(summary) != 3:
+            raise ValueError("summary 必须是 (effect, ci_low, ci_high) 三元组")
+        if not all(np.isfinite(v) for v in summary):
+            raise ValueError("summary 不能包含 NaN 或 Inf")
+        if summary[1] > summary[2]:
+            raise ValueError("summary CI 下限必须小于等于上限")
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    line_color = color or _get_cycle_colors()[0]
+
+    # 行位置：研究从上到下，序号增大向下
+    ys = np.arange(n, 0, -1, dtype=float)
+    # 交替行背景（浅灰带）
+    for i in range(n):
+        if i % 2 == 1:
+            ax.axhspan(ys[i] - 0.5, ys[i] + 0.5, color="#999999",
+                       alpha=band_alpha, zorder=0)
+
+    # 置信区间线
+    ax.hlines(ys, lo, hi, color=line_color, linewidth=1.6, zorder=3)
+    # 效应量点（菱形或方形标记）
+    ax.scatter(eff, ys, marker="D", s=42, color=line_color,
+               edgecolors="white", linewidths=0.6, zorder=4)
+
+    # 参考线（无效线 / 合并线）
+    ax.axvline(reference, color="#444444", linestyle="--", linewidth=1.0, zorder=2)
+
+    # 右侧数值标签
+    if show_value_labels:
+        fontsize = relative_fontsize(-1, floor=6)
+        for i in range(n):
+            text = f"{value_format.format(eff[i])} [{value_format.format(lo[i])}, {value_format.format(hi[i])}]"
+            ax.text(1.01, ys[i], text, transform=ax.transData,
+                    fontsize=fontsize, va="center", ha="left",
+                    color="#333333", clip_on=False)
+
+    # 左侧研究标签
+    label_list: List[str]
+    if labels is None:
+        label_list = [f"{i + 1}" for i in range(n)]
+    else:
+        label_list = [str(lb) for lb in labels]
+
+    # 合并效应（底部菱形）
+    plot_ymax = float(n) + 0.5
+    if summary is not None:
+        summary_effect, summary_lo, summary_hi = summary
+        # 菱形顶点：左右 = CI 边界，上下 = 菱形高度
+        diamond_h = 0.38
+        sy = 0.0
+        ax.fill([summary_lo, summary_effect, summary_hi, summary_effect],
+                [sy, sy + diamond_h, sy, sy - diamond_h],
+                color=summary_color, edgecolor="black", linewidth=0.7, zorder=5)
+        # 汇总行背景（浅色）
+        ax.axhspan(-0.55, 0.55, color=summary_color, alpha=0.12, zorder=0)
+        # 汇总行标签
+        if summary_label is None:
+            from sciplot._core.style import get_current_lang
+
+            active_lang = lang or get_current_lang() or "zh"
+            summary_label = "汇总" if active_lang in {"zh", "zh-cn"} else "Summary"
+        plot_ymax = max(plot_ymax, 0.8)
+    else:
+        summary_effect = None
+
+    # 设置 y 轴：研究行在上，汇总行（如有）在下
+    ymin = -0.75 if summary is not None else 0.5
+    ax.set_ylim(ymin, plot_ymax)
+
+    # 研究名标签（左侧，ax 坐标外）
+    for i in range(n):
+        ax.text(-0.02, ys[i], label_list[i], transform=ax.transAxes,
+                fontsize=relative_fontsize(-1, floor=6),
+                va="center", ha="right", clip_on=False)
+    if summary is not None and summary_label:
+        ax.text(-0.02, 0.0, summary_label, transform=ax.transAxes,
+                fontsize=relative_fontsize(0, floor=6),
+                va="center", ha="right", fontweight="bold",
+                color=summary_color, clip_on=False)
+
+    ax.set_yticks([])
+    ax.set_xlabel(xlabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+
+    # 右侧数值区留白（clip_on=False 的文本需要空间）
+    xlim = ax.get_xlim()
+    span = xlim[1] - xlim[0]
+    ax.set_xlim(xlim[0], xlim[1] + span * 0.30)
+
+    meta: Dict[str, Any] = {"venue": venue, "palette": palette}
+    if summary is not None:
+        meta["summary"] = tuple(summary)
+    return PlotResult(fig, ax, metadata=meta)
+
+
+def plot_funnel(
+    effect: np.ndarray,
+    se: np.ndarray,
+    ci_low: Optional[np.ndarray] = None,
+    ci_high: Optional[np.ndarray] = None,
+    reference: Optional[float] = None,
+    xlabel: str = "效应量",
+    ylabel: str = "标准误",
+    title: str = "",
+    show_ci_triangle: bool = True,
+    show_legend: bool = True,
+    point_color: Optional[str] = None,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制漏斗图（Funnel Plot，发表偏倚检测）
+
+    横轴为效应量，纵轴为标准误（倒置：精度高的研究在上方）。
+    无偏倚时各研究对称分布于合并效应两侧，呈倒漏斗形。
+    可叠加 95% 置信三角带辅助判断对称性。
+
+    参数:
+        effect   : 各研究效应量数组
+        se       : 各研究标准误（与 effect 等长，必须 > 0）
+        ci_low/ci_high: 各研究 95% CI（可选，用于画 CI 短线）
+        reference: 参考线（合并效应）位置；None 时用加权均值
+        show_ci_triangle: 是否绘制 95% 置信三角带
+        show_legend: 是否显示图例
+        point_color: 点颜色；None 用主题色循环第一个
+
+    示例:
+        >>> # Meta 分析发表偏倚检查
+        >>> fig, ax = sp.plot_funnel(
+        ...     effect=[0.8, 0.5, 1.1, 0.6, 0.9],
+        ...     se=[0.25, 0.30, 0.20, 0.28, 0.22],
+        ... )
+        >>> sp.save(fig, "funnel")
+    """
+    eff = np.asarray(effect, dtype=float).ravel()
+    se_arr = np.asarray(se, dtype=float).ravel()
+
+    n = len(eff)
+    if n == 0:
+        raise ValueError("effect 不能为空")
+    if len(se_arr) != n:
+        raise ValueError(f"se 长度 ({len(se_arr)}) 与 effect ({n}) 不一致")
+    if not np.all(np.isfinite(eff)) or not np.all(np.isfinite(se_arr)):
+        raise ValueError("effect/se 不能包含 NaN 或 Inf")
+    if np.any(se_arr <= 0):
+        raise ValueError("se 必须全部为正数")
+    if ci_low is not None or ci_high is not None:
+        if ci_low is None or ci_high is None:
+            raise ValueError("ci_low 与 ci_high 必须同时提供")
+        lo = np.asarray(ci_low, dtype=float).ravel()
+        hi = np.asarray(ci_high, dtype=float).ravel()
+        if len(lo) != n or len(hi) != n:
+            raise ValueError("ci_low/ci_high 长度与 effect 不一致")
+        if np.any(lo > hi):
+            raise ValueError("ci_low 必须小于等于 ci_high")
+    else:
+        lo = hi = None
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    point_color_final = point_color or _get_cycle_colors()[0]
+
+    # 参考线：显式给定或逆方差加权均值
+    if reference is None:
+        w = 1.0 / (se_arr**2)
+        reference = float(np.sum(w * eff) / np.sum(w))
+
+    # 95% 置信三角带（±1.96·SE，随 SE 线性展开）
+    if show_ci_triangle:
+        se_max = float(np.max(se_arr))
+        se_range = np.linspace(0.02, se_max * 1.15, 120)
+        upper = reference + 1.96 * se_range
+        lower = reference - 1.96 * se_range
+        ax.fill_betweenx(se_range, lower, upper,
+                         color="#BBBBBB", alpha=0.18, zorder=1,
+                         label="95% 置信区间" if show_legend else None)
+
+    # CI 短线（可选）
+    if lo is not None and hi is not None:
+        ax.hlines(se_arr, lo, hi, color="#999999", linewidth=0.8, zorder=2)
+
+    # 散点
+    ax.scatter(eff, se_arr, s=30, color=point_color_final, alpha=0.75,
+               edgecolors="white", linewidths=0.5, zorder=3,
+               label="研究" if show_legend else None)
+
+    # 参考线
+    ax.axvline(reference, color="#444444", linestyle="--", linewidth=1.0, zorder=4,
+               label="合并效应" if show_legend else None)
+
+    # 倒置 y 轴：精度高的研究在上
+    ax.invert_yaxis()
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    if show_legend:
+        ax.legend(loc="upper right", frameon=False, fontsize="small")
+    ax.tick_params(direction="in")
+
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_residuals",
     "plot_qq",
@@ -897,4 +1177,6 @@ __all__ = [
     "plot_ridgeline",
     "plot_raincloud",
     "plot_volcano",
+    "plot_forest",
+    "plot_funnel",
 ]

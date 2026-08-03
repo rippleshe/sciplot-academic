@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure
+from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, relative_fontsize
 from sciplot._core.result import PlotResult
 
 # ============================================================================
@@ -341,6 +341,212 @@ def plot_waterfall(
     ax.set_xticklabels(bar_cats, rotation=25, ha="right")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+def plot_alluvial(
+    stages: Sequence[Sequence[str]],
+    flows: Sequence[Sequence[Tuple[int, int, float]]],
+    title: str = "",
+    node_colors: Optional[Sequence[str]] = None,
+    flow_alpha: float = 0.55,
+    node_width: float = 0.06,
+    label_size: Optional[int] = None,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制冲积图（Alluvial Diagram，多阶段类别流动）
+
+    各阶段为竖直列，列内类别堆叠为水平条；相邻阶段的类别
+    之间用贝塞尔流带连接，流带宽度正比于流量。
+    适合展示人群/样本在多分类间的迁移（如 分组→响应→结局）。
+
+    参数:
+        stages : 各阶段的类别名列表，如 [["A", "B"], ["X", "Y", "Z"]]
+        flows  : 相邻阶段间流量，每阶段对一组 (源索引, 目标索引, 流量)：
+                 flows[0] 描述 stages[0]→stages[1]，依此类推
+        node_colors: 各阶段类别颜色（扁平列表，按阶段顺序拼接）；
+                     None 用当前配色循环
+        flow_alpha: 流带不透明度
+        node_width: 节点条宽度（归一化坐标）
+        label_size: 类别标签字号；None 继承 rcParams
+
+    示例:
+        >>> # 队列研究：基线分组 → 干预 → 结局 的三阶段迁移
+        >>> fig, ax = sp.plot_alluvial(
+        ...     stages=[["对照", "治疗"], ["完成", "脱落", "继续"], ["改善", "无变化"]],
+        ...     flows=[
+        ...         [(0, 0, 60), (0, 1, 10), (1, 0, 40), (1, 2, 60)],
+        ...         [(0, 0, 70), (1, 1, 10), (2, 1, 20), (2, 0, 40)],
+        ...     ],
+        ... )
+        >>> sp.save(fig, "alluvial")
+    """
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path
+
+    stage_list = [list(s) for s in stages]
+    n_stages = len(stage_list)
+    if n_stages < 2:
+        raise ValueError("stages 至少需要两个阶段")
+    if any(len(s) == 0 for s in stage_list):
+        raise ValueError("每个阶段至少需要一个类别")
+
+    # flows 容错：允许扁平三元组列表（两阶段时的便捷写法）
+    if flows and isinstance(flows[0], tuple) and len(flows[0]) == 3:
+        flow_groups: List[List[Tuple[int, int, float]]] = [list(flows)]  # type: ignore[arg-type]
+    else:
+        flow_groups = [list(g) for g in flows]
+
+    if len(flow_groups) != n_stages - 1:
+        raise ValueError(
+            f"flows 长度 ({len(flow_groups)}) 必须为阶段数减一 ({n_stages - 1})"
+        )
+    for si, flow_group in enumerate(flow_groups):
+        n_src = len(stage_list[si])
+        n_dst = len(stage_list[si + 1])
+        for src_idx, dst_idx, val in flow_group:
+            if not (0 <= src_idx < n_src):
+                raise ValueError(f"flows[{si}] 源索引 {src_idx} 超出阶段 {si} 范围")
+            if not (0 <= dst_idx < n_dst):
+                raise ValueError(f"flows[{si}] 目标索引 {dst_idx} 超出阶段 {si + 1} 范围")
+            if not np.isfinite(val) or val < 0:
+                raise ValueError(f"flows[{si}] 流量必须为非负有限值，实际: {val!r}")
+
+    colors = get_cycle_colors()
+    if node_colors is None:
+        flat_colors: List[str] = []
+        for s in stage_list:
+            for j in range(len(s)):
+                flat_colors.append(cycle_color(colors, len(flat_colors)))
+    else:
+        flat_colors = list(node_colors)
+        expected = sum(len(s) for s in stage_list)
+        if len(flat_colors) != expected:
+            raise ValueError(
+                f"node_colors 长度 ({len(flat_colors)}) 与类别总数 ({expected}) 不一致"
+            )
+
+    # 每阶段类别颜色
+    stage_colors: List[List[str]] = []
+    idx = 0
+    for s in stage_list:
+        stage_colors.append(flat_colors[idx:idx + len(s)])
+        idx += len(s)
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+
+    # 每阶段：先算类别总流入/流出，确定节点条高度
+    x_positions = np.linspace(0.0, 1.0, n_stages)
+    node_totals: List[List[float]] = []
+    for si in range(n_stages):
+        totals = [0.0] * len(stage_list[si])
+        if si > 0:
+            for src_idx, dst_idx, val in flow_groups[si - 1]:
+                totals[dst_idx] += float(val)
+        if si < n_stages - 1:
+            for src_idx, dst_idx, val in flow_groups[si]:
+                totals[src_idx] += float(val)
+        node_totals.append(totals)
+
+    # 节点条 y 区间（自顶向下堆叠，归一化）
+    node_y: List[List[Tuple[float, float]]] = []
+    for si in range(n_stages):
+        total = sum(node_totals[si])
+        if total <= 0:
+            total = 1.0
+        intervals: List[Tuple[float, float]] = []
+        cursor = 1.0
+        for t in node_totals[si]:
+            h = t / total
+            intervals.append((cursor - h, cursor))
+            cursor -= h
+        node_y.append(intervals)
+
+    fs = label_size if label_size is not None \
+        else relative_fontsize(-1, floor=7)
+
+    # 绘制流带（先画，垫底）
+    for si in range(n_stages - 1):
+        x0, x1 = x_positions[si], x_positions[si + 1]
+        gap = x1 - x0
+        # 流带在节点条内部的 y 区间：按流量细分
+        src_y = node_y[si]
+        dst_y = node_y[si + 1]
+        # 记录每个类别已用偏移量（从区间顶部开始分配）
+        src_cursor = [y_hi for (_, y_hi) in src_y]
+        dst_cursor = [y_hi for (_, y_hi) in dst_y]
+        for src_idx, dst_idx, val in flow_groups[si]:
+            v = float(val)
+            # 源侧：按类别内流量比例分配流带（从上往下连续分配）
+            src_lo, src_hi = src_y[src_idx]
+            src_span = src_hi - src_lo
+            src_total = max(sum(x[2] for x in flow_groups[si] if x[0] == src_idx), 1e-12)
+            src_frac = v / src_total
+            band_h = src_span * src_frac
+            yA0 = src_cursor[src_idx] - band_h
+            yA1 = src_cursor[src_idx]
+            src_cursor[src_idx] = yA0
+
+            dst_span = dst_y[dst_idx][1] - dst_y[dst_idx][0]
+            dst_total = max(sum(x[2] for x in flow_groups[si] if x[1] == dst_idx), 1e-12)
+            dst_frac = v / dst_total
+            band_h2 = dst_span * dst_frac
+            yB0 = dst_cursor[dst_idx] - band_h2
+            yB1 = dst_cursor[dst_idx]
+            dst_cursor[dst_idx] = yB0
+
+            # 贝塞尔曲线流带
+            c = stage_colors[si][src_idx]
+            verts = [
+                (x0 + node_width / 2, yA0),
+                (x0 + node_width / 2, yA1),
+                (x0 + gap * 0.5, yA1),
+                (x0 + gap * 0.5, yB1),
+                (x1 - node_width / 2, yB1),
+                (x1 - node_width / 2, yB0),
+                (x0 + gap * 0.5, yB0),
+                (x0 + gap * 0.5, yA0),
+            ]
+            codes = [
+                Path.MOVETO, Path.LINETO, Path.CURVE4, Path.CURVE4,
+                Path.LINETO, Path.LINETO, Path.CURVE4, Path.CURVE4,
+            ]
+            path = Path(verts, codes)
+            patch = PathPatch(path, facecolor=c, edgecolor="none",
+                              alpha=flow_alpha, zorder=1)
+            ax.add_patch(patch)
+
+    # 节点条（覆盖流带边缘）
+    for si in range(n_stages):
+        x0 = x_positions[si]
+        for j, (ylo, yhi) in enumerate(node_y[si]):
+            ax.add_patch(PathPatch(
+                Path([(x0 - node_width / 2, ylo),
+                      (x0 + node_width / 2, ylo),
+                      (x0 + node_width / 2, yhi),
+                      (x0 - node_width / 2, yhi),
+                      (x0 - node_width / 2, ylo)]),
+                facecolor=stage_colors[si][j], edgecolor="white",
+                linewidth=0.8, zorder=2,
+            ))
+            # 类别标签
+            ax.text(x0 - node_width / 2 - 0.012, (ylo + yhi) / 2,
+                    stage_list[si][j], va="center", ha="right",
+                    fontsize=fs, color="#333333", clip_on=False)
+
+    ax.set_xlim(-0.02 - node_width, 1.02 + node_width)
+    ax.set_ylim(-0.02, 1.02)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     if title:
         ax.set_title(title)
     ax.tick_params(direction="in")

@@ -7,6 +7,55 @@
 
 ---
 
+## [1.13.0] - 2026-08-03
+
+### Added
+
+- **复合图模板系统**：`figure_panels(template=...)` 一键生成 Nature 级多面板布局，
+  内置 5 大原型：`condition_matrix`（2×3 条件矩阵）/ `time_march`（2×2 时间推进）/
+  `comparative`（1×2 对照双列）/ `pipeline`（1×5 流水线）/ `triptych`（3×2 临床三联画）
+  - 模板自动配置网格结构、间距、共享轴策略与 **8pt 加粗面板标签**（Nature 规范）
+  - 新增 `list_composite_templates()` 查询模板注册表
+  - 显式参数可覆盖模板值，`template=None` 完全向后兼容
+- **不对称 Hero 布局**：`hero_layout(template=...)` 主面板 + 卫星面板架构
+  - `hero_right`（左侧 2/3 主面板 + 右双卫星）/ `hero_top`（顶部通栏 + 底部三列）/
+    `hub_spoke`（3×3 中心 + 四向卫星）
+  - `GridSpecResult` 新增 `ax_hero` / `satellites` / `ax_satellite(i)` 属性
+- **6 个新图表类型**（均带简洁别名，纯 matplotlib 无新依赖）：
+  - `plot_forest`（`forest`）：森林图，Meta 分析标配；交替行带、CI 区间、
+    合并菱形、右侧数值标签
+  - `plot_funnel`（`funnel`）：漏斗图，发表偏倚检测；95% 置信三角带、
+    逆方差加权参考线
+  - `plot_bump`（`bump`）：排名变化图，端点放大 + 末端直接标注，支持单条高亮
+  - `plot_alluvial`（`alluvial`）：冲积图，多阶段类别流动（贝塞尔流带）
+  - `plot_sunburst`（`sunburst`）：旭日图，分层占比（递归扇区）
+  - `plot_upset`（`upset`）：UpSet 图，集合交集可视化（韦恩图替代方案）
+- **色盲安全防线**（审稿七宗罪之一）：
+  - `simulate_colorblind()`：Brettel-Viénot-Mollon (1997) 矩阵模拟三类色觉缺失
+  - `check_colorblind_safe()`：色盲视角下颜色区分度校验
+  - `audit_palette()`：内置配色色盲安全体检
+  - 内置 **Okabe-Ito 色盲安全调色板**（okabe-ito / okabe-ito-4 / okabe-ito-6），
+    可直接 `setup_style(palette="okabe-ito")`
+- **投稿质量审计**（审稿七宗罪防线）：
+  - `audit_figure()`：检查字号下限（Nature 最小 5pt）、多面板标签缺失、轴未标注
+  - `save()` 默认执行必拒项审计（字号 + 面板标签），`audit=False` 或
+    `set_defaults(audit=False)` 可关闭
+- 新增 `relative_fontsize()` 字号工具（统一相对字号 + 下限保护）
+- 新增 showcase 42–50（森林/漏斗/排名/冲积/旭日/UpSet/临床三联画/色盲安全/Hero 布局）
+
+### Changed
+
+- `figure_panels` 面板标签默认字号改为 8pt（模板场景，Nature 规范）
+- `add_panel_labels` 支持通过 `fontsize` 参数显式控制标签字号
+- 新图表内部统一使用 `relative_fontsize`，消除重复字号计算
+
+### Tests
+
+- 新增 119 个用例（复合图模板 12 / Meta 分析 14 / 排名冲积 16 / 旭日 Upset 20 /
+  色盲安全 15 / Hero 布局 10 / 质量审计 11 / 回归加固 21），总数 1511 passed
+
+---
+
 ## [1.12.6] - 2026-08-03
 
 ### Added

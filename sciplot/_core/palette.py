@@ -252,6 +252,16 @@ RESIDENT_PALETTES: Dict[str, List[str]] = {
     **DIVERGING_PALETTES,
 }
 
+# 色盲安全调色板（Okabe-Ito）并入内置配色体系
+# 延迟导入避免模块级循环依赖（colorblind 内 audit_palette 局部导入本模块）
+try:
+    from sciplot._core.colorblind import OKABE_ITO as _OKABE_ITO
+
+    RESIDENT_PALETTES.update(_OKABE_ITO)
+except ImportError:  # pragma: no cover - 防御性回退
+    _OKABE_ITO = {}
+
+
 
 def _register_diverging_cmaps() -> None:
     """将 SciPlot 发散配色注册为 matplotlib colormap。"""

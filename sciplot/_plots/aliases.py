@@ -48,8 +48,9 @@ from sciplot._plots.advanced import (
     plot_packed_bubble,
     plot_chord,
 )
-from sciplot._plots.flow import plot_sankey, plot_waterfall
-from sciplot._plots.proportions import plot_treemap, plot_donut
+from sciplot._plots.flow import plot_sankey, plot_waterfall, plot_alluvial
+from sciplot._plots.proportions import plot_treemap, plot_donut, plot_sunburst
+from sciplot._plots.sets import plot_upset
 from sciplot._plots.polar import (
     plot_radar,
     plot_taylor,
@@ -64,6 +65,7 @@ from sciplot._plots.timeseries import (
     plot_gantt,
     plot_calendar_heatmap,
     plot_streamgraph,
+    plot_bump,
 )
 from sciplot._plots.statistical import (
     plot_density,
@@ -74,6 +76,8 @@ from sciplot._plots.statistical import (
     plot_ridgeline,
     plot_raincloud,
     plot_volcano,
+    plot_forest,
+    plot_funnel,
 )
 from sciplot._ext.plot3d import (
     plot_waterfall3d,
@@ -142,9 +146,13 @@ packed_bubble = _make_alias(plot_packed_bubble)
 chord = _make_alias(plot_chord)
 sankey = _make_alias(plot_sankey)
 waterfall = _make_alias(plot_waterfall)
+alluvial = _make_alias(plot_alluvial)
 treemap = _make_alias(plot_treemap)
 donut = _make_alias(plot_donut)
+sunburst = _make_alias(plot_sunburst)
+upset = _make_alias(plot_upset)
 streamgraph = _make_alias(plot_streamgraph)
+bump = _make_alias(plot_bump)
 combo = _make_alias(plot_combo)
 
 # ═══════════════════════════════════════════════════════════════
@@ -166,6 +174,8 @@ bland_altman = _make_alias(plot_bland_altman)
 ridgeline = _make_alias(plot_ridgeline)
 raincloud = _make_alias(plot_raincloud)
 volcano = _make_alias(plot_volcano)
+forest = _make_alias(plot_forest)
+funnel = _make_alias(plot_funnel)
 waterfall3d = _make_alias(plot_waterfall3d)
 
 
@@ -174,8 +184,8 @@ __all__ = [
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop",
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph", "waterfall",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
     "radar", "taylor", "circular_barplot", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "waterfall3d",
+    "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "forest", "funnel", "waterfall3d",
 ]

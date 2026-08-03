@@ -16,7 +16,7 @@ import numpy as np
 from datetime import date, datetime, timedelta
 
 from sciplot._core.layout import add_colorbar
-from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data
+from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data, relative_fontsize
 from sciplot._core.result import PlotResult
 
 
@@ -932,4 +932,118 @@ def plot_streamgraph(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_streamgraph"]
+def plot_bump(
+    labels: List[str],
+    values: Union[np.ndarray, List[List[float]]],
+    time_points: Optional[List[str]] = None,
+    xlabel: str = "",
+    ylabel: str = "排名",
+    title: str = "",
+    highlight: Optional[str] = None,
+    highlight_color: str = "#C0392B",
+    base_color: str = "#9AA5B1",
+    linewidth: float = 1.6,
+    marker_size: float = 5.0,
+    show_end_labels: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制排名变化图（Bump Chart，时间序列排名演化）
+
+    横轴为时间点，纵轴为排名（1 在顶部），每条曲线代表一个
+    对象的排名随时间的变化。端点放大标记，末尾直接标注名称
+    （Nature 常用“直接标注优先于图例”）。
+    支持高亮单条曲线（其余置灰），用于突出某个对象的轨迹。
+
+    参数:
+        labels      : 对象名称列表（与 values 行数一致）
+        values      : 对象×时间点的数值矩阵（自动转为排名）；
+                      若已传入排名矩阵（1 为最优），请先转置输入
+        time_points : 时间点标签；None 时用 1..n
+        highlight   : 高亮对象名（其余曲线置灰）；None 不高亮
+        highlight_color: 高亮曲线颜色，默认深红
+        base_color  : 非高亮曲线颜色，默认灰蓝
+        show_end_labels: 是否在曲线末端直接标注名称
+
+    示例:
+        >>> # 三个模型在 5 个 benchmark 上的排名变化
+        >>> fig, ax = sp.plot_bump(
+        ...     labels=["模型 A", "模型 B", "模型 C"],
+        ...     values=[[85, 88, 90, 87, 92],
+        ...             [90, 85, 82, 88, 86],
+        ...             [78, 92, 95, 93, 94]],
+        ...     time_points=["T1", "T2", "T3", "T4", "T5"],
+        ...     highlight="模型 C",
+        ... )
+        >>> sp.save(fig, "bump")
+    """
+    mat = np.asarray(values, dtype=float)
+    if mat.ndim != 2:
+        raise ValueError("values 必须是二维数组（对象 × 时间点）")
+    n_items, n_time = mat.shape
+    if n_items == 0 or n_time == 0:
+        raise ValueError("values 不能为空")
+    if len(labels) != n_items:
+        raise ValueError(f"labels 长度 ({len(labels)}) 与 values 行数 ({n_items}) 不一致")
+    if time_points is not None and len(time_points) != n_time:
+        raise ValueError(
+            f"time_points 长度 ({len(time_points)}) 与列数 ({n_time}) 不一致"
+        )
+    if not np.all(np.isfinite(mat)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if highlight is not None and highlight not in labels:
+        raise ValueError(f"highlight '{highlight}' 不在 labels 中")
+
+    # 数值 → 排名（每列内：值越大排名越靠前）
+    ranks = np.zeros_like(mat, dtype=int)
+    for j in range(n_time):
+        order = np.argsort(-mat[:, j], kind="stable")
+        ranks[order, j] = np.arange(1, n_items + 1)
+
+    x = np.arange(n_time, dtype=float)
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+
+    colors = get_cycle_colors()
+    for i in range(n_items):
+        if highlight is not None and labels[i] == highlight:
+            c = highlight_color
+            lw = linewidth + 0.8
+        elif highlight is not None:
+            c = base_color
+            lw = linewidth * 0.8
+        else:
+            c = cycle_color(colors, i)
+            lw = linewidth
+        alpha = 1.0 if (highlight is None or labels[i] == highlight) else 0.6
+        ax.plot(x, ranks[i], "-o", color=c, linewidth=lw,
+                markersize=marker_size, alpha=alpha, zorder=3)
+
+    # 末端直接标注
+    if show_end_labels:
+        fs = relative_fontsize(-1, floor=6)
+        for i in range(n_items):
+            c = highlight_color if (highlight is not None and labels[i] == highlight) \
+                else (base_color if highlight is not None else cycle_color(colors, i))
+            ax.text(x[-1] + 0.12, ranks[i, -1], str(labels[i]),
+                    va="center", ha="left", fontsize=fs, color=c, clip_on=False)
+
+    ax.set_xticks(x)
+    if time_points is not None:
+        ax.set_xticklabels(time_points)
+    ax.set_yticks(np.arange(1, n_items + 1))
+    ax.invert_yaxis()  # 排名 1 在顶部
+    ax.set_xlim(-0.4, n_time - 0.6 + (0.6 if show_end_labels else 0.0))
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_streamgraph", "plot_bump"]

@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure
+from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, relative_fontsize
 from sciplot._core.result import PlotResult
 
 # ============================================================================
@@ -323,6 +323,174 @@ def plot_donut(
         spine.set_visible(False)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 旭日图（Sunburst，Part-of-a-whole 家族）
+# ============================================================================
+
+def plot_sunburst(
+    labels: List[str],
+    parents: List[Optional[str]],
+    values: np.ndarray,
+    title: str = "",
+    colors: Optional[Sequence[str]] = None,
+    show_labels: bool = True,
+    label_min_angle: float = 8.0,
+    ring_gap: float = 0.03,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """
+    绘制旭日图（Sunburst Chart，分层占比）
+
+    同心环逐层展开层级占比：内环为顶层类别，外环为子类别，
+    每段弧长正比于数值。适合展示“整体 → 分类 → 子类”的
+    多级构成（如 门 → 纲 → 属 的分类学结构）。
+
+    参数:
+        labels  : 所有节点标签（含根节点，根为 "" 或自定义名）
+        parents : 每个节点的父节点标签（根节点为 None）
+        values  : 每个节点的数值（内部节点可为其子节点之和或任意值）
+        colors  : 顶层类别颜色列表（按顶层节点顺序）；None 用配色循环
+        show_labels: 是否在扇区显示标签
+        label_min_angle: 扇区角度小于该值（度）时不显示标签
+        ring_gap: 环间留白比例
+
+    示例:
+        >>> # 分类学结构：根 → 两门 → 六属
+        >>> fig, ax = sp.plot_sunburst(
+        ...     labels=["", "门A", "门B", "属A1", "属A2", "属B1", "属B2", "属B3"],
+        ...     parents=[None, "", "", "门A", "门A", "门B", "门B", "门B"],
+        ...     values=[100, 60, 40, 35, 25, 18, 12, 10],
+        ... )
+        >>> sp.save(fig, "sunburst")
+    """
+    lbl = [str(lb) for lb in labels]
+    par = [None if p is None else str(p) for p in parents]
+    val = np.asarray(values, dtype=float).ravel()
+
+    n = len(lbl)
+    if n == 0:
+        raise ValueError("labels 不能为空")
+    if len(par) != n or len(val) != n:
+        raise ValueError("labels/parents/values 长度必须一致")
+    if not np.all(np.isfinite(val)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if np.any(val < 0):
+        raise ValueError("values 不能包含负值")
+
+    # 构建父子索引映射
+    index_of = {name: i for i, name in enumerate(lbl)}
+    for i, p in enumerate(par):
+        if p is not None and p not in index_of:
+            raise ValueError(f"parents[{i}] '{p}' 不在 labels 中")
+
+    children: Dict[int, List[int]] = {i: [] for i in range(n)}
+    for i, p in enumerate(par):
+        if p is not None:
+            children[index_of[p]].append(i)
+
+    # 计算深度（BFS）
+    depth = [0] * n
+    roots = [i for i in range(n) if par[i] is None]
+    if not roots:
+        raise ValueError("至少需要一个根节点（parents 为 None）")
+    queue = list(roots)
+    while queue:
+        node = queue.pop(0)
+        for c in children[node]:
+            depth[c] = depth[node] + 1
+            queue.append(c)
+    max_depth = max(depth)
+
+    # 顶层节点颜色
+    cycle = get_cycle_colors()
+    if colors is None:
+        top_colors = [cycle_color(cycle, i) for i in range(len(roots))]
+    else:
+        if len(colors) != len(roots):
+            raise ValueError(
+                f"colors 长度 ({len(colors)}) 与顶层节点数 ({len(roots)}) 不一致"
+            )
+        top_colors = list(colors)
+    root_color_map = {root: top_colors[i] for i, root in enumerate(roots)}
+    node_color: Dict[int, str] = {}
+    for i, p in enumerate(par):
+        if p is None:
+            node_color[i] = root_color_map[i]
+        else:
+            node_color[i] = node_color[index_of[p]]
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+
+    # 递归绘制扇区（从根开始，按数值分配角度）
+    ring_width = 1.0 / (max_depth + 1) if max_depth > 0 else 1.0
+
+    def _draw_node(idx: int, theta0: float, theta1: float, depth_idx: int) -> None:
+        """绘制节点扇区，递归绘制子节点。"""
+        r_outer = 1.0 - depth_idx * ring_width
+        r_inner = max(0.0, r_outer - ring_width + ring_gap)
+        if theta1 - theta0 > 1e-9 and r_outer - r_inner > 1e-9:
+            wedge = ax.pie(
+                [val[idx]],
+                startangle=90.0,
+                colors=[node_color[idx]],
+                radius=r_outer,
+                counterclock=False,
+                wedgeprops=dict(
+                    width=r_outer - r_inner,
+                    edgecolor="white",
+                    linewidth=0.8,
+                ),
+            )
+            wedges = wedge[0]
+            w = wedges[0]
+            w.set_theta1(90.0 - theta1)
+            w.set_theta2(90.0 - theta0)
+
+            # 扇区标签（角度足够大才显示）
+            if show_labels and (theta1 - theta0) * 180.0 / np.pi >= label_min_angle:
+                mid = (theta0 + theta1) / 2
+                r_mid = (r_inner + r_outer) / 2
+                fs = relative_fontsize(-2, floor=6)
+                x_t = r_mid * np.cos(mid)
+                y_t = r_mid * np.sin(mid)
+                ax.text(x_t, y_t, lbl[idx], ha="center", va="center",
+                        fontsize=fs, color="white", fontweight="bold", zorder=5)
+
+        total_child = sum(val[c] for c in children[idx])
+        if total_child <= 0:
+            return
+        cursor = theta0
+        # 子节点按出现顺序分配角度
+        for c in children[idx]:
+            frac = float(val[c]) / total_child
+            child_span = (theta1 - theta0) * frac
+            _draw_node(c, cursor, cursor + child_span, depth_idx + 1)
+            cursor += child_span
+
+    total_root = sum(float(val[r]) for r in roots)
+    if total_root <= 0:
+        raise ValueError("根节点 values 之和必须大于 0")
+    cursor = 0.0
+    for r in roots:
+        frac = float(val[r]) / total_root
+        _draw_node(r, cursor, cursor + 2 * np.pi * frac, 0)
+        cursor += 2 * np.pi * frac
+
+    ax.set_aspect("equal")
+    ax.set_xlim(-1.05, 1.05)
+    ax.set_ylim(-1.05, 1.05)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     if title:
         ax.set_title(title)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

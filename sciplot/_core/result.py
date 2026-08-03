@@ -478,6 +478,9 @@ class GridSpecResult:
     def __init__(self, fig: Figure, gridspec: GridSpec):
         self._fig = fig
         self._gridspec = gridspec
+        # Hero 布局扩展（由 hero_layout 填充）：
+        self._ax_hero: Optional[Axes] = None
+        self._satellites: List[Axes] = []
 
     @property
     def fig(self) -> Figure:
@@ -488,6 +491,33 @@ class GridSpecResult:
     def figure(self) -> Figure:
         """获取 Figure 对象（别名）"""
         return self._fig
+
+    @property
+    def ax_hero(self) -> Axes:
+        """Hero 布局：主导面板（未使用 hero_layout 时抛错）。"""
+        if self._ax_hero is None:
+            raise AttributeError(
+                "当前 GridSpecResult 未使用 hero_layout 创建，无主面板"
+            )
+        return self._ax_hero
+
+    @property
+    def hero_ax(self) -> Axes:
+        """ax_hero 的别名。"""
+        return self.ax_hero
+
+    @property
+    def satellites(self) -> List[Axes]:
+        """Hero 布局：卫星面板列表。"""
+        return list(self._satellites)
+
+    def ax_satellite(self, index: int) -> Axes:
+        """获取第 index 个卫星面板。"""
+        if index < 0 or index >= len(self._satellites):
+            raise IndexError(
+                f"卫星面板索引 {index} 超出范围 [0, {len(self._satellites) - 1}]"
+            )
+        return self._satellites[index]
 
     @property
     def gs(self) -> GridSpec:
