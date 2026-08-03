@@ -7,6 +7,17 @@
 
 ---
 
+## [1.11.1] - 2026-08-03
+
+### Changed
+
+- 重构 skill 目录：`sciplot-skill/` 迁移至 `.claude/skills/sciplot/`（Claude Code 标准位置），
+  SKILL.md 元数据标准化为 YAML frontmatter（name/description/version/author/…），
+  skill 名从 `sciplot-skill` 改为规范的 `sciplot`
+- README 修正 skill 引用路径与失效的文档链接
+
+---
+
 ## [1.11.0] - 2026-08-03
 
 ### Added
