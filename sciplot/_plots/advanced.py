@@ -265,6 +265,8 @@ def plot_heatmap(
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
                 cell_value = data[i, j]
+                if not np.isfinite(cell_value):
+                    continue  # NaN 掩膜格（如上三角）不写文字
                 if annot_color is None:
                     # 依据格子实际渲染颜色的亮度自动选择黑/白文字，保证可读性。
                     rgba = im.cmap(norm(cell_value))

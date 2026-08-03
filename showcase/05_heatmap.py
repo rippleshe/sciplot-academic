@@ -48,8 +48,12 @@ var_labels = [
 ]
 
 # ── 绘图 ──────────────────────────────────────────────────────
+# 掩膜上三角 + 对角线（相关性矩阵惯例：只展示下三角）
+masked = corr_matrix.copy()
+masked[np.triu_indices_from(masked)] = np.nan
+
 fig, ax = sp.plot_heatmap(
-    corr_matrix,
+    masked,
     row_labels=var_labels,
     col_labels=var_labels,
     cmap="RdBu_r",
