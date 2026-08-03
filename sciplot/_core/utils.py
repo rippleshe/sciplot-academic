@@ -240,6 +240,16 @@ def apply_resolved_style(
     return effective_venue
 
 
+def _try_import_optional(module_name: str) -> Any:
+    """尝试导入可选依赖模块，失败时返回 None（静默降级）。"""
+    import importlib
+
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        return None
+
+
 def new_styled_figure(
     venue: Optional[str] = None,
     palette: Optional[str] = None,

@@ -17,6 +17,7 @@ from sciplot._core.utils import (
     boxplot_with_orientation,
     get_cycle_colors as _get_cycle_colors,
     new_styled_figure,
+    _try_import_optional,
 )
 from sciplot._core.result import PlotResult
 
@@ -35,11 +36,7 @@ def _is_constant(values: np.ndarray) -> bool:
 
 def _try_import_scipy_stats() -> Any:
     """尝试导入 scipy.stats，失败时返回 None。"""
-    try:
-        from scipy import stats
-        return stats
-    except ImportError:
-        return None
+    return _try_import_optional("scipy.stats")
 
 
 def _check_scipy_stats() -> Any:

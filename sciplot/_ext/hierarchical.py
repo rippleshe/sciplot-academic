@@ -16,17 +16,13 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.style import VENUES
-from sciplot._core.utils import apply_resolved_style, new_styled_figure
+from sciplot._core.utils import apply_resolved_style, new_styled_figure, _try_import_optional
 from sciplot._core.result import PlotResult
 
 
 def _try_import_scipy():
     """尝试导入 scipy.cluster.hierarchy，失败时返回 None。"""
-    try:
-        from scipy.cluster import hierarchy
-        return hierarchy
-    except ImportError:
-        return None
+    return _try_import_optional("scipy.cluster.hierarchy")
 
 
 def _check_scipy():
