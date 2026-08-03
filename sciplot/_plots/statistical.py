@@ -18,12 +18,11 @@ from sciplot._core.utils import (
     apply_resolved_style,
     boxplot_with_orientation,
     get_cycle_colors as _get_cycle_colors,
-    _ensure_non_empty_prop_cycle,
 )
 from sciplot._core.result import PlotResult
 
 
-# _get_cycle_colors 和 _ensure_non_empty_prop_cycle 已从 sciplot._core.utils 导入
+# _get_cycle_colors 已从 sciplot._core.utils 导入（其内部保证 prop_cycle 非空）
 
 
 def _try_import_scipy_stats() -> Any:
@@ -120,7 +119,6 @@ def plot_residuals(
     residuals = y_true - y_pred
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     colors = _get_cycle_colors()
@@ -203,7 +201,6 @@ def plot_qq(
         )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     colors = _get_cycle_colors()
@@ -304,7 +301,6 @@ def plot_bland_altman(
     lower_loa = mean_diff - 1.96 * std_diff
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     colors = _get_cycle_colors()
@@ -372,7 +368,6 @@ def plot_density(
         raise ValueError("plot_density 至少需要 2 个有效数据点")
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     if values.min() == values.max():
@@ -438,7 +433,6 @@ def plot_multi_density(
         )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     all_values = np.concatenate(normalized_data)
@@ -540,7 +534,6 @@ def plot_ridgeline(
         )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     colors = _get_cycle_colors()
@@ -666,7 +659,6 @@ def plot_raincloud(
         )
 
     effective_venue = apply_resolved_style(venue, palette, lang)
-    _ensure_non_empty_prop_cycle()
     fig, ax = new_figure(effective_venue)
 
     colors = _get_cycle_colors()
