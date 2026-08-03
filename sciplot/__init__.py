@@ -267,7 +267,7 @@ from sciplot._plots.advanced import (
     plot_packed_bubble,
     plot_chord,
 )
-from sciplot._plots.flow import plot_sankey
+from sciplot._plots.flow import plot_sankey, plot_waterfall
 from sciplot._plots.proportions import plot_treemap, plot_donut
 from sciplot._plots.timeseries import plot_streamgraph
 from sciplot._plots.polar import (
@@ -347,6 +347,7 @@ from sciplot._plots.aliases import (
     packed_bubble,
     chord,
     sankey,
+    waterfall,
     treemap,
     donut,
     streamgraph,
@@ -646,10 +647,10 @@ __all__ = [
     "ternary", "raincloud", "volcano",
 
     # ── 高级（完整名称）──
-    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph",
+    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph", "plot_waterfall",
 
     # ── 高级（简洁别名）──
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph", "waterfall",
 
     # ── 极坐标图表 ──
     "plot_radar", "plot_taylor", "plot_circular_barplot",

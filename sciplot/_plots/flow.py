@@ -240,3 +240,108 @@ def plot_sankey(
     if title:
         ax.set_title(title)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 瀑布图（Waterfall，增量分解）
+# ============================================================================
+
+def plot_waterfall(
+    categories: List[str],
+    values: np.ndarray,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    start_value: float = 0.0,
+    show_connectors: bool = True,
+    show_values: bool = True,
+    fmt: str = ".1f",
+    increase_color: str = "#2E8B57",
+    decrease_color: str = "#D64541",
+    total_color: str = "#4A4A4A",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制瀑布图（Waterfall Chart，增量分解）。
+
+    财务/预算/误差分析的经典图表：从起始值出发，每个增量（绿）与
+    减量（红）依次堆叠，末位显示最终总计条（深灰），
+    累计值用虚线连接。Plotly 单列一类的经典图表。
+
+    参数:
+        categories    : 各增量/减量的名称（最后自动追加“总计”条）
+        values        : 各步增量（正数=增加，负数=减少）
+        start_value   : 起始值（如初始库存/预算）
+        show_connectors: 是否显示累计虚线连接线
+        show_values   : 是否在条形上显示数值
+        increase_color/ decrease_color/ total_color: 增/减/总计三色
+
+    示例:
+        >>> fig, ax = sp.plot_waterfall(
+        ...     ["期初", "销售", "采购", "损耗"], [100, 30, -15, -5],
+        ...     start_value=80,
+        ... )
+    """
+    cat_arr = list(categories)
+    val_arr = np.asarray(values, dtype=float).ravel()
+    if len(cat_arr) != len(val_arr):
+        raise ValueError(
+            f"categories 长度 ({len(cat_arr)}) 与 values 长度 ({len(val_arr)}) 不一致"
+        )
+    if len(cat_arr) == 0:
+        raise ValueError("categories/values 不能为空")
+    if not np.all(np.isfinite(val_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if not np.isfinite(start_value):
+        raise ValueError("start_value 必须是有限数值")
+
+    # 累计轨迹
+    cum = float(start_value)
+    bottoms: List[float] = []
+    for v in val_arr:
+        bottoms.append(cum)
+        cum += float(v)
+    total = cum
+
+    # 条形颜色与高度
+    bar_colors = [increase_color if v >= 0 else decrease_color for v in val_arr]
+    bar_colors.append(total_color)
+    bar_heights = [abs(v) for v in val_arr] + [abs(total)]
+    bar_bottoms = bottoms + [0.0]
+    bar_cats = cat_arr + ["总计"]
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+
+    x_pos = np.arange(len(bar_cats))
+    bars = ax.bar(x_pos, bar_heights, bottom=bar_bottoms, color=bar_colors,
+                  edgecolor="white", linewidth=0.8, width=0.62, **kwargs)
+    for b in bars:
+        b.set_zorder(2)
+
+    # 累计连接线（各条形顶端之间的虚线）
+    if show_connectors and len(bottoms) > 1:
+        cum_pts = [float(start_value)] + [b + h for b, h in zip(bottoms, [abs(v) for v in val_arr])]
+        for i in range(len(cum_pts) - 1):
+            ax.plot([x_pos[i], x_pos[i + 1]], [cum_pts[i], cum_pts[i]],
+                    color="#999999", linestyle="--", linewidth=0.8, zorder=1)
+
+    # 数值标注
+    if show_values:
+        fs = max(7, plt.rcParams.get("font.size", 9) - 1)
+        span = max(bar_heights) if bar_heights else 1.0
+        for xi, (h, btm, v) in enumerate(zip(bar_heights, bar_bottoms,
+                                              [float(x) for x in val_arr] + [total])):
+            label_y = btm + h + 0.03 * span
+            ax.text(xi, label_y, f"{v:{fmt}}", ha="center",
+                    fontsize=fs, color="#333333", zorder=3)
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(bar_cats, rotation=25, ha="right")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
