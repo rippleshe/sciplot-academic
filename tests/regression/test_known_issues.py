@@ -7,6 +7,7 @@ import numpy as np
 import sciplot as sp
 from matplotlib import rcParams
 import warnings
+from pathlib import Path
 
 
 class TestUnicodeMinusFix:
@@ -268,4 +269,6 @@ class TestSaveFunction:
         
         assert len(paths) == 1
         assert paths[0].exists()
-        assert paths[0].parent == temp_dir
+        # save() 会对 dir 做 .resolve() 规范化（macOS 符号链接 /var→/private/var，
+        # Windows 8.3 短名展开），断言需同样规范化后再比较
+        assert paths[0].parent.resolve() == Path(temp_dir).resolve()
