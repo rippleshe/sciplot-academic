@@ -261,6 +261,18 @@ def _require_optional(module_name: str, feature_hint: str) -> Any:
     )
 
 
+def _apply_style_and_figure(
+    venue: Optional[str],
+    palette: Optional[str],
+    lang: Optional[str],
+) -> Tuple[Optional[str], Any, Any]:
+    """套用样式并创建图形，返回 (effective_venue, fig, ax)。"""
+    from sciplot._core.layout import new_figure
+
+    effective_venue = apply_resolved_style(venue, palette, lang)
+    return effective_venue, new_figure(effective_venue)
+
+
 def new_styled_figure(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
@@ -272,10 +284,8 @@ def new_styled_figure(
     ``effective_venue = apply_resolved_style(...); fig, ax = new_figure(...)``
     两行，可安全替换各绘图函数中的手写配对。
     """
-    from sciplot._core.layout import new_figure
-
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    return new_figure(effective_venue)
+    _, fig, ax = _apply_style_and_figure(venue, palette, lang)
+    return fig, ax
 
 
 def create_sciplot_figure(
@@ -301,10 +311,7 @@ def create_sciplot_figure(
         >>> ax.plot([1, 2, 3], [1, 4, 9])
         >>> result = create_plot_result(fig, ax, venue="nature", palette="pastel")
     """
-    from sciplot._core.layout import new_figure
-
-    effective_venue = apply_resolved_style(venue, palette, lang)
-    fig, ax = new_figure(effective_venue)
+    effective_venue, fig, ax = _apply_style_and_figure(venue, palette, lang)
     ax.tick_params(direction="in")
     return effective_venue, fig, ax
 
