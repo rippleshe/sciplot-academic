@@ -1741,7 +1741,7 @@ def plot_donut(
         def pct_txt(pct: float) -> str:
             return f"{pct:{percent_fmt}}%"
 
-    wedges, _ = ax.pie(
+    wedges, *_ = ax.pie(
         val_arr,
         colors=color_list,
         startangle=start_angle,
