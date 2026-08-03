@@ -989,12 +989,12 @@ def plot_forest(
     # 参考线（无效线 / 合并线）
     ax.axvline(reference, color="#444444", linestyle="--", linewidth=1.0, zorder=2)
 
-    # 右侧数值标签
+    # 右侧数值标签（x 用 axes 坐标，y 用数据坐标）
     if show_value_labels:
         fontsize = relative_fontsize(-1, floor=6)
         for i in range(n):
             text = f"{value_format.format(eff[i])} [{value_format.format(lo[i])}, {value_format.format(hi[i])}]"
-            ax.text(1.01, ys[i], text, transform=ax.transData,
+            ax.text(1.01, ys[i], text, transform=ax.get_yaxis_transform(),
                     fontsize=fontsize, va="center", ha="left",
                     color="#333333", clip_on=False)
 
@@ -1031,13 +1031,14 @@ def plot_forest(
     ymin = -0.75 if summary is not None else 0.5
     ax.set_ylim(ymin, plot_ymax)
 
-    # 研究名标签（左侧，ax 坐标外）
+    # 研究名标签（x 用 axes 坐标，y 用数据坐标；transAxes 会把数据值
+    # 误当归一化坐标导致 tight 边界异常拉伸）
     for i in range(n):
-        ax.text(-0.02, ys[i], label_list[i], transform=ax.transAxes,
+        ax.text(-0.02, ys[i], label_list[i], transform=ax.get_yaxis_transform(),
                 fontsize=relative_fontsize(-1, floor=6),
                 va="center", ha="right", clip_on=False)
     if summary is not None and summary_label:
-        ax.text(-0.02, 0.0, summary_label, transform=ax.transAxes,
+        ax.text(-0.02, 0.0, summary_label, transform=ax.get_yaxis_transform(),
                 fontsize=relative_fontsize(0, floor=6),
                 va="center", ha="right", fontweight="bold",
                 color=summary_color, clip_on=False)
@@ -1048,7 +1049,7 @@ def plot_forest(
         ax.set_title(title)
     ax.tick_params(direction="in")
 
-    # 右侧数值区留白（clip_on=False 的文本需要空间）
+    # 右侧数值区留白：数据区右侧留出标签空间（axes 坐标 1.0 之外）
     xlim = ax.get_xlim()
     span = xlim[1] - xlim[0]
     ax.set_xlim(xlim[0], xlim[1] + span * 0.30)
