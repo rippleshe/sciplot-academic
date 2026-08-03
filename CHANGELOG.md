@@ -7,6 +7,19 @@
 
 ---
 
+## [1.13.3] - 2026-08-03
+
+### Fixed
+
+- **PlotResult.save / GridSpecResult.save 补 audit 参数**：与 layout.save 对齐，
+  链式调用时可用 audit=False 关闭投稿质量审计
+- **showcase 36 重构**：中心-辐条复合图改用 hero_layout("hub_spoke") API，
+  替换手写 3×3 gridspec（代码 90 行 → 1 行布局），验证 API 落地
+- **skill 同步**：触发词表补新图表关键词（森林/漏斗/旭日/UpSet/Meta 分析），
+  版本号残留清理，全部同步至 v1.13.1
+
+---
+
 ## [1.13.2] - 2026-08-03
 
 ### Fixed

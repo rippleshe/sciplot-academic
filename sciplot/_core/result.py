@@ -329,6 +329,7 @@ class PlotResult:
         dir: Optional[str] = None,
         tight: bool = True,
         close: bool = False,
+        audit: Optional[bool] = None,
         **kwargs: Any,
     ) -> List[Path]:
         """
@@ -342,6 +343,7 @@ class PlotResult:
             dir: 保存目录
             tight: 是否自动调整布局，默认 True
             close: 保存后是否自动关闭图形释放内存，默认 False
+            audit: 是否执行投稿质量审计；None 读取配置默认值
 
         返回:
             保存的文件路径列表
@@ -349,7 +351,8 @@ class PlotResult:
         if tight:
             _safe_tight_layout(self._fig)
         return _save(self._fig, name, dpi=dpi, formats=formats,
-                     bbox_inches=bbox_inches, dir=dir, close=close, **kwargs)
+                     bbox_inches=bbox_inches, dir=dir, close=close,
+                     audit=audit, **kwargs)
 
     def show(self) -> None:
         """显示图形"""
@@ -594,16 +597,19 @@ class GridSpecResult:
         formats: Optional[Union[str, Sequence[str]]] = None,
         tight: bool = True,
         close: bool = False,
+        audit: Optional[bool] = None,
         **kwargs: Any,
     ) -> List[Path]:
         """保存图形
 
         参数:
             close: 保存后是否自动关闭图形释放内存，默认 False
+            audit: 是否执行投稿质量审计；None 读取配置默认值
         """
         if tight:
             _safe_tight_layout(self._fig)
-        return _save(self._fig, name, dpi=dpi, formats=formats, close=close, **kwargs)
+        return _save(self._fig, name, dpi=dpi, formats=formats, close=close,
+                     audit=audit, **kwargs)
 
     def show(self) -> None:
         """显示图形"""

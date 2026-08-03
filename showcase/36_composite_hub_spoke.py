@@ -2,13 +2,13 @@
 36_composite_hub_spoke.py — Nature 复合图模板：中心-辐条（Hub-and-Spoke）
 
 布局原型：hub-and-spoke（中心总览 + 卫星细节）。
-中心面板：模型整体性能（雷达图）；四周四个卫星面板：
-特征重要性 / 混淆矩阵 / 学习曲线 / PR 曲线。
-用 ConnectionPatch 画辐条连线，面板标签 (a)-(e) 按阅读顺序。
+使用 sp.hero_layout("hub_spoke") 获得 3×3 网格：
+中心主面板 + 上/左/右/下四个卫星面板，自动加 8pt 面板标签。
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import ConnectionPatch
 import sciplot as sp
 
 rng = np.random.default_rng(7)
@@ -39,18 +39,11 @@ recall = np.linspace(0, 1, 60)
 precision = 0.90 - 0.25 * recall + 0.15 * recall**2 + rng.normal(0, 0.01, 60)
 precision = np.clip(precision, 0, 1)
 
-# ── 布局：3×3 网格，中心占中间格 ──────────────────────────────
+# ── 布局：hero_layout hub_spoke（中心 + 四卫星） ───────────────
 sp.setup_style("thesis", "ocean", lang="zh")
-fig = plt.figure(figsize=(7.0, 6.5))
-gs = fig.add_gridspec(3, 3, hspace=0.55, wspace=0.40)
-ax_top = fig.add_subplot(gs[0, 1])
-ax_left = fig.add_subplot(gs[1, 0])
-ax_right = fig.add_subplot(gs[1, 2])
-ax_bottom = fig.add_subplot(gs[2, 1])
-ax_center = fig.add_subplot(gs[1, 1])
-
-for ax in [ax_top, ax_left, ax_right, ax_bottom, ax_center]:
-    ax.tick_params(direction="in")
+result = sp.hero_layout("hub_spoke", venue="thesis")
+ax_center = result.ax_hero
+ax_top, ax_left, ax_right, ax_bottom = result.satellites
 
 # ── 中心：雷达图（模型整体 F1） ──────────────────────────────
 angles = np.linspace(0, 2 * np.pi, len(classes), endpoint=False).tolist()
@@ -72,7 +65,7 @@ ax_top.set_title("特征重要性", fontsize=8)
 ax_top.tick_params(axis="y", labelsize=6)
 
 # ── 卫星 2（左）：混淆矩阵（归一化） ─────────────────────────
-im = ax_left.imshow(cm, cmap="Blues", vmin=0, vmax=1)
+ax_left.imshow(cm, cmap="Blues", vmin=0, vmax=1)
 ax_left.set_xticks(range(5))
 ax_left.set_yticks(range(5))
 ax_left.set_xticklabels([""] * 5, fontsize=5)
@@ -94,21 +87,13 @@ ax_bottom.set_title("PR 曲线", fontsize=8)
 ax_bottom.tick_params(labelsize=6)
 
 # ── 辐条连线（中心 → 卫星，fig 坐标） ───────────────────────
-from matplotlib.patches import ConnectionPatch
-
 for sat in [ax_top, ax_left, ax_right, ax_bottom]:
     cp = ConnectionPatch(
         xyA=(0.5, 0.5), coordsA=ax_center.transAxes,
         xyB=(0.5, 0.5), coordsB=sat.transAxes,
         color="#BBBBBB", linewidth=0.8, linestyle="--", zorder=0,
     )
-    fig.add_artist(cp)
-
-# ── 面板标签（阅读顺序：中心 a → 上 b → 左 c → 右 d → 下 e） ─
-for ax, lbl in zip([ax_center, ax_top, ax_left, ax_right, ax_bottom],
-                   ["a", "b", "c", "d", "e"]):
-    ax.text(-0.12, 1.06, f"({lbl})", transform=ax.transAxes,
-            fontweight="bold", fontsize=11)
+    result.fig.add_artist(cp)
 
 # ── 保存 ──────────────────────────────────────────────────────
-sp.save(fig, "showcase/36_composite_hub_spoke", formats=("png",), dpi=300)
+sp.save(result.fig, "showcase/36_composite_hub_spoke", formats=("png",), dpi=300)
