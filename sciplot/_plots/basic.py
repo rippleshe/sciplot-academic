@@ -145,6 +145,7 @@ def plot_multi_line(
     lang: Optional[str] = None,
     use_linestyles: bool = False,
     show_legend: bool = True,
+    highlight_last: bool = False,
     **kwargs: Any,
 ) -> PlotResult:
     """
@@ -154,6 +155,8 @@ def plot_multi_line(
         use_linestyles: True 时在不同颜色外叠加线型循环（- -- -. :），
                         提升黑白打印/色盲可读性
         show_legend   : 是否显示图例，默认 True；当 labels 为自动生成时可设为 False
+        highlight_last: 是否高亮最后一条线（加粗 + 星形标记），
+                        对比图中突出“本文方法”等主角线的惯例做法
         lang          : 语言设置
 
     示例:
@@ -184,7 +187,15 @@ def plot_multi_line(
         xi = x[i] if x_is_multi else x
         _validate_xy_lengths(xi, y, x_name=("x" if not x_is_multi else f"x[{i}]"), y_name=f"y_list[{i}]")  # type: ignore
         ls = LINE_STYLES[i % len(LINE_STYLES)] if use_linestyles else "-"
-        ax.plot(xi, y, label=lbl, linestyle=ls, **kwargs)
+        if highlight_last and i == len(y_list) - 1:
+            line_kwargs = dict(kwargs)
+            line_kwargs.setdefault("linewidth", 2.6)
+            line_kwargs.setdefault("marker", "*")
+            line_kwargs.setdefault("markersize", 9)
+            line_kwargs.setdefault("zorder", 5)
+            ax.plot(xi, y, label=lbl, linestyle=ls, **line_kwargs)
+        else:
+            ax.plot(xi, y, label=lbl, linestyle=ls, **kwargs)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

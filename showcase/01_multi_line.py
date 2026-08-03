@@ -43,7 +43,9 @@ fig, ax = sp.plot_multi(
     xlabel="信噪比 (dB)",
     ylabel="检测概率",
     palette="pastel",
+    highlight_last=True,   # 本文方法加粗 + 星形标记
 )
+ax.grid(True, linestyle="--", alpha=0.4)  # 浅网格辅助读数
 
 # ── 保存 ──────────────────────────────────────────────────────
 sp.save(fig, "showcase/01_multi_line", formats=("png",), dpi=300)
