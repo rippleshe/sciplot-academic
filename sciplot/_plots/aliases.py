@@ -62,6 +62,7 @@ from sciplot._plots.timeseries import (
     plot_multi_timeseries,
     plot_gantt,
     plot_calendar_heatmap,
+    plot_streamgraph,
 )
 from sciplot._plots.statistical import (
     plot_density,
@@ -141,6 +142,7 @@ chord = _make_alias(plot_chord)
 sankey = _make_alias(plot_sankey)
 treemap = _make_alias(plot_treemap)
 donut = _make_alias(plot_donut)
+streamgraph = _make_alias(plot_streamgraph)
 combo = _make_alias(plot_combo)
 
 # ═══════════════════════════════════════════════════════════════
@@ -169,7 +171,7 @@ __all__ = [
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop",
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut",
+    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph",
     "radar", "taylor", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "waterfall3d",

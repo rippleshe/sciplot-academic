@@ -16,7 +16,7 @@ import numpy as np
 from datetime import date, datetime, timedelta
 
 from sciplot._core.layout import add_colorbar
-from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure
+from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data
 from sciplot._core.result import PlotResult
 
 
@@ -834,4 +834,102 @@ def plot_calendar_heatmap(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap"]
+def plot_streamgraph(
+    x: np.ndarray,
+    y_list: Sequence[np.ndarray],
+    labels: Optional[Sequence[str]] = None,
+    baseline: str = "wiggle",
+    alpha: float = 0.85,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制流图（Streamgraph，类别的时序构成演变）。
+
+    堆叠面积图的变体：基线按列偏移，形成“河流”形态，
+    适合展示多类别随时间占比/数量的连续演变（Python Graph
+    Gallery 的 Evolution 家族经典类型）。纯 matplotlib 实现。
+
+    参数:
+        x        : 时间轴（等长数组）
+        y_list   : 每类一条序列
+        labels   : 类别名
+        baseline : 基线策略
+                   'wiggle' → 逐列平滑偏移（默认，河流形态最平滑）
+                   'center' → 整体居中对称
+                   'zero'   → 从零堆叠（普通堆叠面积图）
+        alpha    : 图层不透明度
+
+    示例:
+        >>> fig, ax = sp.plot_streamgraph(
+        ...     years, [y_web, y_mobile, y_pc],
+        ...     labels=["Web", "移动端", "PC"],
+        ... )
+    """
+    x_arr = np.asarray(x, dtype=float).ravel()
+    series = [np.asarray(y, dtype=float).ravel() for y in y_list]
+    if len(series) == 0:
+        raise ValueError("y_list 不能为空")
+    n_pts = len(x_arr)
+    for i, y in enumerate(series):
+        if len(y) != n_pts:
+            raise ValueError(
+                f"y_list[{i}] 长度 ({len(y)}) 与 x 长度 ({n_pts}) 不一致"
+            )
+        if not np.all(np.isfinite(y)):
+            raise ValueError(f"y_list[{i}] 不能包含 NaN 或 Inf")
+        if np.any(y < 0):
+            raise ValueError(f"y_list[{i}] 不能包含负值（流图要求非负）")
+    if baseline not in {"wiggle", "center", "zero"}:
+        raise ValueError(f"baseline 仅支持 'wiggle' / 'center' / 'zero'，实际值: {baseline!r}")
+
+    labels = validate_labels_match_data(labels, series)
+
+    stacked = np.vstack(series)  # (n_series, n_pts)
+    totals = stacked.sum(axis=0)
+
+    # 基线偏移（Byron-Wattenberg 流图基线）
+    if baseline == "zero":
+        offset = np.zeros(n_pts)
+    elif baseline == "center":
+        offset = -totals / 2.0
+    else:  # wiggle：center 基础上做逐列平滑，使相邻层面积平衡
+        offset = -totals / 2.0
+        # 多轮松弛：相邻列基线差最小化
+        for _ in range(12):
+            new_offset = offset.copy()
+            new_offset[1:-1] = 0.5 * (offset[:-2] + offset[2:])
+            offset = new_offset
+        # 端点保持，整体再居中
+        offset = offset - np.mean(offset)
+
+    bases = offset + np.cumsum(stacked, axis=0) - stacked
+    tops = bases + stacked
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = get_cycle_colors()
+
+    # 从最上层往下画（视觉上较新的类别在上）
+    for i in range(len(series) - 1, -1, -1):
+        ax.fill_between(
+            x_arr, bases[i], tops[i],
+            color=cycle_color(colors, i), alpha=alpha,
+            label=labels[i], linewidth=0.4,
+            edgecolor="white", zorder=2,
+        )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.tick_params(direction="in")
+    if labels is not None:
+        ax.legend(frameon=False)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_streamgraph"]
