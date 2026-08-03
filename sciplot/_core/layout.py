@@ -75,6 +75,15 @@ PAPER_LAYOUTS: Dict[str, Dict[str, Tuple[float, float]]] = {
 }
 
 
+# Windows 保留设备名（含带扩展名的变体，如 CON.png），
+# 避免写入控制台设备或产生不可索引文件
+_WINDOWS_RESERVED_NAMES = frozenset({
+    "con", "prn", "aux", "nul",
+    *(f"com{i}" for i in range(1, 10)),
+    *(f"lpt{i}" for i in range(1, 10)),
+})
+
+
 # ============================================================================
 # 基础图形创建
 # ============================================================================
@@ -487,13 +496,7 @@ def save(
     if name_path.name in {"", ".", ".."}:
         raise ValueError("name 必须是有效文件名")
 
-    # Windows 保留设备名检查：CON/PRN/AUX/NUL/COM1-9/LPT1-9
-    # （含带扩展名的变体，如 CON.png），避免写入控制台设备或产生不可索引文件
-    _WINDOWS_RESERVED_NAMES = {
-        "con", "prn", "aux", "nul",
-        *(f"com{i}" for i in range(1, 10)),
-        *(f"lpt{i}" for i in range(1, 10)),
-    }
+    # Windows 保留设备名检查（模块级常量，含带扩展名的变体）
     stem_lower = name_path.stem.lower()
     if stem_lower in _WINDOWS_RESERVED_NAMES:
         raise ValueError(
