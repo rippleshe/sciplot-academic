@@ -149,6 +149,47 @@ def test_alluvial_save_png(tmp_path, cleanup_figures):
     assert paths[0].exists()
 
 
+def test_alluvial_imbalanced_node_no_overflow(cleanup_figures):
+    """流入≠流出的节点：流带累计高度不得超过节点条高度（防溢出细条）。
+
+    回归：曾用全局 total_value 归一化流带高度，节点流入≠流出时
+    流带会溢出节点条边界产生视觉残留。
+    """
+    from matplotlib.patches import PathPatch, Rectangle
+
+    stages = [["A", "B"], ["X", "Y"]]
+    # A 流出 50 但流入 0（不守恒）；X 流入 80 无流出
+    flows = [[(0, 0, 30), (0, 1, 20), (1, 0, 50)]]
+    fig, ax = sp.plot_alluvial(stages, flows)
+
+    # 找所有 PathPatch（流带=8顶点，节点条=5顶点）与节点矩形
+    bands = [p for p in ax.patches
+             if isinstance(p, PathPatch) and len(p.get_path().vertices) >= 8]
+    node_patches = [p for p in ax.patches
+                    if isinstance(p, PathPatch) and len(p.get_path().vertices) < 8]
+    assert len(bands) == 3
+    assert len(node_patches) == 4
+
+    # 对每个目标列（x 最大的列）的节点：流入流带不得超出节点条 y 范围
+    target_x = max(float(n.get_path().vertices[:, 0].min()) for n in node_patches)
+    target_nodes = [n for n in node_patches
+                    if np.isclose(n.get_path().vertices[:, 0].min(), target_x, atol=1e-6)]
+    # 目标列节点条 y 覆盖范围
+    node_min = min(float(n.get_path().vertices[:, 1].min()) for n in target_nodes)
+    node_max = max(float(n.get_path().vertices[:, 1].max()) for n in target_nodes)
+    for band in bands:
+        verts = band.get_path().vertices
+        xs = verts[:, 0]
+        right_side = np.isclose(xs, xs.max(), atol=1e-6)
+        if not right_side.any():
+            continue
+        band_top = float(verts[right_side][:, 1].max())
+        band_bottom = float(verts[right_side][:, 1].min())
+        # 目标侧流带应落在节点条并集区间内（允许 1e-6 容差）
+        assert band_top <= node_max + 1e-6, "流带顶部溢出节点条"
+        assert band_bottom >= node_min - 1e-6, "流带底部溢出节点条"
+
+
 # ── 别名与导出 ────────────────────────────────────────────────
 
 def test_aliases_exported(cleanup_figures):

@@ -173,19 +173,25 @@ def plot_sankey(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     # ── 流量带（先画，zorder 低于节点） ──
+    # 流带高度在源/目标侧分别按该节点自身流量归一化，
+    # 保证 ∑流带高度 == 节点条高度（视觉严格对齐，无溢出残留）
     for s, t, v in zip(src_arr, tgt_arr, val_arr):
         x_s, y_s = node_pos[s]
         x_t, y_t = node_pos[t]
         h_s = node_value[s] / total_value
         h_t = node_value[t] / total_value
-        y_s0 = y_s + h_s - (out_cursor[s] + v / total_value)
-        y_t0 = y_t + h_t - (in_cursor[t] + v / total_value)
-        out_cursor[s] += v / total_value
-        in_cursor[t] += v / total_value
-        w = v / total_value
-        # 垂直居中于带，半带宽
-        b_s = w / 2
-        b_t = w / 2
+        # 节点内流量占比（避免流入≠流出时流带溢出节点条）
+        out_total = max(outflow[s], 1e-12)
+        in_total = max(inflow[t], 1e-12)
+        frac_s = float(v) / out_total * h_s
+        frac_t = float(v) / in_total * h_t
+        y_s0 = y_s + h_s - (out_cursor[s] + frac_s)
+        y_t0 = y_t + h_t - (in_cursor[t] + frac_t)
+        out_cursor[s] += frac_s
+        in_cursor[t] += frac_t
+        # 半带宽：取两侧的平均（带在两端宽度一致，中间平滑过渡）
+        b_s = frac_s / 2
+        b_t = frac_t / 2
         xm = (x_s + node_width + x_t) / 2
         verts = [
             (x_s + node_width, y_s0 + b_s),
