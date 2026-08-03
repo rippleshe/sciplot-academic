@@ -25,7 +25,7 @@ from __future__ import annotations
 import re
 import threading
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import matplotlib.pyplot as plt
 from cycler import cycler
@@ -609,6 +609,7 @@ def dual_encode_colors(
         >>> colors = sp.dual_encode_colors([\"#E07B54\", \"#5B7DB1\"], 3)
         >>> fig, ax = sp.plot_bar(cats, vals, color=colors[0][2])  # 处理1高剂量
     """
+    import colorsys
     import matplotlib.colors as mcolors
 
     if not hue_colors:
@@ -623,7 +624,7 @@ def dual_encode_colors(
     matrix: List[List[str]] = []
     for hue in hue_colors:
         rgb = mcolors.to_rgb(hue)
-        h, l, s = mcolors.rgb_to_hls(*rgb)
+        h, l, s = colorsys.rgb_to_hls(*rgb)
         row: List[str] = []
         if levels == 1:
             row.append(hue)
@@ -631,6 +632,6 @@ def dual_encode_colors(
             for i in range(levels):
                 frac = i / (levels - 1)
                 lightness = min_lightness + (max_lightness - min_lightness) * frac
-                row.append(mcolors.to_hex(mcolors.hls_to_rgb(h, lightness, s)))
+                row.append(mcolors.to_hex(colorsys.hls_to_rgb(h, lightness, s)))
         matrix.append(row)
     return matrix
