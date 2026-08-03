@@ -90,6 +90,35 @@
   </tr>
 </table>
 
+### 进阶图表
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/13_bubble_heatmap.png" width="100%">
+      <br><b>气泡热力图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/14_waterfall3d.png" width="100%">
+      <br><b>3D 瀑布图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/15_bubble.png" width="100%">
+      <br><b>二维气泡图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/16_ridgeline.png" width="100%">
+      <br><b>山脊图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/17_hexbin.png" width="100%">
+      <br><b>六边形密度图</b>
+    </td>
+  </tr>
+</table>
+
 </div>
 
 ---
