@@ -43,6 +43,8 @@ test = [
     "pytest-cov>=4.0",
     "pytest-xdist>=3.5",
     "coverage[toml]",
+    "pandas>=2.2; python_version >= '3.11'",
+    "pandas>=2.2,<3.0; python_version < '3.11'",
 ]
 lint = [
     "ruff>=0.5",

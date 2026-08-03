@@ -44,7 +44,7 @@ jobs:
         version: "latest"
 
     - name: Sync locked dependencies
-      run: uv sync --frozen --extra dev --extra all
+      run: uv sync --frozen --extra dev --extra all --extra test
 
     - name: Run mypy
       run: uv run mypy sciplot/ --ignore-missing-imports
@@ -71,7 +71,7 @@ jobs:
         version: "latest"
 
     - name: Sync locked dependencies
-      run: uv sync --frozen --extra dev --extra all
+      run: uv sync --frozen --extra dev --extra all --extra test
 
     - name: Run tests with coverage
       shell: bash
