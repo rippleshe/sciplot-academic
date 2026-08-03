@@ -10,7 +10,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, boxplot_with_orientation, get_cycle_colors
+from sciplot._core.utils import (
+    apply_resolved_style,
+    boxplot_with_orientation,
+    contrast_text_color,
+    get_cycle_colors,
+)
 from sciplot._core.result import PlotResult
 
 
@@ -247,9 +252,7 @@ def plot_heatmap(
                 if annot_color is None:
                     # 依据格子实际渲染颜色的亮度自动选择黑/白文字，保证可读性。
                     rgba = im.cmap(norm(cell_value))
-                    r, g, b = to_rgb(rgba)
-                    luminance = 0.299 * r + 0.587 * g + 0.114 * b
-                    text_color = "black" if luminance > 0.55 else "white"
+                    text_color = contrast_text_color(rgba)
                 else:
                     text_color = annot_color
                 ax.text(
@@ -422,9 +425,7 @@ def plot_bubble_heatmap(
         fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
         for x_p, y_p, v, rgba in zip(x_pts, y_pts, vals, colors):
             if annot_color is None:
-                r, g, b = to_rgb(rgba)
-                luminance = 0.299 * r + 0.587 * g + 0.114 * b
-                text_color = "black" if luminance > 0.55 else "white"
+                text_color = contrast_text_color(rgba)
             else:
                 text_color = annot_color
             ax.text(
@@ -611,10 +612,8 @@ def plot_packed_bubble(
             edgecolor="white", linewidth=1.2, zorder=1, **kwargs,
         )
         ax.add_patch(circle)
-        # 文字对比度：依据底色亮度选黑/白
-        rr, gg, bb = to_rgb(colors[i])
-        luminance = 0.299 * rr + 0.587 * gg + 0.114 * bb
-        text_color = "black" if luminance > 0.62 else "white"
+        # 文字对比度：依据底色亮度选黑/白（packed 气泡文字面积极小，阈值略高）
+        text_color = contrast_text_color(colors[i], threshold=0.62)
         fs = max(min_font, min(max_font, fontsize * (0.7 + 1.3 * (r / max(radii)))))
         ax.text(
             pos[i][0], pos[i][1], label,
@@ -1246,9 +1245,7 @@ def plot_bubble(
             if color_arr is not None:
                 # 依据数据点实际渲染颜色选择对比色
                 rgba = cmap_obj(norm(float(color_arr[idx])))
-                r, g, b = _to_rgb(rgba)
-                luminance = 0.299 * r + 0.587 * g + 0.114 * b
-                text_color = "black" if luminance > 0.55 else "white"
+                text_color = contrast_text_color(rgba)
             else:
                 text_color = "black"
             ax.text(

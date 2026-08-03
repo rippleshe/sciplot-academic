@@ -551,6 +551,30 @@ def boxplot_with_orientation(
         return ax.boxplot(data, vert=(orientation != "horizontal"), **kwargs)
 
 
+def contrast_text_color(color: Any, threshold: float = 0.55) -> str:
+    """依据背景色亮度自动选择黑/白文字，保证对比度。
+
+    参数:
+        color: 任意 matplotlib 可解析的颜色（hex/名称/RGBA）
+        threshold: 亮度阈值，高于则用黑字、低于用白字，默认 0.55
+
+    返回:
+        "black" 或 "white"
+    """
+    from matplotlib.colors import to_rgb, to_rgba
+
+    try:
+        r, g, b = to_rgb(color)
+    except (ValueError, TypeError):
+        # RGBA 元组/数组等特殊输入回退
+        try:
+            r, g, b = to_rgb(to_rgba(color)[:3])
+        except Exception:
+            return "black"
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return "black" if luminance > threshold else "white"
+
+
 __all__ = [
     "apply_resolved_style",
     "create_sciplot_figure",
@@ -563,5 +587,6 @@ __all__ = [
     "validate_dict_not_empty",
     "get_cycle_colors",
     "boxplot_with_orientation",
+    "contrast_text_color",
 ]
 
