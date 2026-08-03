@@ -699,8 +699,14 @@ def plot_combo(
         >>> result = sp.plot_combo(months, bar_data={"销量": sales}, line_data={"均价": prices})
         >>> ax_bar, ax_line = result.ax_array
     """
-    if not bar_data:
-        raise ValueError("bar_data 不能为空，至少需要一个柱状图系列")
+    # 兼容两种输入：{系列名: 数值} 字典，或单个数值数组（自动命名 "值"）
+    if isinstance(bar_data, dict):
+        if not bar_data:
+            raise ValueError("bar_data 不能为空，至少需要一个柱状图系列")
+        normalized_input = bar_data
+    else:
+        # 数组/列表：包成单系列字典
+        normalized_input = {"值": bar_data}
 
     if len(x) == 0:
         raise ValueError("x 不能为空")
@@ -708,7 +714,7 @@ def plot_combo(
 
     n_groups = len(x)
     normalized_bar_data: Dict[str, np.ndarray] = {}
-    for name, values in bar_data.items():
+    for name, values in normalized_input.items():
         series_values = np.asarray(
             validate_array_like(values, f"bar_data['{name}']"),
             dtype=float,
@@ -722,9 +728,13 @@ def plot_combo(
         normalized_bar_data[name] = series_values
 
     normalized_line_data: Optional[Dict[str, np.ndarray]] = None
-    if line_data:
+    if line_data is not None:
+        if isinstance(line_data, dict):
+            line_input = line_data
+        else:
+            line_input = {"值": line_data}
         normalized_line_data = {}
-        for name, values in line_data.items():
+        for name, values in line_input.items():
             series_values = np.asarray(
                 validate_array_like(values, f"line_data['{name}']"),
                 dtype=float,

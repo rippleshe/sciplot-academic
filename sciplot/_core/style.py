@@ -306,21 +306,47 @@ def setup_style(
     plt.rcParams["axes.formatter.use_mathtext"] = False
 
     # ── 字体 ──
-    plt.rcParams["font.family"] = "serif"
+    # font.family 直接使用字体名列表：matplotlib 3.6+ 会逐字符回退，
+    # 保证混排（如英文正文 + 中文标签）不缺字形。
+    # 列表先按系统中实际安装的字体过滤，消除 findfont 警告噪音，
+    # 同时保留跨机器可移植性（未安装的字体只是被移除，不影响回退链语义）。
+    def _filter_installed(fonts: List[str]) -> List[str]:
+        from matplotlib import font_manager as _fm
+
+        installed = {f.name for f in _fm.fontManager.ttflist}
+        result = [f for f in fonts if f in installed]
+        # 过滤后为空时保留通用族（此时 matplotlib 自行解析）
+        if not result:
+            result = ["serif"]
+        return result
+
     if cjk_font:
-        plt.rcParams["font.serif"] = [
+        plt.rcParams["font.family"] = _filter_installed([
             cjk_font,
             "Noto Serif CJK SC",
             "Source Han Serif SC",
             "Times New Roman",
             "DejaVu Serif",
-        ]
+        ])
+        plt.rcParams["font.serif"] = list(plt.rcParams["font.family"])
     else:
-        plt.rcParams["font.serif"] = [
+        # 英文模式：主字体 Times New Roman，CJK 回退链保留
+        # （用户混排中文标签时自动回退，避免缺字形警告）
+        plt.rcParams["font.family"] = _filter_installed([
             "Times New Roman",
+            "SimSun",
+            "Noto Serif CJK SC",
+            "Source Han Serif SC",
             "DejaVu Serif",
-            "serif",
-        ]
+        ])
+        plt.rcParams["font.serif"] = list(plt.rcParams["font.family"])
+        plt.rcParams["font.sans-serif"] = _filter_installed([
+            "Arial",
+            "SimHei",
+            "Microsoft YaHei",
+            "Noto Sans CJK SC",
+            "DejaVu Sans",
+        ])
 
     # ── 数学文本字体设置 ──
     # 使用与正文字体一致的设置，避免字体缺失导致的负号问题

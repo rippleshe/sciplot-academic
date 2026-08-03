@@ -28,16 +28,34 @@ def _safe_tight_layout(fig: Figure, stacklevel: int = 2) -> None:
     """
     安全调用 tight_layout()，捕获并警告异常。
 
+    tight_layout 不支持某些布局（如 gridspec 多轴自定义布局、
+    3D 轴），此时回退到 constrained_layout（其支持任意 gridspec），
+    两者都失败才警告。
+
     参数:
         fig: matplotlib Figure 对象
         stacklevel: 警告堆栈级别
     """
     try:
         fig.tight_layout()
-    except ValueError as exc:
-        warnings.warn(f"tight_layout() 跳过: {exc}", UserWarning, stacklevel=stacklevel)
-    except Exception as exc:
-        warnings.warn(f"tight_layout() 失败: {exc}", UserWarning, stacklevel=stacklevel)
+        return
+    except Exception:
+        pass
+
+    # 回退：constrained_layout 支持 tight_layout 不支持的 gridspec 布局
+    try:
+        fig.set_layout_engine("constrained")
+        return
+    except Exception:
+        pass
+
+    import warnings as _w
+
+    _w.warn(
+        "tight_layout() 与 constrained_layout 均不可用，布局可能未优化。",
+        UserWarning,
+        stacklevel=stacklevel,
+    )
 
 
 class PlotResult:

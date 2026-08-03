@@ -344,6 +344,8 @@ def plot_network3d(
     layout_kwargs: Optional[Dict[str, Any]] = None,
     node_size_range: Tuple[float, float] = (60, 600),
     show_colorbar: bool = False,
+    view: Optional[Tuple[float, float]] = None,
+    normalize_z: bool = True,
     show_legend: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
@@ -370,11 +372,17 @@ def plot_network3d(
         node_size_range: 属性→尺寸映射范围，默认 (60, 600)
         show_colorbar: 连续着色时显示颜色条
         show_legend  : 分类着色时显示图例
+        view         : 3D 视角 (仰角 elev, 方位角 azim)；None 用默认 (25, -60)。
+                      想突出 z 方向层次可用 (20, 45) 等斜视角
+        normalize_z  : 是否将 Z 坐标 min-max 归一化到 XY 平面量级（默认 True）。
+                      长尾分布（如 lognormal）下归一化能避免多数节点被压成平面；
+                      若需保留原始数值高度语义，设为 False
 
     示例:
         >>> # 蛋白质互作网络：节点高度=表达量
         >>> fig, ax = sp.plot_network3d(
         ...     G, z_by="expression", node_color_by="module",
+        ...     view=(20, 45),
         ... )
         >>> sp.save(fig, "network3d")
     """
@@ -404,7 +412,27 @@ def plot_network3d(
             )
             z_coords = {n: 0.0 for n in G.nodes()}
         else:
-            z_coords = {n: float(numeric_z.get(n, 0.0)) for n in G.nodes()}
+            raw_z = {n: float(numeric_z.get(n, 0.0)) for n in G.nodes()}
+            if normalize_z:
+                # Z 归一化到 XY 平面量级：min-max 缩放到 XY 跨度的一半，
+                # 避免长尾分布（如 lognormal）把多数节点压成平面
+                z_vals = np.array(list(raw_z.values()), dtype=float)
+                z_min, z_max = float(z_vals.min()), float(z_vals.max())
+                if z_max - z_min > 1e-12:
+                    xyspan = max(
+                        max(v[0] for v in pos.values()) - min(v[0] for v in pos.values()),
+                        max(v[1] for v in pos.values()) - min(v[1] for v in pos.values()),
+                        1e-9,
+                    )
+                    scale = xyspan * 0.6
+                    z_coords = {
+                        n: (v - z_min) / (z_max - z_min) * scale
+                        for n, v in raw_z.items()
+                    }
+                else:
+                    z_coords = {n: 0.0 for n in G.nodes()}
+            else:
+                z_coords = raw_z
     else:
         z_coords = {n: 0.0 for n in G.nodes()}
 
@@ -501,6 +529,10 @@ def plot_network3d(
         ax.legend(handles=handles, loc="upper right", frameon=False)
 
     ax.set_axis_off()
+    if view is not None:
+        if len(view) != 2:
+            raise ValueError(f"view 必须是 (elev, azim) 二元组，实际值: {view!r}")
+        ax.view_init(elev=float(view[0]), azim=float(view[1]))
     if title:
         ax.set_title(title)
 

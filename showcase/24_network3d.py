@@ -34,6 +34,7 @@ fig, ax = sp.plot_network3d(
     node_size_by="expression",
     labels=10,
     show_legend=True,
+    view=(22, 50),   # 斜视角：突出 z 方向层次
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

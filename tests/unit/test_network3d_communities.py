@@ -34,20 +34,36 @@ def test_network3d_exported():
 
 
 def test_network3d_z_by_degree(karate, cleanup_figures):
-    """z_by='degree' 时节点 Z 坐标与度一致。"""
+    """z_by='degree' 默认归一化保持单调；normalize_z=False 用原始度值。"""
     result = sp.plot_network3d(karate, z_by="degree")
     zs = np.asarray(result.ax.collections[0]._offsets3d)[2]
     degrees = [d for _, d in karate.degree()]
-    assert np.allclose(np.sort(zs), np.sort(degrees))
+    assert len(zs) == len(degrees)
+    # 归一化后：排序一致、存在深度差异
+    assert np.all(np.diff(np.sort(zs)) >= 0)
+    assert float(np.max(zs)) > float(np.min(zs))
+
+    # 显式关闭归一化：Z 与原始度一致
+    result_raw = sp.plot_network3d(karate, z_by="degree", normalize_z=False)
+    zs_raw = np.asarray(result_raw.ax.collections[0]._offsets3d)[2]
+    assert np.allclose(np.sort(zs_raw), np.sort(degrees))
 
 
 def test_network3d_z_by_attr(karate, cleanup_figures):
-    """z_by 指向数值属性时按属性取值。"""
+    """z_by 指向数值属性时归一化保持单调。"""
     nx.set_node_attributes(karate, {n: n * 2.0 for n in karate.nodes()}, "zval")
     result = sp.plot_network3d(karate, z_by="zval")
     zs = np.asarray(result.ax.collections[0]._offsets3d)[2]
     expected = np.sort([n * 2.0 for n in karate.nodes()])
-    assert np.allclose(np.sort(zs), expected)
+    z_sorted = np.sort(zs)
+    assert len(z_sorted) == len(expected)
+    assert z_sorted[-1] > z_sorted[0]
+    assert np.all(np.diff(z_sorted) >= 0)
+
+    # normalize_z=False 保留原始属性值
+    result_raw = sp.plot_network3d(karate, z_by="zval", normalize_z=False)
+    zs_raw = np.asarray(result_raw.ax.collections[0]._offsets3d)[2]
+    assert np.allclose(np.sort(zs_raw), expected)
 
 
 def test_network3d_z_by_string_attr_warns(karate, cleanup_figures):

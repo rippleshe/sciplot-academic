@@ -7,6 +7,31 @@
 
 ---
 
+## [1.13.2] - 2026-08-03
+
+### Fixed
+
+- **字体回退链重构**：`font.family` 改用字体名列表（matplotlib 3.6+ 逐字符回退），
+  en 模式混排中文不再缺字形；按系统已安装字体动态过滤，消除 findfont 警告噪音
+- **tight_layout 兼容**：`_safe_tight_layout` 失败时回退 `constrained_layout`
+  （支持 gridspec 多轴自定义布局），消除 marginal/raincloud 等图的布局警告
+- **plot_taylor 输入兼容**：models 接受单个数组（自动命名），修复
+  "truth value of an array is ambiguous" 崩溃
+- **plot_combo 输入兼容**：bar_data/line_data 接受数组（自动包装单系列）
+- **plot_upset 参数修复**：`intersection_color` 之前被渐变蓝硬编码覆盖失效
+- **plot_network3d 增强**：Z 坐标默认归一化到 XY 量级（长尾分布不再压成平面），
+  新增 `view=(elev, azim)` 视角参数与 `normalize_z` 开关
+- **docs 修复**：conf.py 版本读取兼容 dynamic version（setuptools_scm）；
+  补全 quickstart / api / examples / changelog 页面，Sphinx 构建恢复成功
+
+### Tests
+
+- 新增 plot_taylor/plot_combo 数组输入兼容测试（9 个）
+- 更新 network3d z 语义测试（单调性 + normalize_z 开关）
+- 总数 1522 passed
+
+---
+
 ## [1.13.1] - 2026-08-03
 
 ### Fixed

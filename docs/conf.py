@@ -18,7 +18,7 @@ copyright = "2024, SciPlot Team"
 
 # Read version from pyproject.toml dynamically
 def _get_version() -> str:
-    """Read version from pyproject.toml."""
+    """Read version from pyproject.toml or package metadata."""
     try:
         import tomllib
     except ModuleNotFoundError:
@@ -27,7 +27,18 @@ def _get_version() -> str:
     pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
     with open(pyproject_path, "rb") as f:
         data = tomllib.load(f)
-    return data["project"]["version"]
+    # version 可能是静态值或 dynamic（setuptools_scm 管理）
+    project = data.get("project", {})
+    static_version = project.get("version")
+    if static_version:
+        return str(static_version)
+    # 动态版本：从已安装包元数据读取，回退 0.0.0
+    try:
+        from importlib.metadata import version as _meta_version
+
+        return _meta_version("sciplot-academic")
+    except Exception:
+        return "0.0.0"
 
 
 release = _get_version()

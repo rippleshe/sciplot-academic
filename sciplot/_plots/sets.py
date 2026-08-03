@@ -207,10 +207,13 @@ def plot_upset(
     ax_main.set_yticks([])
     ax_main.tick_params(direction="in")
 
-    # ── 顶：交集大小柱（渐变蓝 + 加粗数值） ──
+    # ── 顶：交集大小柱（默认渐变蓝，显式 intersection_color 时用单色） ──
     sizes = [c[1] for c in combos]
-    cmap_sizes = plt.cm.get_cmap("Blues")
-    bar_colors = [cmap_sizes(0.45 + 0.5 * s / max(sizes)) for s in sizes]
+    if intersection_color is None:
+        cmap_sizes = plt.cm.get_cmap("Blues")
+        bar_colors = [cmap_sizes(0.45 + 0.5 * s / max(sizes)) for s in sizes]
+    else:
+        bar_colors = [inter_color] * n_inters
     ax_bar.bar(x_pos, sizes, color=bar_colors,
                edgecolor="white", linewidth=0.8, width=0.66, zorder=2)
     ax_bar.set_ylim(0, max(sizes) * 1.25)

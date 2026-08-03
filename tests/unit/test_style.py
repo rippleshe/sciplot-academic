@@ -14,8 +14,10 @@ class TestSetupStyle:
     def test_default_style(self, reset_style):
         """测试默认样式设置"""
         sp.setup_style()
-        # font.family 设置为 "serif"，实际字体在 font.serif 中指定
-        assert rcParams["font.family"] == ["serif"]
+        # font.family 使用字体名列表（matplotlib 3.6+ 逐字符回退），
+        # 中文主字体 SimSun 应位于回退链首位
+        assert isinstance(rcParams["font.family"], list)
+        assert rcParams["font.family"][0] == "SimSun"
         assert "SimSun" in rcParams["font.serif"]
         assert not rcParams["axes.unicode_minus"]
         

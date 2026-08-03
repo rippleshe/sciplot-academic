@@ -187,8 +187,22 @@ def plot_taylor(
         ... )
         >>> sp.save(fig, "taylor")
     """
-    if not models:
-        raise ValueError("models 不能为空字典")
+    # 兼容两种输入：{模型名: 序列} 字典，或单个 np.ndarray（自动命名）
+    if isinstance(models, dict):
+        if not models:
+            raise ValueError("models 不能为空字典")
+        model_dict = models
+    elif isinstance(models, np.ndarray):
+        model_dict = {"模型": models}
+    else:
+        try:
+            model_dict = dict(models)
+            if not model_dict:
+                raise ValueError("models 不能为空")
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "models 必须是 {模型名: 序列} 字典或单个数组"
+            ) from exc
 
     obs = np.asarray(observations, dtype=float).ravel()
     if obs.size < 3:
@@ -200,7 +214,7 @@ def plot_taylor(
         raise ValueError("observations 方差为零，无法计算相关系数与标准差比")
 
     stats_list: List[Dict[str, Any]] = []
-    for name, pred in models.items():
+    for name, pred in model_dict.items():
         pred_arr = np.asarray(pred, dtype=float).ravel()
         if len(pred_arr) != len(obs):
             raise ValueError(
