@@ -1378,7 +1378,7 @@ def plot_sankey(
     while changed:
         changed = False
         for s, t in zip(src_arr, tgt_arr):
-            if level[t] <= level[s]:
+            if s != t and level[t] <= level[s]:  # 自环跳过，避免死循环
                 level[t] = level[s] + 1
                 changed = True
     max_level = max(level.values())

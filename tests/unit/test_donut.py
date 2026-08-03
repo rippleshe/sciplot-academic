@@ -49,6 +49,17 @@ def test_donut_hole_ratio_invalid_raises(cleanup_figures):
         sp.plot_donut(["A", "B"], [5.0, 5.0], hole_ratio=1.2)
 
 
+def test_donut_single_category(cleanup_figures):
+    result = sp.plot_donut(["A"], [100.0], center_text="100")
+    assert result.fig is not None
+
+
+def test_donut_extreme_split(cleanup_figures):
+    """5%/95% 极端占比（小扇区不写数值）不崩溃。"""
+    result = sp.plot_donut(["A", "B"], [5.0, 95.0])
+    assert result.fig is not None
+
+
 def test_donut_custom_options(cleanup_figures):
     result = sp.plot_donut(
         ["A", "B", "C", "D"], [40, 30, 20, 10],

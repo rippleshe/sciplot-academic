@@ -109,3 +109,11 @@ def test_sankey_zero_values_ok(cleanup_figures):
     """零流量流被允许（不参与布局但对齐校验）。"""
     result = sp.plot_sankey(["A", "B"], ["B", "C"], [10.0, 0.0])
     assert result.fig is not None
+
+
+def test_sankey_self_loop_no_hang(cleanup_figures):
+    """自环（源==目标）不得导致层级分配死循环。"""
+    result = sp.plot_sankey(["A", "A"], ["A", "B"], [5.0, 3.0])
+    assert result.fig is not None
+    result2 = sp.plot_sankey(["A"], ["A"], [10.0])
+    assert result2.fig is not None

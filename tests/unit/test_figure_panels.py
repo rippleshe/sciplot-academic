@@ -68,6 +68,14 @@ def test_figure_panels_export(cleanup_figures):
     assert "figure_panels" in sp.__all__
 
 
+def test_figure_panels_single_panel_returns_axes(cleanup_figures):
+    """(1,1) 时 subplots squeeze 返回单个 Axes。"""
+    from matplotlib.axes import Axes
+
+    fig, axes = sp.figure_panels(1, 1)
+    assert isinstance(axes, Axes)
+
+
 def test_figure_panels_sharex(cleanup_figures):
     fig, axes = sp.figure_panels(2, 1, sharex=True)
     assert axes[0].get_shared_x_axes().joined(axes[0], axes[1])

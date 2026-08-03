@@ -99,3 +99,17 @@ def test_treemap_many_categories(cleanup_figures):
     cats = [f"类{i}" for i in range(20)]
     result = sp.plot_treemap(cats, vals)
     assert result.fig is not None
+
+
+def test_treemap_single_category(cleanup_figures):
+    result = sp.plot_treemap(["A"], [100.0])
+    assert result.fig is not None
+
+
+def test_treemap_extreme_skew(cleanup_figures):
+    """1 个大值 + 30 个小值的极端分布（布局稳定）。"""
+    rng = np.random.default_rng(1)
+    vals = np.r_[500.0, rng.uniform(1, 5, 30)]
+    cats = [f"C{i}" for i in range(31)]
+    result = sp.plot_treemap(cats, vals)
+    assert result.fig is not None
