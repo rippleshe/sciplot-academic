@@ -108,6 +108,124 @@ allowed-tools: "Read Write Edit Bash Glob Grep"
 
 ---
 
+## 函数调用手册（数据约定 · 参数语义 · 返回值）
+
+> 本节回答“具体某个函数怎么调”。所有签名已按 v1.12.3 核对。
+
+### 通用输入约定（所有 plot_* 一致）
+
+| 约定 | 规则 |
+|------|------|
+| 数组类型 | 接受 `list` / `np.ndarray` / pandas `Series`，内部统一 `np.asarray` 归一 |
+| 长度匹配 | 轴数据必须等长，否则 ValueError 会带具体长度提示（无需猜测） |
+| NaN/Inf | 分布统计类（density/qq/residuals/bland_altman）自动过滤；热力/气泡/边际/甘特/日历等**严格报错** |
+| 日期输入 | `datetime` / `date` / `np.datetime64` / 字符串 `"YYYY-MM-DD"` 四类通用（timeseries / gantt / calendar_heatmap） |
+| 颜色参数 | 单色字符串（如 `"#D62728"`）或颜色列表（长度与数据对齐）；连续映射用 `cmap` + `color` 数值列 |
+| 可选依赖 | scipy：density/qq/raincloud/ridgeline 等；scikit-learn：pca/confusion_matrix/feature_importance；matplotlib-venn：venn2/venn3。缺失时抛 ImportError 并附安装提示 |
+
+### 返回值约定
+
+- 所有 `plot_*` 返回 `PlotResult`；`plot_combo` 返回 `ComboPlotResult`（额外有 `ylabel_left`/`ylabel_right`）
+- 两种消费方式：
+  ```python
+  # 方式 A：元组解包（传统）
+  fig, ax = sp.plot(x, y)
+  sp.save(fig, "fig")
+
+  # 方式 B：链式（推荐，一步到位）
+  sp.plot(x, y).xlabel("X").ylabel("Y").title("标题").save("fig")
+  ```
+- 常用方法：`save(formats, dpi, dir, close)` / `show()` / `title()` / `xlabel()` / `ylabel()` / `legend()` / `tight_layout()` / `axhline()` / `axvline()` / `annotate()` / `set_labels()` / `grid()` / `tick_params()`
+
+### 数据形状与关键参数（按家族）
+
+| 家族 | 函数 | 核心入参 | 关键参数 | 注意事项 |
+|------|------|---------|---------|---------|
+| 基础 | `plot` / `line` | `(x, y)` | `label`, `**kwargs`(透传 plt.plot) | 单线最简单入口 |
+| 阶梯 | `plot_step` | `(x, y)` | `where=mid/pre/post` | 离散变化过程 |
+| 面积 | `plot_area` | `(x, y)` | `alpha=0.3`, `fill=True` | 填充曲线 |
+| 多面积 | `plot_multi_area` | `(x, y_list)` | `stacked=False` | stacked=True 堆叠面积 |
+| 堆叠条 | `plot_stacked_bar` | `(categories, data)` | `show_values`, `value_fmt` | data 为 2D（行=类目，列=系列） |
+| 水平条 | `plot_horizontal_bar` | `(categories, values)` | `sort=False`, `show_values` | 排名类首选 |
+| 棒棒糖 | `plot_lollipop` | `(categories, values)` | `sort=True`, `marker_size`, `baseline` | 排名变体 |
+| 箱线 | `plot_box` | `(data, labels)` | `showfliers` | data 为数组列表或 2D |
+| 小提琴 | `plot_violin` | `(data, labels)` | `showmeans`, `showmedians` | 分布形状 |
+| 多线 | `plot_multi` / `multi` | `(x, y_list)` | `labels`, `use_linestyles` | x 可标量数组或逐线数组 |
+| 散点 | `plot_scatter` | `(x, y)` | `s=20`, `alpha=0.7` | 回归线需手动：`slope, ic = np.polyfit(x, y, 1)` 后 `ax.plot`（参考 showcase/03） |
+| 柱状 | `plot_bar` | `(categories, values)` | `width=0.6` | categories 为标签列表 |
+| 分组柱 | `plot_grouped_bar` | `(groups, data)` | `gap=0.05`, `show_values`, `value_fmt` | data 为 2D 数组（行=组，列=系列） |
+| 直方 | `plot_histogram` | `(data,)` | `bins=30`, `density` | bins 必须正整数 |
+| 热力 | `plot_heatmap` | `(data,)` 2D | `cmap`, `show_values`, `fmt`, `vmin/vmax` | NaN 报错；NaN 矩阵用 `masked` 语义请预清洗 |
+| 气泡热力 | `plot_bubble_heatmap` | `(data,)` 2D | `background=True`, `bubble_scale` | 气泡大小编码 \|值\|，颜色编码值 |
+| 气泡 | `plot_bubble` | `(x, y, size)` | `color`(数值→cmap), `size_scale` | color 省略时单色 |
+| 六边形 | `plot_hexbin` | `(x, y)` | `gridsize=30`, `bins="log"`, `mincnt` | 大样本密度首选 |
+| 边际 | `plot_marginal` | `(x, y)` | `marginal=hist/box/kde`, `show_corr` | x/y 含 NaN 会报错 |
+| 雨云 | `plot_raincloud` | `(data_list,)` | `orientation=h/v`, `show_violin` | data_list 元素为数组；需 scipy |
+| 蜂群 | `plot_beeswarm` | `(data_list,)` | `method=swarm/jitter`, `orient=v`, `show_box` | 大样本可换 `method="jitter"` 加速 |
+| 山脊 | `plot_ridgeline` | `(data_list, labels)` | `overlap=0.3`, `show_median` | 需 scipy |
+| 密度 | `plot_density` | `(data,)` | `bw_method` | 需 scipy |
+| 多密度 | `plot_multi_density` | `(data_list, labels)` | `fill`, `alpha` | 多分布叠加 |
+| 哑铃 | `plot_dumbbell` | `(categories, start, end)` | `sort_by=delta`, `improve_color` | 方向自动着色（改善/恶化） |
+| 发散条 | `plot_diverging_bar` | `(categories, values)` | `threshold=0.0`, `sort=True` | 正负分色 |
+| 甘特 | `plot_gantt` | `(tasks, start)` | `duration` 或 `end` 二选一；`groups`/`milestones`/`dependencies`/`now` | 日期或数值轴自动检测 |
+| 打包气泡 | `plot_packed_bubble` | `(labels, sizes)` | `color_by`, `min_size_frac` | 占比构成首选 |
+| 火山 | `plot_volcano` | `(log2fc, p_values)` | `fc_threshold`, `p_threshold`, `annotate_top` | p=0 已安全处理 |
+| 日历热图 | `plot_calendar_heatmap` | `(dates, values)` | `weekday_start=0/6`, `show_month_lines` | 字符串必须 `YYYY-MM-DD`；支持跨年 |
+| 泰勒 | `plot_taylor` | `(observations, models_dict)` | `obs_name`, `rms_levels` | models 为 {名称: 预测数组} 字典 |
+| 弦图 | `plot_chord` | `(matrix, labels)` | `min_flow`, `color_by`, `show_values` | matrix 为 2D 流量矩阵 |
+| 三角相图 | `plot_ternary` | `(a, b, c)` | `color_by`, `grid_levels` | 要求非负且每行之和>0；行和自动归一化 |
+| 华夫 | `plot_waffle` | `(categories, values)` | `rows/cols`, `show_percent` | 占比格子图 |
+| 雷达 | `plot_radar` | `(categories, values_list)` | `fill`, `show_labels` | values_list 每个元素一条多边形 |
+| 平行坐标 | `plot_parallel` | `(data, columns)` | `normalize=minmax/zscore/none`, `color_by` | 接受 DataFrame（columns 选列） |
+| 散点矩阵 | `plot_scatter_matrix` | `(data, columns)` | `diag=hist`, `color_by` | 多维两两关系 |
+| 聚类热图 | `plot_clustermap` | `(data,)` 2D | `row_cluster`, `col_cluster`, `cmap` | 行列聚类 + 树状图 |
+| 双轴 | `plot_combo` | `(x, bar_data)` | `line_data`, `bar_width` | 返回 ComboPlotResult |
+| 时序 | `plot_timeseries` | `(t, y)` | `events`, `shade_regions`, `rolling_mean` | 自动检测日期轴 |
+| 多时序 | `plot_multi_timeseries` | `(t, y_list)` | `labels`, `events`, `shade_regions` | 多线时序 |
+| 斜率图 | `plot_slope` | `(labels, before, after)` | `left_label`, `right_label`, `show_diff` | 前后对比连线 |
+| 误差条 | `plot_errorbar` | `(x, y, yerr)` | `fmt='o'`, `capsize` | yerr 与 y 等长 |
+| 置信带 | `plot_confidence` | `(x, y_mean, y_std)` | `n_std=1.0`, `label_std` | 均值线 + 带状区间 |
+| 一致性 | `plot_bland_altman` | `(y1, y2)` | `show_ci`, `ci=0.95` | 默认中文标签 |
+| QQ | `plot_qq` | `(data,)` | `distribution=norm/expon/uniform/t` | scipy 缺失时用纯 numpy 近似；至少 3 个有效值 |
+| 残差 | `plot_residuals` | `(y_true, y_pred)` | `show_zero_line`, `show_loess` | show_loess 需 statsmodels |
+| 网络 | `plot_network` | `(G,)` | `node_color_by`, `node_size_by`, `labels=10` | 属性列名=字符串→分类色；数值→连续 cmap |
+| 矩阵建网 | `plot_network_from_matrix` | `(adj_matrix,)` | `threshold=0.0`, `labels` | 邻接矩阵→图 |
+| 社区网络 | `plot_network_communities` | `(G,)` | `communities`, `labels` | 社区分色 |
+| 3D 网络 | `plot_network3d` | `(G,)` | `z_by`, `labels=10` | 同上 |
+| 聚类树 | `plot_dendrogram` | `(data_or_linkage,)` | `orientation`, `color_threshold` | 传数据矩阵或现成 linkage |
+| 维恩 | `plot_venn2/3` | `(subsets,)` | `set_labels`, `show_counts` | 需 matplotlib-venn |
+| PCA | `plot_pca` | `(data,)` | `n_components=2`, `labels` | 需 scikit-learn |
+| 混淆矩阵 | `plot_confusion_matrix` | `(y_true, y_pred)` | `normalize`, `labels` | 需 scikit-learn |
+| 特征重要 | `plot_feature_importance` | `(features, importance)` | `top_n` | 自动降序条形 |
+| 学习曲线 | `plot_learning_curve` | `(train_scores, val_scores)` | `train_sizes`, `label_train/label_val` | 模型诊断；需 sklearn |
+| 3D 曲面 | `plot_surface` | `(X, Y, Z)` 网格 | `elev/azim`, `cmap` | X/Y 需 meshgrid 网格 |
+| 3D 散点 | `plot_3d_scatter` | `(x, y, z)` | `c`(数值→cmap), `s`, `alpha` | 三维点云 |
+| 线框 | `plot_wireframe` | `(X, Y, Z)` 网格 | `rstride`, `alpha` | 曲面线框 |
+| 等高线 | `plot_contour` | `(X, Y, Z)` 网格 | `levels`, `filled` | 同 meshgrid |
+| 3D 瀑布 | `plot_waterfall3d` | `(x, y_list)` | `spacing`, `fill`, `baseline` | 多组堆叠 3D |
+
+### 参数语义速查（跨函数一致）
+
+- `venue` / `palette` / `lang` / `theme`：**每个函数都有**，传 `None` 表示沿用全局（`setup_style` / `set_defaults` / `style_context` 设置）
+- palette 子集语法：`"pastel-2"` 取前 2 色、`"ocean-4"` 取前 4 色
+- `title` 默认 `""`（无标题原则，投稿图不自动加标题）
+- `lang="zh"`：自动切中文字体与标签；bland_altman/qq/residuals 的默认标签本身已是中文
+- `**kwargs` 透传给底层 matplotlib 调用（`ax.plot`/`ax.scatter`/…），可直接传 `linewidth`、`marker` 等
+- 所有图默认 `figsize` 由 venue 决定（如 `ieee` 单栏 3.5in 宽）
+
+### 常见错误与规避
+
+1. **长度不匹配**：轴数据不等长 → ValueError 会打印两边实际长度，对照修正即可
+2. **bins 非正整数**：`plot_histogram` / `plot_marginal` 的 `bins` 必须是正整数
+3. **gantt 参数冲突**：`duration` 与 `end` 只能二选一，同时传会报错
+4. **marginal 的 NaN**：`plot_marginal` 对 x/y 的 NaN 严格报错（统计图会过滤，这里不会）
+5. **qq 的分布名**：仅 `norm` / `expon` / `uniform` / `t`，其他名字直接 ValueError
+6. **calendar 字符串日期**：必须是 `YYYY-MM-DD`，其他格式（如 `2024/01/01`）报错
+7. **可选依赖缺失**：错误消息自带安装命令（`pip install scipy` / `scikit-learn` / `matplotlib-venn`），按提示安装即可；qq 在无 scipy 时静默降级为纯 numpy 近似
+8. **空颜色循环**：库已在图形创建入口兜底（不会出现 matplotlib 内部取色崩溃）
+
+---
+
 ## 最佳实践骨架（必备设置）
 
 > **核心思想**：SciPlot 的设计哲学是"一次设置，全局生效"。正确的起手骨架能让后续代码更简洁、更专业。
