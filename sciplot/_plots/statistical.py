@@ -16,6 +16,7 @@ import numpy as np
 from sciplot._core.utils import (
     boxplot_with_orientation,
     get_cycle_colors as _get_cycle_colors,
+    cycle_color,
     new_styled_figure,
     _try_import_optional,
     _require_optional,
@@ -532,7 +533,7 @@ def plot_ridgeline(
 
     for i, (values, label) in enumerate(zip(normalized_data, labels)):
         base = i * step
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
 
         if _is_constant(values):
             # 常数序列：KDE 退化，绘制垂直线表示质量集中。
@@ -652,7 +653,7 @@ def plot_raincloud(
     rng = np.random.default_rng(42)
 
     for i, (values, label) in enumerate(zip(normalized_data, labels)):
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         pos = float(i)
 
         if orientation == "h":

@@ -15,7 +15,7 @@ import numpy as np
 from matplotlib.colors import Normalize
 from matplotlib.patches import Patch
 
-from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors, new_styled_figure
+from sciplot._core.utils import apply_resolved_style, cycle_color, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -110,7 +110,7 @@ def _resolve_node_colors(G, node_color_by, colors):
     numeric_attr = _coerce_numeric_attr(color_values)
     unique_values = sorted(set(color_values.values()), key=str)  # 确定性排序
     if numeric_attr is None or len(unique_values) <= 10:
-        categorical_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
+        categorical_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_values)}
         node_colors = [categorical_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
         return node_colors, categorical_map, continuous_info
 
@@ -673,7 +673,7 @@ def plot_network_communities(
     legend_handles = []
     for i, community in enumerate(communities):
         legend_handles.append(
-            Patch(facecolor=colors[i % len(colors)], label=f"社区 {i + 1}", alpha=0.8)
+            Patch(facecolor=cycle_color(colors, i), label=f"社区 {i + 1}", alpha=0.8)
         )
     ax.legend(handles=legend_handles, loc="best", frameon=False)
 

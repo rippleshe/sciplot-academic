@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from sciplot._core.utils import get_cycle_colors, new_styled_figure, _require_optional
+from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, _require_optional
 from sciplot._core.result import PlotResult
 
 
@@ -77,7 +77,7 @@ def plot_venn2(
     if v is not None:
         for i, patch in enumerate(v.patches):
             if patch is not None:
-                patch.set_facecolor(colors[i % len(colors)])
+                patch.set_facecolor(cycle_color(colors, i))
                 patch.set_alpha(alpha)
 
         if show_counts:
@@ -149,7 +149,7 @@ def plot_venn3(
     if v is not None:
         for i, patch in enumerate(v.patches):
             if patch is not None:
-                patch.set_facecolor(colors[i % len(colors)])
+                patch.set_facecolor(cycle_color(colors, i))
                 patch.set_alpha(alpha)
 
         if show_counts:

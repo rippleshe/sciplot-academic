@@ -16,6 +16,7 @@ from sciplot._core.utils import (
     contrast_text_color,
     get_cmap_safe,
     get_cycle_colors,
+    cycle_color,
     polar_to_cart,
     new_styled_figure,
 )
@@ -583,7 +584,7 @@ def plot_packed_bubble(
             )
     else:
         cycle = get_cycle_colors()
-        colors = [cycle[i % len(cycle)] for i in range(len(labels))]
+        colors = [cycle_color(cycle, i) for i in range(len(labels))]
 
     categorical_legend = None
     if color_by is not None:
@@ -594,7 +595,7 @@ def plot_packed_bubble(
         # 类别优先：color_by 覆盖 colors 分配（按输入首次出现顺序）
         unique_groups = list(dict.fromkeys(color_by))
         cycle = get_cycle_colors()
-        group_map = {g: cycle[i % len(cycle)] for i, g in enumerate(unique_groups)}
+        group_map = {g: cycle_color(cycle, i) for i, g in enumerate(unique_groups)}
         colors = [group_map[g] for g in color_by]
         categorical_legend = group_map
     if not 0 < min_size_frac < 1:
@@ -734,11 +735,11 @@ def plot_chord(
     # 节点颜色：color_by 分类或默认逐节点
     if color_by is not None:
         unique_groups = sorted(set(color_by), key=str)
-        group_map = {g: colors[i % len(colors)] for i, g in enumerate(unique_groups)}
+        group_map = {g: cycle_color(colors, i) for i, g in enumerate(unique_groups)}
         node_colors = [group_map[g] for g in color_by]
         categorical_legend = group_map
     else:
-        node_colors = [colors[i % len(colors)] for i in range(n)]
+        node_colors = [cycle_color(colors, i) for i in range(n)]
         categorical_legend = None
 
     # 节点总流量（行 + 列）
@@ -1224,7 +1225,7 @@ def plot_bubble(
 
             scatter.set_array(None)
             label_colors = {
-                lbl: colors[i % len(colors)]
+                lbl: cycle_color(colors, i)
                 for i, lbl in enumerate(unique_labels)
             }
             # set_facecolors 仅存在于 PathCollection 子类，scatter 返回类型按基类标注

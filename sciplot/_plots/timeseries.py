@@ -15,7 +15,7 @@ from matplotlib.patches import Patch
 import numpy as np
 from datetime import date, datetime, timedelta
 
-from sciplot._core.utils import get_cycle_colors, new_styled_figure
+from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -349,7 +349,7 @@ def plot_multi_timeseries(
                 UserWarning,
                 stacklevel=2,
             )
-        ax.plot(t, y, label=lbl, color=colors[i % len(colors)], **kwargs)
+        ax.plot(t, y, label=lbl, color=cycle_color(colors, i), **kwargs)
 
     for event in events_normalized:
         event_time = event["time"]
@@ -421,7 +421,7 @@ def plot_slope(
     left_x, right_x = x_positions
 
     for i, (name, b_val, a_val) in enumerate(zip(labels, before_arr, after_arr)):
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         ax.plot(x_positions, [b_val, a_val], marker="o", color=color, alpha=0.85, **kwargs)
 
         ax.text(left_x - 0.03, b_val, f"{name}", ha="right", va="center")
@@ -577,14 +577,14 @@ def plot_gantt(
                 f"color_by 长度 ({len(c_arr)}) 与 tasks 长度 ({len(tasks)}) 不一致"
             )
         unique_vals = sorted(set(c_arr), key=str)
-        color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_vals)}
+        color_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_vals)}
         bar_colors = [color_map[v] for v in c_arr]
         legend_handles = [
             Patch(facecolor=c, label=str(v), alpha=alpha)
             for v, c in color_map.items()
         ]
     else:
-        bar_colors = [colors[i % len(colors)] for i in range(len(tasks))]
+        bar_colors = [cycle_color(colors, i) for i in range(len(tasks))]
         legend_handles = None
 
     # groups / milestones / dependencies / now 校验
@@ -609,7 +609,7 @@ def plot_gantt(
         from matplotlib.patches import Patch as _Patch
 
         unique_groups = list(dict.fromkeys(groups))
-        group_colors = [colors[i % len(colors)] for i in range(len(unique_groups))]
+        group_colors = [cycle_color(colors, i) for i in range(len(unique_groups))]
         group_map = dict(zip(unique_groups, group_colors))
         for i, g in enumerate(groups):
             ax.axhspan(

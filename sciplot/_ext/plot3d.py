@@ -15,7 +15,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from sciplot._core.result import PlotResult
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors, new_styled_figure
+from sciplot._core.utils import apply_resolved_style, cycle_color, get_cycle_colors, new_styled_figure
 from sciplot._core.style import VENUES
 
 
@@ -500,7 +500,7 @@ def plot_waterfall3d(
 
     for i, (y_arr, label) in enumerate(zip(normalized, labels)):
         group_pos = i * float(spacing)
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
 
         ax.plot(
             x_arr,

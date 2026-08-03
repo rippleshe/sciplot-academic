@@ -19,6 +19,7 @@ from sciplot._core.utils import (
     validate_positive_number,
     boxplot_with_orientation,
     contrast_text_color,
+    cycle_color,
     get_cycle_colors as _get_cycle_colors,
     new_styled_figure,
 )
@@ -73,7 +74,7 @@ def plot_bar(
 
     effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
     colors = _get_cycle_colors()
-    bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
+    bar_colors = [cycle_color(colors, i) for i in range(len(categories))]
     # 显式 color 参数覆盖自动配色（避免 kwargs 与 bar_colors 冲突）
     explicit_color = kwargs.pop("color", None)
     if explicit_color is not None:
@@ -165,7 +166,7 @@ def plot_grouped_bar(
 
     for i, (series_name, values) in enumerate(normalized_data.items()):
         offsets = group_centers + (i - (n_series - 1) / 2) * (bar_w + gap)
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         bars = ax.bar(
             offsets, values, width=bar_w,
             color=color, label=series_name, **kwargs
@@ -253,7 +254,7 @@ def plot_box(
     if labels is not None:
         ax.set_xticklabels(labels)
     for i, patch in enumerate(bp["boxes"]):
-        patch.set_facecolor(colors[i % len(colors)])
+        patch.set_facecolor(cycle_color(colors, i))
         patch.set_alpha(0.75)
 
     ax.set_xlabel(xlabel)
@@ -327,7 +328,7 @@ def plot_violin(
     )
     bodies: list = parts["bodies"]  # type: ignore[assignment]
     for i, pc in enumerate(bodies):
-        pc.set_facecolor(colors[i % len(colors)])
+        pc.set_facecolor(cycle_color(colors, i))
         pc.set_alpha(0.75)
 
     if labels is not None:
@@ -463,7 +464,7 @@ def plot_stacked_bar(
 
     bottom = np.zeros(n_groups)
     for i, (series_name, values) in enumerate(normalized_data.items()):
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         bars = ax.bar(
             x, values, width=width,
             bottom=bottom, color=color, label=series_name, **kwargs
@@ -551,7 +552,7 @@ def plot_horizontal_bar(
         values_arr = values_arr[sorted_indices]
 
     y = np.arange(len(categories))
-    bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
+    bar_colors = [cycle_color(colors, i) for i in range(len(categories))]
 
     bars = ax.barh(y, values_arr, height=height, color=bar_colors, **kwargs)
 
@@ -738,7 +739,7 @@ def plot_combo(
     bar_width_eff = bar_width / n_bars
     for i, (name, values) in enumerate(normalized_bar_data.items()):
         offset = (i - (n_bars - 1) / 2) * bar_width_eff
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         ax_bar.bar(indices + offset, values, bar_width_eff, label=name, color=color, **kwargs)
 
     ax_bar.set_xticks(indices)
@@ -960,7 +961,7 @@ def plot_beeswarm(
     rng = np.random.default_rng(42)
 
     for i, (values, label) in enumerate(zip(normalized_data, labels)):
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         pos = float(i)
 
         if method == "swarm":
@@ -1296,7 +1297,7 @@ def plot_waffle(
             )
     else:
         cycle = _get_cycle_colors()
-        colors = [cycle[i % len(cycle)] for i in range(len(categories))]
+        colors = [cycle_color(cycle, i) for i in range(len(categories))]
 
     fig, ax = new_styled_figure(venue, palette, lang)
 

@@ -566,6 +566,13 @@ def _ensure_non_empty_prop_cycle() -> None:
         plt.rcParams["axes.prop_cycle"] = cycler(color=_FALLBACK_COLORS)
 
 
+def cycle_color(colors: Sequence[str], index: int) -> str:
+    """循环取色：``colors[index % len(colors)]``，空列表时回退到默认色。"""
+    if not colors:
+        return _FALLBACK_COLORS[0]
+    return colors[index % len(colors)]
+
+
 def get_cycle_colors() -> List[str]:
     """获取当前颜色循环列表，空循环时回退到默认色。
 
@@ -647,6 +654,7 @@ __all__ = [
     "validate_choice",
     "validate_dict_not_empty",
     "get_cycle_colors",
+    "cycle_color",
     "boxplot_with_orientation",
     "contrast_text_color",
     "get_cmap_safe",

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
+from sciplot._core.utils import apply_resolved_style, cycle_color, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -117,7 +117,7 @@ def plot_radar(
 
     for i, (values, label) in enumerate(zip(values_list, labels)):
         values_closed = values + values[:1]
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
 
         ax.plot(angles, values_closed, "o-", color=color, label=label, **kwargs)
         if fill:
@@ -277,7 +277,7 @@ def plot_taylor(
     # ── 模型点 ──
     for i, s in enumerate(stats_list):
         theta = np.arccos(s["corr"])
-        color = colors[i % len(colors)]
+        color = cycle_color(colors, i)
         ax.scatter(theta, s["std_ratio"], s=70, color=color,
                    marker=marker, label=s["name"], zorder=5, **kwargs)
         ax.annotate(

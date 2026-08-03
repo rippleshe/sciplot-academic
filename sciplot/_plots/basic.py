@@ -11,7 +11,7 @@ from matplotlib.lines import Line2D
 
 from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import create_sciplot_figure, create_plot_result, get_cycle_colors, new_styled_figure, validate_labels_match_data
+from sciplot._core.utils import create_sciplot_figure, create_plot_result, cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data
 from sciplot._core.result import PlotResult
 
 
@@ -392,7 +392,7 @@ def plot_multi_area(
         # 堆叠面积图
         y_stack = np.zeros(len(x))
         for i, (y, lbl) in enumerate(zip(y_list, labels)):
-            color = colors[i % len(colors)]
+            color = cycle_color(colors, i)
             fill_kwargs = dict(kwargs)
             fill_kwargs.pop("label", None)
             fill_kwargs.setdefault("alpha", alpha)
@@ -402,7 +402,7 @@ def plot_multi_area(
     else:
         # 独立面积图：绘制边界线 + 半透明填充
         for i, (y, lbl) in enumerate(zip(y_list, labels)):
-            color = colors[i % len(colors)]
+            color = cycle_color(colors, i)
 
             line_kwargs = {k: v for k, v in kwargs.items() if k in _LINE2D_KWARGS}
             line_kwargs.pop("label", None)

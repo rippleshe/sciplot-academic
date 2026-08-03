@@ -14,7 +14,7 @@ from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 
 from sciplot._core.style import VENUES, get_current_venue
-from sciplot._core.utils import apply_resolved_style, get_cmap_safe, get_cycle_colors, new_styled_figure
+from sciplot._core.utils import apply_resolved_style, cycle_color, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
@@ -163,7 +163,7 @@ def plot_parallel(
         # DataFrame 分类列着色（数值列已提取，此路径只按类别分配颜色）
         unique_vals = sorted(set(categorical_color_values), key=str)
         colors = get_cycle_colors()
-        cat_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_vals)}
+        cat_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_vals)}
         for i in range(n_samples):
             ax.plot(
                 x, data_norm[i, :], alpha=alpha,
@@ -198,7 +198,7 @@ def plot_parallel(
         colors = get_cycle_colors()
 
         if (not is_numeric_color) or len(unique_values) <= 10:
-            color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_values)}
+            color_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_values)}
 
             for i in range(n_samples):
                 color = color_map.get(color_values[i], colors[0])
@@ -329,7 +329,7 @@ def plot_scatter_matrix(
         unique_vals = np.unique(color_values)
         if (not is_numeric) or len(unique_vals) <= 10:
             colors = get_cycle_colors()
-            color_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_vals)}
+            color_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_vals)}
             scatter_colors = [color_map[v] for v in color_values]
             cmap = None
         else:
