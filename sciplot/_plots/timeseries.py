@@ -19,16 +19,18 @@ from sciplot._core.utils import get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
 
 
+def _is_datetime_value(value: Any) -> bool:
+    """判断单个值是否为 datetime 类型（含 pandas 的 Timestamp 等带 dtype 的对象）。"""
+    if isinstance(value, (datetime, date, np.datetime64)):
+        return True
+    return hasattr(value, "dtype") and np.issubdtype(value.dtype, np.datetime64)
+
+
 def _is_datetime(data: np.ndarray) -> bool:
     """判断数据是否为 datetime 类型"""
     if len(data) == 0:
         return False
-    first = data[0]
-    if isinstance(first, (datetime, date, np.datetime64)):
-        return True
-    if hasattr(first, "dtype") and np.issubdtype(first.dtype, np.datetime64):
-        return True
-    return False
+    return _is_datetime_value(data[0])
 
 
 def _detect_x_type(t: np.ndarray) -> str:
@@ -95,13 +97,9 @@ def _is_numeric_time_value(value: Any) -> bool:
     return isinstance(value, (int, float, np.number))
 
 
-def _is_datetime_time_value(value: Any) -> bool:
-    return isinstance(value, (datetime, date, np.datetime64))
-
-
 def _validate_time_value_for_axis(value: Any, x_type: str, field_name: str) -> None:
     if x_type == "datetime":
-        if not _is_datetime_time_value(value):
+        if not _is_datetime_value(value):
             raise TypeError(
                 f"{field_name} 必须是 datetime/date 类型，实际类型: {type(value).__name__}"
             )
@@ -502,9 +500,7 @@ def plot_gantt(
     is_datetime = False
     if len(start_arr) > 0:
         first = start_arr[0]
-        if isinstance(first, (datetime, date, np.datetime64)) or (
-            hasattr(first, "dtype") and np.issubdtype(first.dtype, np.datetime64)
-        ):
+        if _is_datetime_value(first):
             is_datetime = True
 
     # 解析 duration / end
