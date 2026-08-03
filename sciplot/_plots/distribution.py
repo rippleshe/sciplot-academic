@@ -19,6 +19,7 @@ from sciplot._core.utils import (
     validate_dict_not_empty,
     validate_array_like,
     validate_positive_number,
+    boxplot_with_orientation,
     get_cycle_colors as _get_cycle_colors,
 )
 from sciplot._core.result import PlotResult, ComboPlotResult
@@ -73,6 +74,10 @@ def plot_bar(
     effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
     colors = _get_cycle_colors()
     bar_colors = [colors[i % len(colors)] for i in range(len(categories))]
+    # 显式 color 参数覆盖自动配色（避免 kwargs 与 bar_colors 冲突）
+    explicit_color = kwargs.pop("color", None)
+    if explicit_color is not None:
+        bar_colors = explicit_color
     ax.bar(categories, values_arr, width=width, color=bar_colors, **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -981,11 +986,15 @@ def plot_beeswarm(
 
         if show_box:
             if orient == "v":
-                ax.boxplot(values, positions=[pos], widths=0.35,
-                           patch_artist=True, showfliers=False)
+                boxplot_with_orientation(
+                    ax, values, orientation="vertical", positions=[pos],
+                    widths=0.35, patch_artist=True, showfliers=False,
+                )
             else:
-                ax.boxplot(values, positions=[pos], vert=False, widths=0.35,
-                           patch_artist=True, showfliers=False)
+                boxplot_with_orientation(
+                    ax, values, orientation="horizontal", positions=[pos],
+                    widths=0.35, patch_artist=True, showfliers=False,
+                )
             for patch in ax.patches[-1:]:
                 patch.set_facecolor(color)
                 patch.set_alpha(0.15)

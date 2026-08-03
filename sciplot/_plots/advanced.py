@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from sciplot._core.layout import new_figure
-from sciplot._core.utils import apply_resolved_style, get_cycle_colors
+from sciplot._core.utils import apply_resolved_style, boxplot_with_orientation, get_cycle_colors
 from sciplot._core.result import PlotResult
 
 
@@ -114,6 +114,18 @@ def plot_confidence(
         >>> fig, ax = sp.plot_confidence(x, mean, se, n_std=1.96,
         ...     label_std="95% CI")
     """
+    # 输入转数组：plot/fill_between 需要 numpy 运算（list 直接相减会崩）
+    x = np.asarray(x, dtype=float)
+    y_mean = np.asarray(y_mean, dtype=float)
+    y_std = np.asarray(y_std, dtype=float)
+    if len(x) != len(y_mean) or len(x) != len(y_std):
+        raise ValueError(
+            f"x/y_mean/y_std 长度必须一致，实际为 "
+            f"x={len(x)}, y_mean={len(y_mean)}, y_std={len(y_std)}"
+        )
+    if np.any(~np.isfinite(y_std)) or np.any(y_std < 0):
+        raise ValueError("y_std 必须全部为非负的有限数值")
+
     # 自动推断 label_std
     if label_std is None:
         if abs(n_std - 1.96) < 0.01:
@@ -694,7 +706,9 @@ def plot_marginal(
     if marginal == "hist":
         ax_x.hist(x_arr, bins=bins, color=main_color, alpha=0.8)
     elif marginal == "box":
-        ax_x.boxplot(x_arr, vert=False, patch_artist=True, widths=0.6)
+        boxplot_with_orientation(
+            ax_x, x_arr, orientation="horizontal", patch_artist=True, widths=0.6,
+        )
         for patch in ax_x.patches[:1]:
             patch.set_facecolor(main_color)
             patch.set_alpha(0.6)
@@ -708,7 +722,9 @@ def plot_marginal(
     if marginal == "hist":
         ax_y.hist(y_arr, bins=bins, orientation="horizontal", color=main_color, alpha=0.8)
     elif marginal == "box":
-        ax_y.boxplot(y_arr, vert=True, patch_artist=True, widths=0.6)
+        boxplot_with_orientation(
+            ax_y, y_arr, orientation="vertical", patch_artist=True, widths=0.6,
+        )
         for patch in ax_y.patches[:1]:
             patch.set_facecolor(main_color)
             patch.set_alpha(0.6)

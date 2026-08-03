@@ -15,6 +15,7 @@ import numpy as np
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
     apply_resolved_style,
+    boxplot_with_orientation,
     get_cycle_colors as _get_cycle_colors,
     _ensure_non_empty_prop_cycle,
 )
@@ -686,9 +687,9 @@ def plot_raincloud(
 
             # ── 箱线（中部） ──
             if show_box:
-                ax.boxplot(
-                    values, positions=[pos], vert=False, widths=box_width,
-                    patch_artist=True, showfliers=False,
+                boxplot_with_orientation(
+                    ax, values, orientation="horizontal", positions=[pos],
+                    widths=box_width, patch_artist=True, showfliers=False,
                 )
                 for patch in ax.patches[-1:]:
                     patch.set_facecolor(color)
@@ -723,9 +724,9 @@ def plot_raincloud(
                 )
 
             if show_box:
-                ax.boxplot(
-                    values, positions=[pos], vert=True, widths=box_width,
-                    patch_artist=True, showfliers=False,
+                boxplot_with_orientation(
+                    ax, values, orientation="vertical", positions=[pos],
+                    widths=box_width, patch_artist=True, showfliers=False,
                 )
                 for patch in ax.patches[-1:]:
                     patch.set_facecolor(color)

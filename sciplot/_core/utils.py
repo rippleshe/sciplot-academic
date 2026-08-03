@@ -534,6 +534,23 @@ def get_cycle_colors() -> List[str]:
     return colors
 
 
+def boxplot_with_orientation(
+    ax: Any,
+    data: Any,
+    orientation: str = "vertical",
+    **kwargs: Any,
+) -> Any:
+    """兼容 matplotlib 新旧版本的 boxplot 方向参数。
+
+    matplotlib >= 3.9 推荐使用 orientation 参数（vert 已弃用），
+    旧版本仅支持 vert。此函数自动适配两者。
+    """
+    try:
+        return ax.boxplot(data, orientation=orientation, **kwargs)
+    except TypeError:
+        return ax.boxplot(data, vert=(orientation != "horizontal"), **kwargs)
+
+
 __all__ = [
     "apply_resolved_style",
     "create_sciplot_figure",
@@ -545,5 +562,6 @@ __all__ = [
     "validate_choice",
     "validate_dict_not_empty",
     "get_cycle_colors",
+    "boxplot_with_orientation",
 ]
 

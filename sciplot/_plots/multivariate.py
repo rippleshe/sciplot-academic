@@ -87,13 +87,41 @@ def plot_parallel(
         ...     color_by=0,  # 按第一列着色
         ... )
     """
+    categorical_color_values: Optional[np.ndarray] = None
     if hasattr(data, "iloc"):
         df = cast(Any, data)
-        if columns is None:
-            columns = list(df.columns)
         if labels is None and hasattr(df, "index"):
             labels = [str(idx) for idx in df.index]
-        data = df.values
+        if isinstance(color_by, str) and color_by in df.columns:
+            col_series = df[color_by]
+            try:
+                col_is_numeric = np.issubdtype(col_series.dtype, np.number)
+            except TypeError:
+                # pandas 3.x 的 StringDtype 等无法被 issubdtype 解释
+                col_is_numeric = False
+            if not col_is_numeric:
+                # 分类着色列：从数值数据中剔除，仅用于着色
+                categorical_color_values = np.asarray(col_series.to_numpy())
+                df = df.drop(columns=[color_by])
+                color_by = None
+        # 只保留数值列（混合类型 DataFrame 自动提取）；无 select_dtypes 的
+        # 轻量 DataFrame 模拟对象（全数值）直接使用 .values 兼容旧行为
+        select_dtypes = getattr(df, "select_dtypes", None)
+        if select_dtypes is not None:
+            df_numeric = df.select_dtypes(include=[np.number])
+            if df_numeric.shape[1] == 0:
+                raise ValueError("data 中不包含数值列")
+            if columns is not None:
+                # 用户显式提供的 columns：剔除被移走的非数值列
+                df_cols = set(df_numeric.columns)
+                columns = [c for c in columns if c in df_cols]
+                if len(columns) != df_numeric.shape[1]:
+                    raise ValueError(
+                        f"columns 长度 ({len(columns)}) 与数值特征数 ({df_numeric.shape[1]}) 不一致"
+                    )
+            else:
+                columns = list(df_numeric.columns)
+            data = df_numeric.values
 
     data = np.asarray(data)
 
@@ -130,7 +158,23 @@ def plot_parallel(
 
     x = np.arange(n_features)
 
-    if color_by is not None:
+    if categorical_color_values is not None:
+        # DataFrame 分类列着色（数值列已提取，此路径只按类别分配颜色）
+        unique_vals = sorted(set(categorical_color_values), key=str)
+        colors = get_cycle_colors()
+        cat_map = {v: colors[i % len(colors)] for i, v in enumerate(unique_vals)}
+        for i in range(n_samples):
+            ax.plot(
+                x, data_norm[i, :], alpha=alpha,
+                color=cat_map.get(categorical_color_values[i], colors[0]),
+                linewidth=linewidth, **kwargs,
+            )
+        legend_handles = [
+            Line2D([0], [0], color=cat_map[v], linewidth=linewidth, label=str(v))
+            for v in unique_vals
+        ]
+        ax.legend(handles=legend_handles, title="")
+    elif color_by is not None:
         if isinstance(color_by, str):
             if columns is None:
                 raise ValueError("color_by 为列名时必须提供 columns")
