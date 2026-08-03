@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import Normalize
 
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import (
@@ -17,6 +18,28 @@ from sciplot._core.utils import (
     get_cycle_colors,
 )
 from sciplot._core.result import PlotResult
+
+
+def _resolve_norm(
+    vmin: Optional[float],
+    vmax: Optional[float],
+    data: np.ndarray,
+) -> Normalize:
+    """解析 vmin/vmax（None 时从数据推断），并避免 vmin==vmax 除零。"""
+    finite = data[np.isfinite(data)]
+    vmin_eff = float(finite.min()) if vmin is None else float(vmin)
+    vmax_eff = float(finite.max()) if vmax is None else float(vmax)
+    if vmin_eff == vmax_eff:
+        vmax_eff = vmin_eff + 1.0  # 避免 Normalize 除零
+    return Normalize(vmin=vmin_eff, vmax=vmax_eff)
+
+
+def _get_cmap_safe(name: str):
+    """获取 colormap，兼容新旧 matplotlib API。"""
+    try:
+        return plt.colormaps.get_cmap(name)
+    except AttributeError:
+        return plt.cm.get_cmap(name)  # type: ignore[attr-defined]
 
 
 def plot_errorbar(
@@ -360,11 +383,7 @@ def plot_bubble_heatmap(
     if finite_data.size == 0:
         raise ValueError("data 中不包含可用于绘图的有限数值")
 
-    vmin_eff = float(finite_data.min()) if vmin is None else float(vmin)
-    vmax_eff = float(finite_data.max()) if vmax is None else float(vmax)
-    if vmin_eff == vmax_eff:
-        vmax_eff = vmin_eff + 1.0  # 避免 Normalize 除零
-    norm = Normalize(vmin=vmin_eff, vmax=vmax_eff)
+    norm = _resolve_norm(vmin, vmax, finite_data)
 
     # 背景热力层（可选，半透明）
     im = None
@@ -372,7 +391,7 @@ def plot_bubble_heatmap(
         masked = np.ma.masked_invalid(data)
         im = ax.imshow(
             masked, cmap=cmap, aspect=aspect,
-            vmin=vmin_eff, vmax=vmax_eff, alpha=bg_alpha,
+            vmin=norm.vmin, vmax=norm.vmax, alpha=bg_alpha,
         )
 
     # 坐标轴刻度与标签
@@ -412,7 +431,7 @@ def plot_bubble_heatmap(
     sizes_pt2 = np.where(vals != 0, np.maximum(sizes_pt2, min_bubble_size), 0.0)
 
     colors = [im.cmap(norm(v)) for v in vals] if im is not None else \
-        [plt.colormaps.get_cmap(cmap)(norm(v)) for v in vals]
+        [_get_cmap_safe(cmap)(norm(v)) for v in vals]
 
     scatter = ax.scatter(
         x_pts, y_pts, s=sizes_pt2, c=colors, alpha=1.0,
@@ -1191,12 +1210,8 @@ def plot_bubble(
         finite_color = color_arr[np.isfinite(color_arr)]
         if finite_color.size == 0:
             raise ValueError("color 中不包含可用于颜色映射的有限数值")
-        vmin_eff = float(finite_color.min()) if vmin is None else float(vmin)
-        vmax_eff = float(finite_color.max()) if vmax is None else float(vmax)
-        if vmin_eff == vmax_eff:
-            vmax_eff = vmin_eff + 1.0
-        norm = Normalize(vmin=vmin_eff, vmax=vmax_eff)
-        cmap_obj = plt.colormaps.get_cmap(cmap)
+        norm = _resolve_norm(vmin, vmax, finite_color)
+        cmap_obj = _get_cmap_safe(cmap)
         scatter = ax.scatter(
             x_arr, y_arr, s=sizes, c=color_arr, cmap=cmap_obj,
             norm=norm, alpha=alpha, edgecolors=edgecolor,
