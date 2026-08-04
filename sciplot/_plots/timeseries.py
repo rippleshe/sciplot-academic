@@ -577,7 +577,7 @@ def plot_gantt(
             raise ValueError(
                 f"color_by 长度 ({len(c_arr)}) 与 tasks 长度 ({len(tasks)}) 不一致"
             )
-        unique_vals = sorted(set(c_arr), key=str)
+        unique_vals = list(dict.fromkeys(c_arr))  # 保持首次出现顺序
         color_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_vals)}
         bar_colors = [color_map[v] for v in c_arr]
         legend_handles = [
@@ -616,12 +616,14 @@ def plot_gantt(
             ax.axhspan(
                 i - 0.5, i + 0.5, color=group_map[g], alpha=0.08, zorder=0,
             )
-        # 阶段图例
+        # 阶段图例：与 color_by 图例按标签去重（同标签不重复条目）
         legend_handles = legend_handles or []
-        legend_handles += [
-            _Patch(facecolor=c, label=str(g), alpha=0.5)
-            for g, c in zip(unique_groups, group_colors)
-        ]
+        existing_labels = {h.get_label() for h in legend_handles}
+        for g, c in zip(unique_groups, group_colors):
+            if str(g) not in existing_labels:
+                legend_handles.append(
+                    _Patch(facecolor=c, label=str(g), alpha=0.5)
+                )
 
     ax.barh(y, widths, left=starts_plot, color=bar_colors, alpha=alpha, zorder=2, **kwargs)
 

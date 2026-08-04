@@ -737,7 +737,7 @@ def plot_chord(
 
     # 节点颜色：color_by 分类或默认逐节点
     if color_by is not None:
-        unique_groups = sorted(set(color_by), key=str)
+        unique_groups = list(dict.fromkeys(color_by))
         group_map = {g: cycle_color(colors, i) for i, g in enumerate(unique_groups)}
         node_colors = [group_map[g] for g in color_by]
         categorical_legend = group_map

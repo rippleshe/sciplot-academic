@@ -157,3 +157,17 @@ def test_gantt_save_png(tmp_path, cleanup_figures):
     )
     paths = result.save(str(tmp_path / "gantt"), formats=("png",), dpi=100)
     assert paths[0].exists() and paths[0].stat().st_size > 0
+
+
+def test_gantt_legend_dedup_colorby_groups(cleanup_figures):
+    """color_by 与 groups 同标签时，图例只出现一次且保持首次出现顺序。"""
+    tasks = [f"T{i}" for i in range(6)]
+    result = sp.plot_gantt(
+        tasks, [0, 1, 2, 3, 4, 5], [1, 1, 1, 1, 1, 1],
+        color_by=["前期", "前期", "中期", "中期", "后期", "后期"],
+        groups=["前期", "前期", "中期", "中期", "后期", "后期"],
+    )
+    leg = result.ax.get_legend()
+    assert leg is not None
+    labels = [t.get_text() for t in leg.get_texts()]
+    assert labels == ["前期", "中期", "后期"], f"图例应去重且有序: {labels}"

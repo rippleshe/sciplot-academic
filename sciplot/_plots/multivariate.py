@@ -162,7 +162,7 @@ def plot_parallel(
 
     if categorical_color_values is not None:
         # DataFrame 分类列着色（数值列已提取，此路径只按类别分配颜色）
-        unique_vals = sorted(set(categorical_color_values), key=str)
+        unique_vals = list(dict.fromkeys(categorical_color_values))
         colors = get_cycle_colors()
         cat_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_vals)}
         for i in range(n_samples):

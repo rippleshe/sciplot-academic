@@ -137,7 +137,7 @@ def _resolve_node_colors(G, node_color_by, colors):
         return colors[0], categorical_map, continuous_info
 
     numeric_attr = _coerce_numeric_attr(color_values)
-    unique_values = sorted(set(color_values.values()), key=str)  # 确定性排序
+    unique_values = list(dict.fromkeys(color_values.values()))  # 首次出现顺序
     if numeric_attr is None or len(unique_values) <= 10:
         categorical_map = {v: cycle_color(colors, i) for i, v in enumerate(unique_values)}
         node_colors = [categorical_map.get(color_values.get(n, 0), colors[0]) for n in G.nodes()]
