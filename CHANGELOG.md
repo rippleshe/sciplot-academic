@@ -7,6 +7,27 @@
 
 ---
 
+## [1.13.8] - 2026-08-04
+
+### Added
+
+- **plot_network / plot_network3d 边列表输入**：G 支持 networkx 图对象
+  或边列表 `[(u, v)]` / 带权重 `[(u, v, w)]`（数值三元组自动转为
+  `weight` 属性，可直接配 `edge_weight_by="weight"`）；
+  非法输入给明确 TypeError
+
+### Changed
+
+- 全函数 dark theme 冒烟（52 个函数）：全部通过，无硬编码浅色元素
+- 全 NaN/Inf 输入冒烟：全部优雅报错或安全处理
+
+### Tests
+
+- 新增 network 边列表/带权重/非法输入/3D 边列表 4 个测试
+- 总数 1531 passed
+
+---
+
 ## [1.13.7] - 2026-08-04
 
 ### Fixed

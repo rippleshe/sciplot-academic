@@ -154,3 +154,33 @@ def test_communities_node_size(karate, cleanup_figures):
     result = sp.plot_network_communities(karate, node_size=500)
     sizes = np.asarray(result.ax.collections[1].get_sizes())
     assert np.all(sizes == 500)
+
+
+def test_network_edge_list_input(cleanup_figures):
+    """边列表自动转 nx.Graph。"""
+    result = sp.plot_network([(1, 2), (2, 3), (1, 3)])
+    assert result.fig is not None
+    assert result.ax is not None
+
+
+def test_network_edge_list_weighted(cleanup_figures):
+    """(u, v, w) 数值三元组自动转 weight 属性，edge_weight_by 可映射。"""
+    result = sp.plot_network(
+        [(1, 2, 0.5), (2, 3, 1.5), (1, 3, 2.0)],
+        edge_weight_by="weight",
+    )
+    assert result.fig is not None
+
+
+def test_network_edge_list_invalid_raises(cleanup_figures):
+    """非图非边列表输入应报 TypeError。"""
+    import pytest
+
+    with pytest.raises(TypeError):
+        sp.plot_network(42)
+
+
+def test_network3d_edge_list_input(cleanup_figures):
+    """3D 网络同样支持边列表。"""
+    result = sp.plot_network3d([(1, 2), (2, 3), (1, 3)])
+    assert result.fig is not None

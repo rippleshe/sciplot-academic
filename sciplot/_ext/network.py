@@ -34,6 +34,34 @@ def _check_networkx():
         ) from e
 
 
+def _coerce_graph(G: Any, nx: Any) -> Any:
+    """把输入归一化为 networkx 图对象。
+
+    - networkx Graph/DiGraph → 原样返回
+    - 边列表 [(u, v), ...] 或带权重 [(u, v, w), ...] → 自动构造 nx.Graph
+    - 其他 → TypeError
+    """
+    if hasattr(G, "is_directed") and hasattr(G, "nodes"):
+        return G
+    # 尝试直接构造；失败时把 (u, v, w) 数值三元组自动转为 weight 属性
+    try:
+        return nx.Graph(G)
+    except Exception:
+        pass
+    try:
+        edges = []
+        for e in G:
+            if len(e) == 3 and not isinstance(e[2], dict):
+                edges.append((e[0], e[1], {"weight": e[2]}))
+            else:
+                edges.append(e)
+        return nx.Graph(edges)
+    except Exception:
+        raise TypeError(
+            "G 必须是 networkx 图对象或边列表（如 [(1, 2), (2, 3)] 或带权重 [(1, 2, 0.5)]）"
+        ) from None
+
+
 def _get_label_font_family() -> str:
     """获取当前 rcParams 中最具体的字体族（支持中文回退链）。"""
     font_family = plt.rcParams.get("font.family", "serif")
@@ -209,7 +237,8 @@ def plot_network(
     绘制网络图
 
     参数:
-        G            : networkx Graph 或 DiGraph 对象
+        G            : networkx Graph 或 DiGraph 对象；
+                      也支持边列表 [(u, v)] / [(u, v, w)]，自动转为无向图
         layout       : 布局算法
                        - "spring": 力导向布局（默认）
                        - "circular": 环形布局
@@ -240,6 +269,7 @@ def plot_network(
         >>> sp.save(fig, "network")
     """
     nx = _check_networkx()
+    G = _coerce_graph(G, nx)
     layout_kw = dict(layout_kwargs or {})
     if seed is not None:
         layout_kw.setdefault("seed", seed)
@@ -360,7 +390,8 @@ def plot_network3d(
     社交网络 + 活跃度）。
 
     参数:
-        G            : networkx Graph 或 DiGraph 对象
+        G            : networkx Graph 或 DiGraph 对象；
+                      也支持边列表 [(u, v)] / [(u, v, w)]，自动转为无向图
         layout       : 布局算法（同 plot_network）
         node_color_by: 按节点属性着色（"degree" 或任意属性）
         node_size_by : 按节点属性调整大小
@@ -390,6 +421,7 @@ def plot_network3d(
     from sciplot._ext.plot3d import _get_3d_figsize
 
     nx = _check_networkx()
+    G = _coerce_graph(G, nx)
     layout_kw = dict(layout_kwargs or {})
     if seed is not None:
         layout_kw.setdefault("seed", seed)
