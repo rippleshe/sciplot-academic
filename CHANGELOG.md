@@ -7,6 +7,31 @@
 
 ---
 
+## [1.13.10] - 2026-08-04
+
+### Added
+
+- **11 个新短别名**：parallel / pca / slope / surface / contour /
+  confusion / learning_curve / feature_importance / venn2 / venn3 / network
+
+### Fixed
+
+- **甘特图图例重复**：color_by 与 groups 同标签时图例出现两份
+  → 按标签去重
+- **分类色中文乱序**：4 处 `sorted(set(..., key=str))` 按 Unicode 码点排中文
+  （中期 < 前期 < 后期）→ 改为首次出现顺序
+  （gantt / parallel / 网络节点着色 / 其他 color_by）
+- **桑基图标签重叠**：同层标签按 y 累积推挤，最小间距 0.045，
+  多节点小流量时不再重叠
+
+### Tests
+
+- 新增：别名完整性、gantt 图例去重、sankey 标签避让、
+  histogram 自定义色、box patch_artist 三态
+- 总数 1537 passed
+
+---
+
 ## [1.13.9] - 2026-08-04
 
 ### Fixed
