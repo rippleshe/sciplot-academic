@@ -144,3 +144,21 @@ def test_sankey_min_node_height_zero_disables(cleanup_figures):
     rects = [p for p in result.ax.patches if isinstance(p, Rectangle)]
     hs = sorted(r.get_height() for r in rects)
     assert hs[0] < 0.01  # 原始比例下小节点仍很小
+
+
+def test_sankey_label_collision_avoidance(cleanup_figures):
+    """同层节点标签按 y 累积推挤，最小间距 0.045 不重叠。"""
+    src = (["煤炭", "石油", "天然气", "水电", "风电", "核电", "太阳能", "生物质"]
+           + ["电力转化"] * 4)
+    tgt = ["电力转化"] * 8 + ["工业用电", "商业用电", "居民用电", "农业"]
+    val = [180.0, 60.0, 30.0, 25.0, 15.0, 10.0, 8.0, 5.0, 150.0, 40.0, 30.0, 10.0]
+    result = sp.plot_sankey(src, tgt, val)
+
+    cols = {}
+    for t in result.ax.texts:
+        x, y = t.get_position()
+        cols.setdefault(round(x, 2), []).append(y)
+    for x, ys in cols.items():
+        ys.sort()
+        for i in range(len(ys) - 1):
+            assert ys[i + 1] - ys[i] >= 0.044, f"x={x} 列标签重叠: {ys[i]:.3f}→{ys[i+1]:.3f}"

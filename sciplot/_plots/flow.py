@@ -246,14 +246,30 @@ def plot_sankey(
 
     # ── 节点标签（末层在左，其余在右） ──
     fs = max(7, plt.rcParams.get("font.size", 9) - 1)
+
+    # 标签避让：同层标签按 y 排序后累积推挤，保证最小文字间距
+    min_label_gap = 0.045
+    label_y: Dict[Any, float] = {}
+    for lv in sorted(set(level.values())):
+        layer_nodes = sorted(
+            (n for n in node_list if level[n] == lv),
+            key=lambda n: node_pos[n][1],
+        )
+        for i, n in enumerate(layer_nodes):
+            y0 = node_pos[n][1] + node_h_display[n] / 2
+            if i > 0:
+                prev = layer_nodes[i - 1]
+                y0 = max(y0, label_y[prev] + min_label_gap)
+            label_y[n] = y0
+
     for n in node_list:
         x, y = node_pos[n]
         h = node_h_display[n]
         if level[n] == max_level:
-            ax.text(x - 0.005, y + h / 2, label_of[n],
+            ax.text(x - 0.005, label_y[n], label_of[n],
                     ha="right", va="center", fontsize=fs, zorder=4)
         else:
-            ax.text(x + node_width + 0.005, y + h / 2, label_of[n],
+            ax.text(x + node_width + 0.005, label_y[n], label_of[n],
                     ha="left", va="center", fontsize=fs, zorder=4)
 
     ax.set_xlim(-0.3, max_level * x_stride + node_width + 0.3)
