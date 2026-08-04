@@ -396,6 +396,17 @@ from sciplot._plots.aliases import (
     volcano,
     forest,
     funnel,
+    parallel,
+    pca,
+    slope,
+    surface,
+    contour,
+    confusion,
+    learning_curve,
+    feature_importance,
+    venn2,
+    venn3,
+    network,
 )
 
 # ── 工具 ──────────────────────────────────────────────────────

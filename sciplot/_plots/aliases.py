@@ -58,6 +58,7 @@ from sciplot._plots.polar import (
 )
 from sciplot._plots.multivariate import (
     plot_ternary,
+    plot_parallel,
 )
 from sciplot._plots.timeseries import (
     plot_timeseries,
@@ -66,6 +67,7 @@ from sciplot._plots.timeseries import (
     plot_calendar_heatmap,
     plot_streamgraph,
     plot_bump,
+    plot_slope,
 )
 from sciplot._plots.statistical import (
     plot_density,
@@ -81,6 +83,21 @@ from sciplot._plots.statistical import (
 )
 from sciplot._ext.plot3d import (
     plot_waterfall3d,
+    plot_surface,
+    plot_contour,
+)
+from sciplot._ext.ml import (
+    plot_confusion_matrix,
+    plot_feature_importance,
+    plot_learning_curve,
+    plot_pca,
+)
+from sciplot._ext.network import (
+    plot_network,
+)
+from sciplot._ext.venn import (
+    plot_venn2,
+    plot_venn3,
 )
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -162,6 +179,17 @@ radar = _make_alias(plot_radar)
 taylor = _make_alias(plot_taylor)
 circular_barplot = _make_alias(plot_circular_barplot)
 ternary = _make_alias(plot_ternary)
+parallel = _make_alias(plot_parallel)
+pca = _make_alias(plot_pca)
+slope = _make_alias(plot_slope)
+surface = _make_alias(plot_surface)
+contour = _make_alias(plot_contour)
+confusion = _make_alias(plot_confusion_matrix)
+learning_curve = _make_alias(plot_learning_curve)
+feature_importance = _make_alias(plot_feature_importance)
+venn2 = _make_alias(plot_venn2)
+venn3 = _make_alias(plot_venn3)
+network = _make_alias(plot_network)
 timeseries = _make_alias(plot_timeseries)
 multi_timeseries = _make_alias(plot_multi_timeseries)
 gantt = _make_alias(plot_gantt)
@@ -186,6 +214,9 @@ __all__ = [
     "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
     "radar", "taylor", "circular_barplot", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
+    "parallel", "pca", "slope", "surface", "contour",
+    "confusion", "learning_curve", "feature_importance",
+    "venn2", "venn3", "network",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "forest", "funnel", "waterfall3d",
 ]

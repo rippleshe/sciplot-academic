@@ -219,3 +219,23 @@ class TestAliasParameterForwarding:
         data = np.array([[1, 2], [3, 4]])
         result = sp.heatmap(data, show_values=True, fmt=".1f")
         assert result.fig is not None
+
+
+def test_new_aliases_exposed():
+    """新增别名全部可从包顶层访问。"""
+    for name in [
+        "parallel", "pca", "slope", "surface", "contour",
+        "confusion", "learning_curve", "feature_importance",
+        "venn2", "venn3", "network",
+    ]:
+        assert callable(getattr(sp, name, None)), f"缺少别名 {name}"
+
+
+def test_new_aliases_work(cleanup_figures):
+    """新别名实际可用且行为与原函数一致。"""
+    rng = np.random.default_rng(0)
+    # 别名与原函数指向同一实现
+    assert sp.parallel.__wrapped__ is sp.plot_parallel
+    assert sp.pca.__wrapped__ is sp.plot_pca
+    assert sp.network.__wrapped__ is sp.plot_network
+    assert sp.venn2.__wrapped__ is sp.plot_venn2
