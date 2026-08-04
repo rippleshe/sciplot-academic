@@ -232,14 +232,25 @@ def plot_upset(
                         ha="center", va="bottom", fontsize=fs_small,
                         color="#2C3E50", fontweight="bold")
 
-    # 底部分组标签（集合成员的并集名，如 "A&B"；过长自动截断）
+    # 底部分组标签（集合成员的并集名，如 "A&B"；过长按显示宽度截断）
     if show_degree_labels:
         fs_bottom = fs_tiny
         max_chars = max(10, int(18 / max(1.0, n_inters / 4.0)))
+
+        def _disp_w(s: str) -> int:
+            """近似显示宽度：中文/全角按 2 计，其余按 1。"""
+            return sum(2 if ord(c) > 0x2E80 else 1 for c in s)
+
         for ci, (combo, size) in enumerate(combos):
             label = "&".join(names[i] for i in combo)
-            if len(label) > max_chars:
-                label = label[: max_chars - 1] + "…"
+            if _disp_w(label) > max_chars:
+                # 按显示宽度预算从头部截断，省略号计入预算
+                out = ""
+                for c in label:
+                    if _disp_w(out + c) + 1 > max_chars:
+                        break
+                    out += c
+                label = out + "…"
             ax_main.text(ci, n_sets + 0.42, label,
                          ha="center", va="top", fontsize=fs_bottom,
                          color="#555555")

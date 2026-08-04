@@ -7,6 +7,27 @@
 
 ---
 
+## [1.13.9] - 2026-08-04
+
+### Fixed
+
+- **plot_histogram 透传 color 崩溃**：内部硬编码 `color=colors[0]` 与
+  用户 kwargs 冲突 → TypeError；改为显式 color 覆盖自动配色
+- **plot_box 透传 patch_artist 崩溃**：内部硬编码 `patch_artist=True` 冲突；
+  改为尊重用户值，且 `patch_artist=False` 时跳过面着色（boxes 为 Line2D）
+
+### Changed
+
+- 参数一致性扫描：验证 10 类图表的显式颜色参数均生效
+  （donut/bar/scatter/waterfall/forest/sankey 等无硬编码覆盖）
+
+### Tests
+
+- 新增 histogram 自定义/默认色、box patch_artist 三态测试
+- 总数 1535 passed
+
+---
+
 ## [1.13.8] - 2026-08-04
 
 ### Added

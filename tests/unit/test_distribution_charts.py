@@ -154,3 +154,36 @@ class TestSignificanceAnnotation:
         texts = [child for child in ax.get_children() 
                  if hasattr(child, 'get_text')]
         assert len(texts) > 0
+
+
+def test_histogram_custom_color_kwargs(cleanup_figures):
+    """透传 color 应覆盖默认配色而非冲突崩溃。"""
+    rng = np.random.default_rng(0)
+    result = sp.plot_histogram(rng.normal(0, 1, 200), color="#FF00FF")
+    face = result.ax.patches[0].get_facecolor()
+    assert abs(face[0] - 1.0) < 0.01 and abs(face[2] - 1.0) < 0.01
+
+
+def test_histogram_default_color_unchanged(cleanup_figures):
+    """默认行为不变：使用配色首色（而非用户显式色）。"""
+    rng = np.random.default_rng(0)
+    result = sp.plot_histogram(rng.normal(0, 1, 200))
+    face = result.ax.patches[0].get_facecolor()
+    # 不是 #FF00FF（粉色），且来自配色循环（非灰阶）
+    assert not (abs(face[0] - 1.0) < 0.01 and abs(face[2] - 1.0) < 0.01)
+    assert face[0] != face[1] or face[1] != face[2]
+
+
+def test_box_patch_artist_kwargs(cleanup_figures):
+    """透传 patch_artist 应生效而非冲突崩溃。"""
+    rng = np.random.default_rng(0)
+    data = [rng.normal(0, 1, 50)]
+    # True：boxes 是 Patch，可设色
+    r1 = sp.plot_box(data, patch_artist=True)
+    assert r1.fig is not None
+    # False：boxes 是 Line2D，不设色也不崩
+    r2 = sp.plot_box(data, patch_artist=False)
+    assert r2.fig is not None
+    # 默认 True 不变
+    r3 = sp.plot_box(data)
+    assert r3.fig is not None

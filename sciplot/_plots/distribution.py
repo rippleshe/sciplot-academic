@@ -253,16 +253,18 @@ def plot_box(
 
     fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
-
+    # 显式 patch_artist 参数覆盖默认（避免 kwargs 与 True 冲突）
+    patch_artist = bool(kwargs.pop("patch_artist", True))
     bp = ax.boxplot(
         data, showfliers=showfliers,
-        patch_artist=True, **kwargs
+        patch_artist=patch_artist, **kwargs
     )
     if labels is not None:
         ax.set_xticklabels(labels)
-    for i, patch in enumerate(bp["boxes"]):
-        patch.set_facecolor(cycle_color(colors, i))
-        patch.set_alpha(0.75)
+    if patch_artist:
+        for i, patch in enumerate(bp["boxes"]):
+            patch.set_facecolor(cycle_color(colors, i))
+            patch.set_alpha(0.75)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -390,8 +392,11 @@ def plot_histogram(
 
     fig, ax = new_styled_figure(venue, palette, lang)
     colors = _get_cycle_colors()
+    # 显式 color 参数覆盖自动配色（避免 kwargs 与 colors[0] 冲突）
+    explicit_color = kwargs.pop("color", None)
     ax.hist(finite_values, bins=bins, density=density, alpha=alpha,
-            color=colors[0], **kwargs)
+            color=explicit_color if explicit_color is not None else colors[0],
+            **kwargs)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:

@@ -158,3 +158,25 @@ def test_aliases_exported(cleanup_figures):
     assert "plot_upset" in sp.__all__
     assert "sunburst" in sp.__all__
     assert "upset" in sp.__all__
+
+
+def test_upset_label_truncation_display_width(cleanup_figures):
+    """底部分组标签按显示宽度截断（中文按 2 计），且省略号计入预算。"""
+    result = sp.plot_upset({
+        "RNA-seq": {1, 2, 3, 4, 5},
+        "蛋白质组": {3, 4, 5, 6},
+        "ChIP-seq": {1, 3, 5, 7},
+    })
+    bottom = [t.get_text() for t in result.ax.texts if "&" in t.get_text()]
+
+    def disp_w(s):
+        return sum(2 if ord(c) > 0x2E80 else 1 for c in s)
+
+    # 预算：max(10, int(18 / (3 / 4))) = 24（3 个交集）
+    for label in bottom:
+        assert disp_w(label) <= 24, f"标签 {label!r} 显示宽度超预算: {disp_w(label)}"
+    # 截断后必须带省略号，且保留完整集合名单元
+    full = "RNA-seq&蛋白质组&ChIP-seq"
+    truncated = [t for t in bottom if t.endswith("…")]
+    assert truncated, "超宽标签应被截断"
+    assert any(t.startswith("RNA-seq&蛋白质组&") for t in truncated), "应保留头部信息"
