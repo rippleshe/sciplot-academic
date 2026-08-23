@@ -41,6 +41,10 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+.mplconfig/
+
+# Windows/CI cache artifacts accidentally materialised by isolated runtimes
+/%SystemDrive%/
 
 # Jupyter
 .ipynb_checkpoints/

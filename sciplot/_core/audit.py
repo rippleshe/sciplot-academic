@@ -31,6 +31,35 @@ PANEL_LABEL_SIZE = 8.0
 _PANEL_LABEL_RE = re.compile(r"^\(?[a-zA-Z0-9ivxIVX]{1,3}\)?$")
 
 
+def _is_explicit_auxiliary_axis(ax: Axes) -> bool:
+    """判断轴是否是色条/边际图等明确的辅助轴。"""
+    return bool(
+        getattr(ax, "_sciplot_auxiliary", False)
+        or ax.get_label() == "<colorbar>"
+        or getattr(ax, "_colorbar", None) is not None
+    )
+
+
+def _panel_axes(fig: Figure) -> List[Axes]:
+    """返回真正参与论文面板计数的轴，排除 colorbar/twin/边际辅助轴。"""
+    panels: List[Axes] = []
+    bounds_seen: List[Tuple[float, float, float, float]] = []
+    for ax in fig.axes:
+        if not isinstance(ax, Axes) or not ax.get_visible():
+            continue
+        if _is_explicit_auxiliary_axis(ax):
+            continue
+
+        # twinx/twiny 与主轴占据完全相同的物理区域；它是第二坐标系，
+        # 不是一个需要 (a)/(b) 标签的新论文面板。
+        bounds = tuple(float(v) for v in ax.get_position().bounds)
+        if any(np.allclose(bounds, old, rtol=0.0, atol=1e-9) for old in bounds_seen):
+            continue
+        bounds_seen.append(bounds)
+        panels.append(ax)
+    return panels
+
+
 def _collect_texts(fig: Figure) -> List[Tuple[Axes, Any, str, float]]:
     """收集图中所有文本元素: (ax, text_obj, content, fontsize)。"""
     out: List[Tuple[Axes, Any, str, float]] = []
@@ -121,7 +150,7 @@ def audit_figure(
 
     # ── 面板标签 ──
     if check_panel_labels:
-        n_axes = sum(1 for ax in fig.axes if isinstance(ax, Axes))
+        n_axes = len(_panel_axes(fig))
         if n_axes > 1 and not _has_panel_labels(fig):
             msg = (
                 f"多面板图（{n_axes} 个子图）缺少面板标签 (a) (b)…，"
@@ -139,8 +168,21 @@ def audit_figure(
             # 跳过隐藏轴（如纯示意图面板）
             if not ax.get_visible():
                 continue
-            has_data = bool(ax.lines or ax.collections or ax.patches
-                            or ax.images or ax.barcontainers)
+            # 色条和明确声明的边际辅助轴不使用常规 x/y 轴标签语义。
+            if _is_explicit_auxiliary_axis(ax):
+                continue
+            # ``Axes.containers`` is the public Matplotlib collection for
+            # bars/errorbars/stem containers.  Older code used the private-ish
+            # ``barcontainers`` attribute, which is not part of the Axes
+            # typing/API contract and breaks static analysis on current
+            # Matplotlib stubs.
+            has_data = bool(
+                ax.lines
+                or ax.collections
+                or ax.patches
+                or ax.images
+                or ax.containers
+            )
             if not has_data:
                 continue
             xlbl = ax.get_xlabel().strip()

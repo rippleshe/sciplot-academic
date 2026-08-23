@@ -4,6 +4,8 @@ Round-45 tests for plot_sunburst & plot_upset (分层占比 + 集合交集).
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 from matplotlib.axes import Axes
@@ -90,6 +92,22 @@ def test_upset_basic_dict(cleanup_figures):
     assert isinstance(ax, Axes)
     # 元数据含交集信息
     assert "intersections" in result.metadata
+
+
+def test_upset_metadata_intersections_are_materialized(cleanup_figures):
+    """交集元数据必须可重复读取/序列化，不能泄露一次性 generator。"""
+    result = sp.plot_upset({
+        "RNA": {"G1", "G2", "G3", "G4"},
+        "Prot": {"G2", "G3", "G5"},
+        "ChIP": {"G1", "G3", "G5"},
+    })
+    intersections = result.metadata["intersections"]
+    assert intersections
+    assert all(isinstance(item, tuple) for item in intersections)
+    first_read = [tuple(item) for item in intersections]
+    second_read = [tuple(item) for item in intersections]
+    assert first_read == second_read
+    json.dumps(intersections, ensure_ascii=False)
 
 
 def test_upset_basic_list(cleanup_figures):

@@ -36,6 +36,12 @@ def _safe_tight_layout(fig: Figure, stacklevel: int = 2) -> None:
         fig: matplotlib Figure 对象
         stacklevel: 警告堆栈级别
     """
+    # 一些复合图已经通过 GridSpec / add_axes 精确管理几何布局；对这类
+    # Figure 再调用 tight_layout 不仅无益，还会产生 Matplotlib 的
+    # “Axes not compatible with tight_layout” 噪音。绘图函数可显式标记跳过。
+    if getattr(fig, "_sciplot_skip_tight_layout", False):
+        return
+
     try:
         fig.tight_layout()
         return

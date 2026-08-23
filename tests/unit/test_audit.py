@@ -35,8 +35,12 @@ def test_audit_missing_axis_labels(cleanup_figures):
 def test_audit_missing_panel_labels(cleanup_figures):
     """多面板无标签应被检出。"""
     fig, axes = sp.paper_subplots(1, 2, venue="thesis")
-    axes[0].plot([1, 2, 3]); axes[0].set_xlabel("x"); axes[0].set_ylabel("y")
-    axes[1].plot([1, 2, 3]); axes[1].set_xlabel("x"); axes[1].set_ylabel("y")
+    axes[0].plot([1, 2, 3])
+    axes[0].set_xlabel("x")
+    axes[0].set_ylabel("y")
+    axes[1].plot([1, 2, 3])
+    axes[1].set_xlabel("x")
+    axes[1].set_ylabel("y")
     report = sp.audit_figure(fig, verbose=False)
     assert any("面板标签" in i for i in report["issues"])
 
@@ -44,10 +48,49 @@ def test_audit_missing_panel_labels(cleanup_figures):
 def test_audit_panel_labels_present(cleanup_figures):
     """figure_panels 生成的面板标签可通过审计。"""
     fig, axes = sp.figure_panels(1, 2)
-    axes[0].plot([1, 2, 3]); axes[0].set_xlabel("x"); axes[0].set_ylabel("y")
-    axes[1].plot([1, 2, 3]); axes[1].set_xlabel("x"); axes[1].set_ylabel("y")
+    axes[0].plot([1, 2, 3])
+    axes[0].set_xlabel("x")
+    axes[0].set_ylabel("y")
+    axes[1].plot([1, 2, 3])
+    axes[1].set_xlabel("x")
+    axes[1].set_ylabel("y")
     report = sp.audit_figure(fig, verbose=False)
     assert not any("面板标签" in i for i in report["issues"])
+
+
+def test_audit_colorbar_is_not_a_panel(cleanup_figures):
+    """色条轴不应被误判为第二个论文面板。"""
+    fig, ax = sp.plot_hexbin(
+        np.linspace(0, 1, 60),
+        np.linspace(0, 1, 60) ** 2,
+        xlabel="X",
+        ylabel="Y",
+        colorbar_label="Count",
+    )
+    report = sp.audit_figure(fig, verbose=False)
+    assert not any("面板标签" in issue for issue in report["issues"])
+
+
+def test_audit_twin_axis_is_not_a_panel(cleanup_figures):
+    """共享同一绘图区的第二坐标轴不应触发多面板警告。"""
+    fig, ax = sp.new_figure("nature")
+    ax.plot([0, 1], [0, 1])
+    ax.set_xlabel("X")
+    ax.set_ylabel("Left")
+    ax2 = ax.twinx()
+    ax2.plot([0, 1], [1, 2])
+    ax2.set_ylabel("Right")
+    report = sp.audit_figure(fig, verbose=False)
+    assert not any("面板标签" in issue for issue in report["issues"])
+
+
+def test_audit_marginal_axes_are_auxiliary(cleanup_figures):
+    """边际分布轴属于一个组合统计图，而不是三个独立面板。"""
+    x = np.linspace(-2, 2, 80)
+    y = 0.7 * x + np.sin(x)
+    fig, ax = sp.plot_marginal(x, y, xlabel="X", ylabel="Y")
+    report = sp.audit_figure(fig, verbose=False)
+    assert not any("面板标签" in issue for issue in report["issues"])
 
 
 def test_audit_small_font(cleanup_figures):

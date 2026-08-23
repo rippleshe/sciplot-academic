@@ -942,6 +942,7 @@ def plot_marginal(
 
     venue_cfg = VENUES.get(effective_venue or "nature", VENUES["nature"])
     fig = plt.figure(figsize=venue_cfg.figsize)
+    setattr(fig, "_sciplot_skip_tight_layout", True)
 
     main_ratio = 1.0 - size_ratio
     gs = fig.add_gridspec(
@@ -953,6 +954,10 @@ def plot_marginal(
     ax_main = fig.add_subplot(gs[1, 0])
     ax_x = fig.add_subplot(gs[0, 0], sharex=ax_main)
     ax_y = fig.add_subplot(gs[1, 1], sharey=ax_main)
+    # 顶部/右侧是主散点的边际分布，不是独立论文面板。显式标记后，
+    # save() 的科研质量审计不会误要求它们添加 (a)/(b) 面板标签。
+    setattr(ax_x, "_sciplot_auxiliary", True)
+    setattr(ax_y, "_sciplot_auxiliary", True)
 
     colors = get_cycle_colors()
     main_color = color if color is not None else colors[0]

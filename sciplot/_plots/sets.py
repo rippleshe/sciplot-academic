@@ -211,7 +211,9 @@ def plot_upset(
     sizes = [c[1] for c in combos]
     if intersection_color is None:
         cmap_sizes = plt.cm.get_cmap("Blues")
-        bar_colors = [cmap_sizes(0.45 + 0.5 * s / max(sizes)) for s in sizes]
+        bar_colors: list[object] = [
+            cmap_sizes(0.45 + 0.5 * s / max(sizes)) for s in sizes
+        ]
     else:
         bar_colors = [inter_color] * n_inters
     ax_bar.bar(x_pos, sizes, color=bar_colors,
@@ -221,8 +223,8 @@ def plot_upset(
     ax_bar.tick_params(axis="x", labelbottom=False)
     ax_bar.tick_params(axis="y", labelsize=fs_tiny)
     ax_bar.tick_params(direction="in")
-    for spine in ["top", "right"]:
-        ax_bar.spines[spine].set_visible(False)
+    for spine_name in ["top", "right"]:
+        ax_bar.spines[spine_name].set_visible(False)
     ax_bar.set_xticks(x_pos)
 
     # 柱顶数值（加粗）
@@ -257,8 +259,8 @@ def plot_upset(
 
     # 隐藏边框
     for ax in (ax_main,):
-        for spine in ax.spines.values():
-            spine.set_visible(False)
+        for spine_artist in ax.spines.values():
+            spine_artist.set_visible(False)
 
     if title:
         fig.suptitle(title, fontsize=relative_fontsize(1), y=0.99)
@@ -266,6 +268,9 @@ def plot_upset(
     return PlotResult(fig, ax_main, metadata={
         "venue": venue, "palette": palette,
         "axes": {"set": ax_set, "bar": ax_bar, "main": ax_main},
-        "intersections": [(names[i] for i in combo) for combo, _ in combos],
+        # Materialise labels instead of leaking one-shot generator objects into
+        # public metadata.  Users can safely inspect/serialise this field more
+        # than once.
+        "intersections": [tuple(names[i] for i in combo) for combo, _ in combos],
         "sizes": sizes,
     })
