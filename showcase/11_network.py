@@ -16,9 +16,9 @@ np.random.seed(42)
 # ── 数据生成 ──────────────────────────────────────────────────
 # 构建含 3 个社区的网络
 # 社区内连接概率高，社区间连接概率低 → 自然形成社区结构
-community_sizes = [10, 9, 8]  # 三个社区的节点数
-p_intra = 0.7   # 社区内连接概率
-p_inter = 0.08  # 社区间连接概率
+community_sizes = [7, 7, 7]  # 控制信息密度：足以看出社区，但不让标签/边淹没结构
+p_intra = 0.58  # 社区内连接概率
+p_inter = 0.035  # 少量跨社区连接，保留整体网络感
 
 n_total = sum(community_sizes)
 G = nx.Graph()
@@ -70,7 +70,7 @@ fig, ax = sp.plot_network_communities(
     communities_relabeled,
     layout="spring",
     venue="nature",
-    palette="pastel",
+    palette="pastel-3",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

@@ -162,7 +162,7 @@ def test_alluvial_imbalanced_node_no_overflow(cleanup_figures):
     flows = [[(0, 0, 30), (0, 1, 20), (1, 0, 50)]]
     fig, ax = sp.plot_alluvial(stages, flows)
 
-    # 找所有 PathPatch（流带=8顶点，节点条=5顶点）与节点矩形
+    # 找所有 PathPatch（闭合流带=10顶点，节点条=5顶点）与节点矩形
     bands = [p for p in ax.patches
              if isinstance(p, PathPatch) and len(p.get_path().vertices) >= 8]
     node_patches = [p for p in ax.patches
@@ -188,6 +188,34 @@ def test_alluvial_imbalanced_node_no_overflow(cleanup_figures):
         # 目标侧流带应落在节点条并集区间内（允许 1e-6 容差）
         assert band_top <= node_max + 1e-6, "流带顶部溢出节点条"
         assert band_bottom >= node_min - 1e-6, "流带底部溢出节点条"
+
+
+def test_alluvial_ribbons_are_closed_bezier_paths(cleanup_figures):
+    """流带必须是完整闭合的三次贝塞尔 Path，避免斜切/漏口。"""
+    from matplotlib.path import Path
+    from matplotlib.patches import PathPatch
+
+    fig, ax = sp.plot_alluvial(
+        [["A", "B"], ["X", "Y"]],
+        [[(0, 0, 30), (0, 1, 10), (1, 0, 20), (1, 1, 40)]],
+    )
+    bands = [
+        patch for patch in ax.patches
+        if isinstance(patch, PathPatch) and len(patch.get_path().vertices) >= 10
+    ]
+    assert len(bands) == 4
+    for band in bands:
+        path = band.get_path()
+        assert path.codes is not None
+        assert path.codes[-1] == Path.CLOSEPOLY
+        assert np.allclose(path.vertices[0], path.vertices[-1])
+
+
+def test_alluvial_validates_visual_geometry(cleanup_figures):
+    with pytest.raises(ValueError, match="flow_alpha"):
+        sp.plot_alluvial([["A"], ["B"]], [(0, 0, 1)], flow_alpha=1.2)
+    with pytest.raises(ValueError, match="node_width"):
+        sp.plot_alluvial([["A"], ["B"]], [(0, 0, 1)], node_width=0.0)
 
 
 # ── 别名与导出 ────────────────────────────────────────────────

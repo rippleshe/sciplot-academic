@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from matplotlib.colors import to_hex
 
 import sciplot as sp
 
@@ -37,6 +38,17 @@ def test_circular_barplot_no_sort(cleanup_figures):
     result = sp.plot_circular_barplot(["A", "B"], [3.0, 9.0], sort=False)
     bars = result.ax.patches[:2]
     assert bars[0].get_height() < bars[1].get_height()
+
+
+def test_circular_barplot_palette_argument_is_applied_before_color_cycle(cleanup_figures):
+    """显式 palette 必须决定当前图颜色，不能沿用上一张图的 rcParams。"""
+    sp.setup_style("nature", "pastel")
+    result = sp.plot_circular_barplot(
+        ["A", "B", "C"], [3.0, 2.0, 1.0], palette="ocean", sort=False,
+    )
+    expected = sp.get_palette("ocean")[0]
+    actual = to_hex(result.ax.patches[0].get_facecolor(), keep_alpha=False)
+    assert actual.lower() == expected.lower()
 
 
 def test_circular_barplot_length_mismatch_raises(cleanup_figures):

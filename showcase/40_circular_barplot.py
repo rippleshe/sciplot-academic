@@ -15,7 +15,7 @@ rainfall = np.array([116.0, 182.0, 193.0, 87.0, 145.0, 126.0,
                      57.0, 58.0, 32.0, 29.0, 45.0, 52.0])
 
 # ── 绘图 ──────────────────────────────────────────────────────
-sp.setup_style("presentation", "pastel", lang="zh")
+sp.setup_style("presentation", "ocean", lang="zh")
 
 fig, ax = sp.plot_circular_barplot(
     cities,
@@ -23,6 +23,7 @@ fig, ax = sp.plot_circular_barplot(
     sort=True,
     show_values=True,
     fmt=".0f",
+    palette="ocean",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

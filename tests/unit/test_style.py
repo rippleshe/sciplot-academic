@@ -56,6 +56,24 @@ class TestSetupStyle:
             plt.close(fig)
             sp.reset_style()
 
+    def test_publication_baseline_rcparams(self, reset_style):
+        """普通投稿 venue 应锁定稳定的线宽、刻度和无框图例下限。"""
+        sp.setup_style("nature", lang="en")
+        assert rcParams["axes.linewidth"] == pytest.approx(0.72)
+        assert rcParams["lines.linewidth"] == pytest.approx(1.35)
+        assert rcParams["xtick.direction"] == "in"
+        assert rcParams["ytick.direction"] == "in"
+        assert rcParams["legend.frameon"] is False
+        assert rcParams["savefig.bbox"] == "tight"
+        assert rcParams["savefig.pad_inches"] == pytest.approx(0.04)
+
+    def test_presentation_baseline_is_visually_stronger(self, reset_style):
+        """演示场景使用更强的线条/标记，不直接复用论文细线参数。"""
+        sp.setup_style("presentation", lang="en")
+        assert rcParams["axes.linewidth"] == pytest.approx(1.0)
+        assert rcParams["lines.linewidth"] == pytest.approx(2.0)
+        assert rcParams["lines.markersize"] == pytest.approx(6.0)
+
 
 class TestLanguageAndLaTeX:
     """测试语言设置和 LaTeX 渲染配置"""

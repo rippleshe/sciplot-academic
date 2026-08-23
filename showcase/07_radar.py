@@ -33,7 +33,9 @@ fig, ax = sp.plot_radar(
     values_list,
     labels=labels,
     fill=True,
-    alpha=0.25,
+    # 多组雷达优先保留轮廓，填充仅做轻量分组提示，避免中心区域糊成色块。
+    alpha=0.10,
+    palette="pastel-3",
 )
 
 # ── 保存 ──────────────────────────────────────────────────────

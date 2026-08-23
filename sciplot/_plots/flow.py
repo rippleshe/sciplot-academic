@@ -458,6 +458,10 @@ def plot_alluvial(
         raise ValueError("stages 至少需要两个阶段")
     if any(len(s) == 0 for s in stage_list):
         raise ValueError("每个阶段至少需要一个类别")
+    if not 0.0 <= flow_alpha <= 1.0:
+        raise ValueError(f"flow_alpha 必须在 [0, 1] 范围内，实际值: {flow_alpha!r}")
+    if not 0.0 < node_width < 0.5:
+        raise ValueError(f"node_width 必须在 (0, 0.5) 范围内，实际值: {node_width!r}")
 
     # flows 容错：允许扁平三元组列表（两阶段时的便捷写法）
     if flows and isinstance(flows[0], tuple) and len(flows[0]) == 3:
@@ -480,6 +484,9 @@ def plot_alluvial(
             if not np.isfinite(val) or val < 0:
                 raise ValueError(f"flows[{si}] 流量必须为非负有限值，实际: {val!r}")
 
+    # 先应用 venue/palette，再读取颜色循环；否则显式 palette 参数会被上一张
+    # 图遗留的 rcParams 颜色吞掉，造成“参数传了但颜色没变”的隐蔽 bug。
+    fig, ax = new_styled_figure(venue, palette, lang)
     colors = get_cycle_colors()
     if node_colors is None:
         flat_colors: List[str] = []
@@ -500,8 +507,6 @@ def plot_alluvial(
     for s in stage_list:
         stage_colors.append(flat_colors[idx:idx + len(s)])
         idx += len(s)
-
-    fig, ax = new_styled_figure(venue, palette, lang)
 
     # 每阶段：先算类别总流入/流出，确定节点条高度
     x_positions = np.linspace(0.0, 1.0, n_stages)
@@ -565,19 +570,33 @@ def plot_alluvial(
 
             # 贝塞尔曲线流带
             c = stage_colors[si][src_idx]
+            # 一个完整的闭合 ribbon：上下边界各由一段三次贝塞尔连接。
+            # CURVE4 必须以 3 个顶点为一组（控制点1、控制点2、终点）。
+            # 旧实现下边界少了终点且没有 CLOSEPOLY，虽然能渲染，但会出现
+            # 斜切/漏口等不稳定形状，尤其在多流带密集时明显。
+            x_left = x0 + node_width / 2
+            x_right = x1 - node_width / 2
+            c1 = x0 + gap * 0.38
+            c2 = x1 - gap * 0.38
             verts = [
-                (x0 + node_width / 2, yA0),
-                (x0 + node_width / 2, yA1),
-                (x0 + gap * 0.5, yA1),
-                (x0 + gap * 0.5, yB1),
-                (x1 - node_width / 2, yB1),
-                (x1 - node_width / 2, yB0),
-                (x0 + gap * 0.5, yB0),
-                (x0 + gap * 0.5, yA0),
+                (x_left, yA0),
+                (x_left, yA1),
+                (c1, yA1),
+                (c2, yB1),
+                (x_right, yB1),
+                (x_right, yB0),
+                (c2, yB0),
+                (c1, yA0),
+                (x_left, yA0),
+                (x_left, yA0),
             ]
             codes = [
-                Path.MOVETO, Path.LINETO, Path.CURVE4, Path.CURVE4,
-                Path.LINETO, Path.LINETO, Path.CURVE4, Path.CURVE4,
+                Path.MOVETO,
+                Path.LINETO,
+                Path.CURVE4, Path.CURVE4, Path.CURVE4,
+                Path.LINETO,
+                Path.CURVE4, Path.CURVE4, Path.CURVE4,
+                Path.CLOSEPOLY,
             ]
             path = Path(verts, codes)
             patch = PathPatch(path, facecolor=c, edgecolor="none",

@@ -378,6 +378,10 @@ def plot_circular_barplot(
     cat_ordered = [cat_arr[i] for i in order]
     val_ordered = val_arr[order]
 
+    # palette 必须先应用，再读取颜色循环。旧实现先 get_cycle_colors()，
+    # 导致 plot_circular_barplot(..., palette="ocean") 可能沿用上一张图配色。
+    effective_venue = apply_resolved_style(venue, palette, lang)
+
     if colors is not None:
         if len(colors) != len(cat_arr):
             raise ValueError(
@@ -388,7 +392,6 @@ def plot_circular_barplot(
         cycle = get_cycle_colors()
         color_ordered = [cycle_color(cycle, i) for i in range(len(cat_arr))]
 
-    effective_venue = apply_resolved_style(venue, palette, lang)
     from sciplot._core.style import VENUES
     w, h = VENUES.get(effective_venue or "nature", VENUES["nature"]).figsize
     size = max(w, h)

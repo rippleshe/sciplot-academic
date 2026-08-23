@@ -160,6 +160,36 @@ THEMES: Dict[str, Dict[str, Any]] = {
 }
 
 
+def _publication_rc(venue: str) -> Dict[str, Any]:
+    """返回稳定、克制的科研绘图基础线宽/间距参数。"""
+    presentation = venue == "presentation"
+    return {
+        "axes.linewidth": 1.0 if presentation else 0.72,
+        "axes.labelpad": 5.0 if presentation else 3.0,
+        "axes.titlepad": 7.0 if presentation else 4.5,
+        "lines.linewidth": 2.0 if presentation else 1.35,
+        "lines.markersize": 6.0 if presentation else 4.2,
+        "patch.linewidth": 0.9 if presentation else 0.65,
+        "xtick.direction": "in",
+        "ytick.direction": "in",
+        "xtick.major.size": 4.5 if presentation else 3.2,
+        "ytick.major.size": 4.5 if presentation else 3.2,
+        "xtick.major.width": 1.0 if presentation else 0.72,
+        "ytick.major.width": 1.0 if presentation else 0.72,
+        "xtick.minor.size": 2.6 if presentation else 1.8,
+        "ytick.minor.size": 2.6 if presentation else 1.8,
+        "xtick.minor.width": 0.8 if presentation else 0.55,
+        "ytick.minor.width": 0.8 if presentation else 0.55,
+        "legend.frameon": False,
+        "legend.handlelength": 1.7,
+        "legend.handletextpad": 0.55,
+        "legend.columnspacing": 0.9,
+        "legend.borderaxespad": 0.35,
+        "savefig.bbox": "tight",
+        "savefig.pad_inches": 0.04,
+    }
+
+
 def setup_style(
     venue: Optional[str] = None,
     palette: Optional[str] = None,
@@ -367,6 +397,11 @@ def setup_style(
     plt.rcParams["xtick.labelsize"] = max(6, effective_fontsize - 1)
     plt.rcParams["ytick.labelsize"] = max(6, effective_fontsize - 1)
     plt.rcParams["legend.fontsize"] = max(6, effective_fontsize - 1)
+
+    # ── 出版级基础视觉规范 ──
+    # SciencePlots 负责期刊模板；这里锁住最容易随 Matplotlib/后端漂移的
+    # 线宽、刻度、图例与保存边距，让默认输出在不同机器上保持稳定完成度。
+    plt.rcParams.update(_publication_rc(venue))
 
     # ── 其他规范 ──
     plt.rcParams["axes.grid"] = False   # 科研图默认不加网格

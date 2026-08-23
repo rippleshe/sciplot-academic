@@ -34,5 +34,7 @@ fig2, ax2 = sp.plot_alluvial(
         [(0, 0, 78), (1, 1, 12), (2, 1, 15), (2, 0, 58)],
     ],
     title="",
+    palette="earth",
+    flow_alpha=0.38,
 )
 sp.save(fig2, "showcase/45_alluvial", formats=("png",), dpi=300)
