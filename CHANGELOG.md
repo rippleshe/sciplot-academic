@@ -33,6 +33,9 @@
 - 修复 `plot_network3d()` 将标签直接贴在 3D 节点中心导致透视投影后集中重叠的问题；
   现在先固定最终视角，再将 top-N 节点投影到屏幕平面并按 renderer bbox 避让，同时降低边线默认视觉权重，
   使节点、标签和社区层级在静态科研图中更清楚。
+- 修复 `plot_chord()` 的两处数据编码错误：节点弧长原先先占满 `2π` 再额外加入 `gap`，会使圆周超出一圈；
+  弦端点也未按累计流量分槽，多条流会挤在固定位置。现在基于 `min_flow` 过滤后的可见流严格扣除全部 gap，
+  并在源端/目标端按真实流量守恒切分弧段；`show_values=True` 同步显示过滤后的可见总量并使用稳定双行标签。
 
 ### Changed
 
@@ -46,8 +49,9 @@
 ### Tests
 
 - 新增辅助 Axes 审计、UpSet 元数据、Alluvial 闭合路径、出版样式基线、多类图表 palette 隔离，
-  Treemap 边框/字号、Sunburst 层级拓扑/环方向，以及 Packed Bubble / Volcano / Network3D 像素级文字布局回归测试。
-- 最新全量验证：`1569 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
+  Treemap 边框/字号、Sunburst 层级拓扑/环方向、Packed Bubble / Volcano / Network3D 像素级文字布局，
+  以及 Chord 圆周闭合、流槽守恒与过滤后总量回归测试。
+- 最新全量验证：`1573 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
 
 ---
 

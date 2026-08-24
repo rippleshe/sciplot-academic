@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 import sciplot as sp
+from sciplot._plots.advanced import _compute_chord_geometry
 
 
 @pytest.fixture()
@@ -43,8 +44,8 @@ def test_chord_labels(chord_matrix, cleanup_figures):
 def test_chord_show_values(chord_matrix, cleanup_figures):
     result = sp.plot_chord(chord_matrix, labels=["A", "B", "C", "D"], show_values=True)
     texts = [t.get_text() for t in result.ax.texts]
-    # 节点 A 双向总量 = (12+5+3) * 2 = 40
-    assert "40" in texts
+    # 节点 A 双向总量 = (12+5+3) * 2 = 40；数值与标签组成稳定双行块。
+    assert "A\n40" in texts
 
 
 def test_chord_auto_labels(chord_matrix, cleanup_figures):
@@ -104,6 +105,69 @@ def test_chord_min_flow_filter(chord_matrix, cleanup_figures):
 def test_chord_bad_min_flow_raises(chord_matrix, cleanup_figures):
     with pytest.raises(ValueError, match="min_flow"):
         sp.plot_chord(chord_matrix, min_flow=-1.0)
+    with pytest.raises(ValueError, match="min_flow"):
+        sp.plot_chord(chord_matrix, min_flow=np.nan)
+
+
+def test_chord_bad_gap_raises(chord_matrix, cleanup_figures):
+    with pytest.raises(ValueError, match="gap"):
+        sp.plot_chord(chord_matrix, gap=-0.1)
+    with pytest.raises(ValueError, match="gap"):
+        sp.plot_chord(chord_matrix, gap=np.inf)
+    with pytest.raises(ValueError, match="gap 过大"):
+        sp.plot_chord(chord_matrix, gap=np.pi)
+
+
+def test_chord_geometry_closes_exactly_one_circle(chord_matrix):
+    """节点弧段 + 全部 gap 必须恰好占一圈，不能越过 2π 再重叠。"""
+    gap = 0.03
+    _, _, starts, ends, _, _ = _compute_chord_geometry(
+        chord_matrix, min_flow=0.0, gap=gap
+    )
+    arc_total = float(np.sum(ends - starts))
+    assert arc_total + len(starts) * gap == pytest.approx(2 * np.pi)
+    assert ends[-1] + gap == pytest.approx(starts[0] + 2 * np.pi)
+
+
+def test_chord_flow_slots_conserve_visible_flow(chord_matrix):
+    """过滤后的每条流在源/目标两端都必须占用与其数值成比例的真实槽位。"""
+    visible, totals, starts, ends, source_slots, target_slots = _compute_chord_geometry(
+        chord_matrix, min_flow=6.0, gap=0.02
+    )
+    spans = ends - starts
+
+    for node in range(len(totals)):
+        if totals[node] <= 0:
+            continue
+        scale = spans[node] / totals[node]
+        source_width = sum(
+            b - a for (i, _), (a, b) in source_slots.items() if i == node
+        )
+        target_width = sum(
+            b - a for (_, j), (a, b) in target_slots.items() if j == node
+        )
+        assert source_width + target_width == pytest.approx(spans[node])
+
+        for (i, j), (a, b) in source_slots.items():
+            if i == node:
+                assert b - a == pytest.approx(float(visible[i, j]) * scale)
+        for (i, j), (a, b) in target_slots.items():
+            if j == node:
+                assert b - a == pytest.approx(float(visible[i, j]) * scale)
+
+
+def test_chord_min_flow_updates_visible_totals(chord_matrix, cleanup_figures):
+    """show_values 应与实际绘制的过滤后流量一致，而不是继续显示被过滤流。"""
+    result = sp.plot_chord(
+        chord_matrix,
+        labels=["A", "B", "C", "D"],
+        min_flow=10.0,
+        show_values=True,
+    )
+    texts = [t.get_text() for t in result.ax.texts]
+    # 仅 0↔1 的 12 保留，因此 A/B 可见双向总量均为 24，C/D 为 0。
+    assert "A\n24" in texts and "B\n24" in texts
+    assert "C\n0" in texts and "D\n0" in texts
 
 
 def test_chord_color_by_mismatch_raises(chord_matrix, cleanup_figures):

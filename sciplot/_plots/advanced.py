@@ -708,6 +708,84 @@ def plot_packed_bubble(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def _compute_chord_geometry(
+    matrix: np.ndarray,
+    min_flow: float,
+    gap: float,
+) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    Dict[Tuple[int, int], Tuple[float, float]],
+    Dict[Tuple[int, int], Tuple[float, float]],
+]:
+    """计算守恒的 Chord 弧段与有向流槽位。"""
+    visible = np.asarray(matrix, dtype=float).copy()
+    np.fill_diagonal(visible, 0.0)
+    visible[visible < min_flow] = 0.0
+
+    n = visible.shape[0]
+    total_gap = gap * n
+    if total_gap >= 2 * np.pi:
+        raise ValueError(
+            "gap 过大：所有节点间隙之和必须小于 2π，"
+            f"当前 n*gap={total_gap:.3f}"
+        )
+
+    out_totals = visible.sum(axis=1)
+    in_totals = visible.sum(axis=0)
+    totals = out_totals + in_totals
+    total_flow = float(totals.sum())
+    if total_flow <= 0:
+        raise ValueError("matrix 总流量为零或 min_flow 过滤后无可见流量，无法绘制弦图")
+
+    available_angle = 2 * np.pi - total_gap
+    arc_lengths = totals / total_flow * available_angle
+    arc_starts = np.empty(n, dtype=float)
+    arc_ends = np.empty(n, dtype=float)
+    angle = -np.pi / 2
+    for i in range(n):
+        arc_starts[i] = angle
+        arc_ends[i] = angle + float(arc_lengths[i])
+        angle = arc_ends[i] + gap
+
+    # 每个节点的弧段按“出流槽在前、入流槽在后”完整切分。
+    # 同一条有向流在源端和目标端都占与 flow 成比例的真实角宽。
+    scales = np.divide(
+        arc_lengths,
+        totals,
+        out=np.zeros_like(arc_lengths),
+        where=totals > 0,
+    )
+    source_slots: Dict[Tuple[int, int], Tuple[float, float]] = {}
+    target_slots: Dict[Tuple[int, int], Tuple[float, float]] = {}
+
+    source_cursor = arc_starts.copy()
+    for i in range(n):
+        for j in range(n):
+            flow = float(visible[i, j])
+            if flow <= 0:
+                continue
+            start = float(source_cursor[i])
+            end = start + flow * float(scales[i])
+            source_slots[(i, j)] = (start, end)
+            source_cursor[i] = end
+
+    target_cursor = arc_starts + out_totals * scales
+    for j in range(n):
+        for i in range(n):
+            flow = float(visible[i, j])
+            if flow <= 0:
+                continue
+            start = float(target_cursor[j])
+            end = start + flow * float(scales[j])
+            target_slots[(i, j)] = (start, end)
+            target_cursor[j] = end
+
+    return visible, totals, arc_starts, arc_ends, source_slots, target_slots
+
+
 def plot_chord(
     matrix: np.ndarray,
     labels: Optional[List[str]] = None,
@@ -726,19 +804,19 @@ def plot_chord(
     """
     绘制弦图（Chord Diagram，节点间流量/共现关系）
 
-    节点沿圆周排列，弧长编码节点总流量；节点间弦（渐变宽度多边形）
-    宽度编码流量、颜色取自源节点，源端宽而目标端收窄，
-    适合展示转移矩阵、共现关系、资源流向。
+    节点沿圆周排列，弧长编码过滤后的可见总流量；节点间弦在源端与目标端
+    都按真实流量占用对应弧段槽位，颜色取自源节点。适合展示转移矩阵、
+    共现关系、资源流向。
 
     参数:
         matrix     : 流量/共现矩阵 (n, n)，要求非负
         labels     : 节点标签（等长）；None 则用序号
         width      : 外圈弧宽（占单位半径比例），默认 0.07
-        gap        : 弧段间最小间隙（弧度），默认 0.01
+        gap        : 每个节点弧段后的固定间隙（弧度），默认 0.01
         alpha      : 弦透明度
-        min_flow   : 最小流量阈值，低于该值的弦不绘制（过滤噪声）
+        min_flow   : 最小流量阈值；低于该值的流从弦、外圈总量和显示数值中一并过滤
         color_by   : 节点分类标签（等长）；提供时按类别着色并生成图例
-        show_values: 是否在弧外显示各节点总量
+        show_values: 是否在弧外显示各节点过滤后的可见总量
 
     示例:
         >>> # 城市间迁移流量（按区域分组着色）
@@ -769,8 +847,10 @@ def plot_chord(
         labels = [str(i + 1) for i in range(n)]
     if not 0 < width < 1:
         raise ValueError(f"width 必须在 (0, 1) 范围内，实际值: {width!r}")
-    if min_flow < 0:
+    if not np.isfinite(min_flow) or min_flow < 0:
         raise ValueError(f"min_flow 必须为非负数，实际值: {min_flow!r}")
+    if not np.isfinite(gap) or gap < 0:
+        raise ValueError(f"gap 必须为非负有限数（弧度），实际值: {gap!r}")
     if color_by is not None:
         if len(color_by) != n:
             raise ValueError(
@@ -796,25 +876,14 @@ def plot_chord(
         node_colors = [cycle_color(colors, i) for i in range(n)]
         categorical_legend = None
 
-    # 节点总流量（行 + 列）
-    totals = mat.sum(axis=1) + mat.sum(axis=0)
-    total_flow = float(totals.sum())
-    if total_flow <= 0:
-        raise ValueError("matrix 总流量为零，无法绘制弦图")
-
-    # 弧段角度分配（从 -90° 顺时针）
-    arc_starts: List[float] = []
-    arc_ends: List[float] = []
-    angle = -np.pi / 2
-    for i in range(n):
-        frac = float(totals[i]) / total_flow
-        arc_len = frac * 2 * np.pi
-        # 预留 gap
-        if i > 0:
-            angle += gap
-        arc_starts.append(angle)
-        arc_ends.append(angle + arc_len)
-        angle += arc_len
+    (
+        visible,
+        totals,
+        arc_starts,
+        arc_ends,
+        source_slots,
+        target_slots,
+    ) = _compute_chord_geometry(mat, min_flow=min_flow, gap=gap)
 
     # ── 外圈弧段 ──
     for i in range(n):
@@ -829,11 +898,7 @@ def plot_chord(
         ax.plot(r_out * np.cos(seg), r_out * np.sin(seg),
                 color=color, linewidth=1.2)
 
-    # ── 弦（渐变宽度多边形：源端宽编码流量，目标端收窄） ──
-    max_flow = float(mat.max()) if mat.size else 1.0
-    if max_flow <= 0:
-        max_flow = 1.0
-
+    # ── 弦：源端与目标端均按真实可见流量占用弧段槽位 ──
     def _bezier_curve(
         p0: Tuple[float, float], p3: Tuple[float, float], n_pts: int = 48
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -848,21 +913,17 @@ def plot_chord(
         return bx, by
 
     for i in range(n):
-        row_total = float(mat[i].sum())
         for j in range(n):
-            flow = float(mat[i, j])
-            if flow <= 0 or i == j or flow < min_flow:
+            flow = float(visible[i, j])
+            if flow <= 0:
                 continue
-            # 源端角度：按该流量占 i 行总出量的比例定位在弧段内
-            src_frac = flow / row_total if row_total > 0 else 0.5
-            src_theta = arc_starts[i] + (arc_ends[i] - arc_starts[i]) * min(0.85, max(0.15, src_frac))
-            tgt_theta = arc_starts[j] + (arc_ends[j] - arc_starts[j]) * 0.35
-            # 源端宽度 ∝ 流量，目标端固定窄宽（视觉层次）
-            half_w = max(0.004, flow / max_flow * 0.03)
-            p0a = polar_to_cart(src_theta - half_w, 1.0)
-            p0b = polar_to_cart(src_theta + half_w, 1.0)
-            p3a = polar_to_cart(tgt_theta - 0.007, 1.0)
-            p3b = polar_to_cart(tgt_theta + 0.007, 1.0)
+            src_start, src_end = source_slots[(i, j)]
+            tgt_start, tgt_end = target_slots[(i, j)]
+            # 交叉连接两端边界，可在圆内形成无扭结的带状流。
+            p0a = polar_to_cart(src_start, 1.0)
+            p0b = polar_to_cart(src_end, 1.0)
+            p3a = polar_to_cart(tgt_end, 1.0)
+            p3b = polar_to_cart(tgt_start, 1.0)
             bx_top, by_top = _bezier_curve(p0a, p3a)
             bx_bot, by_bot = _bezier_curve(p0b, p3b)
             poly_x = np.concatenate([bx_top, bx_bot[::-1]])
@@ -871,19 +932,22 @@ def plot_chord(
                     edgecolor="none", zorder=2)
 
     # ── 标签与数值 ──
-    label_r = 1.0 + width + 0.06
-    fontsize = max(7, plt.rcParams.get("font.size", 9) - 1)
+    label_r = 1.0 + width + 0.075
+    fontsize = max(7.0, float(plt.rcParams.get("font.size", 9)) - 1.0)
     for i in range(n):
         mid = (arc_starts[i] + arc_ends[i]) / 2
         x, y = polar_to_cart(mid, label_r)
         ha = "left" if np.cos(mid) >= 0 else "right"
         va = "bottom" if np.sin(mid) >= 0 else "top"
-        ax.text(x, y, labels[i], ha=ha, va=va, fontsize=fontsize,
-                color=node_colors[i], fontweight="bold")
-        if show_values:
-            ax.text(x, y - (0.06 if np.sin(mid) >= 0 else -0.06),
-                    f"{totals[i]:.0f}", ha=ha, va=va,
-                    fontsize=max(6, fontsize - 2), color="#555555")
+        label_text = (
+            f"{labels[i]}\n{totals[i]:.0f}"
+            if show_values
+            else str(labels[i])
+        )
+        ax.text(
+            x, y, label_text, ha=ha, va=va, fontsize=fontsize,
+            color="#2F2F2F", fontweight="bold", linespacing=0.95,
+        )
 
     # ── 分类图例 ──
     if categorical_legend is not None:
@@ -895,8 +959,8 @@ def plot_chord(
         ]
         ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=8)
 
-    ax.set_xlim(-1.35, 1.35)
-    ax.set_ylim(-1.35, 1.35)
+    ax.set_xlim(-1.40, 1.40)
+    ax.set_ylim(-1.40, 1.40)
     ax.set_aspect("equal")
     ax.set_axis_off()
     if title:
