@@ -119,6 +119,44 @@ def test_packed_bubble_bad_min_size_frac_raises(cleanup_figures):
         sp.plot_packed_bubble(["A"], np.array([1.0]), min_size_frac=0.0)
 
 
+def test_packed_bubble_font_range_validation(cleanup_figures):
+    with pytest.raises(ValueError, match="min_font"):
+        sp.plot_packed_bubble(["A"], np.array([1.0]), min_font=0.0)
+    with pytest.raises(ValueError, match="max_font"):
+        sp.plot_packed_bubble(["A"], np.array([1.0]), min_font=8.0, max_font=6.0)
+
+
+def test_packed_bubble_long_labels_fit_inside_visible_bubbles(cleanup_figures):
+    """可显示的长标签必须真正落在对应气泡的像素边界内。"""
+    labels = ["中心平台", "英特尔", "SK海力士", "博通"]
+    result = sp.plot_packed_bubble(labels, np.array([30.0, 12.0, 8.0, 6.0]))
+    result.fig.canvas.draw()
+    renderer = result.fig.canvas.get_renderer()
+    circles = _bubble_circles(result)
+    text_by_label = {t.get_text(): t for t in result.ax.texts if t.get_text() in labels}
+    for label, circle in zip(labels, circles):
+        text = text_by_label.get(label)
+        if text is None:
+            continue
+        text_box = text.get_window_extent(renderer=renderer)
+        circle_box = circle.get_window_extent(renderer=renderer)
+        assert text_box.x0 >= circle_box.x0 - 1.0
+        assert text_box.x1 <= circle_box.x1 + 1.0
+        assert text_box.y0 >= circle_box.y0 - 1.0
+        assert text_box.y1 <= circle_box.y1 + 1.0
+
+
+def test_packed_bubble_extreme_label_is_omitted_instead_of_overflow(cleanup_figures):
+    label = "THIS_LABEL_IS_FAR_TOO_LONG_FOR_THE_TINY_BUBBLE"
+    result = sp.plot_packed_bubble(["中心", label], np.array([100.0, 1.0]), min_size_frac=0.22)
+    assert label not in [t.get_text() for t in result.ax.texts]
+
+
+def test_packed_bubble_circle_kwargs_can_override_defaults(cleanup_figures):
+    result = sp.plot_packed_bubble(["A"], np.array([1.0]), linewidth=2.5)
+    assert _bubble_circles(result)[0].get_linewidth() == pytest.approx(2.5)
+
+
 def test_packed_bubble_color_by_mismatch_raises(cleanup_figures):
     with pytest.raises(ValueError, match="color_by"):
         sp.plot_packed_bubble(["A", "B"], np.array([1.0, 2.0]), color_by=["x"])

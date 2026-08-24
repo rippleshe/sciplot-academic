@@ -844,38 +844,18 @@ def plot_volcano(
 
     fig, ax = new_styled_figure(venue, palette, lang)
 
-    ax.scatter(fc, neg_log10p, c=colors, alpha=alpha, s=18, edgecolors="none", **kwargs)
+    scatter_kwargs: Dict[str, Any] = {"s": 18, "edgecolors": "none"}
+    scatter_kwargs.update(kwargs)
+    # 分类颜色和显式 alpha 是 volcano API 的语义参数；即使 kwargs 中出现同名键，
+    # 也不允许产生重复关键字或悄悄覆盖三分类编码。
+    scatter_kwargs["c"] = colors
+    scatter_kwargs["alpha"] = alpha
+    ax.scatter(fc, neg_log10p, **scatter_kwargs)
 
     if show_thresholds:
         ax.axvline(x=fc_threshold, color="#888888", linestyle="--", linewidth=0.8)
         ax.axvline(x=-fc_threshold, color="#888888", linestyle="--", linewidth=0.8)
         ax.axhline(y=-np.log10(p_threshold), color="#888888", linestyle="--", linewidth=0.8)
-
-    # 标注最显著的 top_n 个特征（显著性优先，其次按 |fc|）
-    if annotate_top and labels is not None and top_n > 0:
-        score = neg_log10p + np.abs(fc) * 0.1
-        top_idx = np.argsort(score)[::-1][:top_n]
-        fontsize = max(6, plt.rcParams.get("font.size", 9) - 2)
-
-        # 智能避让：按 y 排序后，相邻标注间距过小时纵向错开，
-        # 避免多个 top 基因标签重叠
-        sorted_idx = sorted(top_idx, key=lambda i: -neg_log10p[i])
-        placed: List[Tuple[float, float]] = []
-        for rank, idx in enumerate(sorted_idx):
-            x0, y0 = float(fc[idx]), float(neg_log10p[idx])
-            # 找最近的已放置标签，若 y 距离 < 1.2 则错开
-            dy = 0.0
-            for px, py in placed:
-                if abs(py - y0) < 1.2 and abs(px - x0) < 0.5:
-                    dy = max(dy, 1.2 - abs(py - y0))
-            offset_y = dy * (1 if rank % 2 == 0 else -1) + 5
-            ax.annotate(
-                str(labels[idx]),
-                xy=(x0, y0),
-                xytext=(5, offset_y), textcoords="offset points",
-                fontsize=fontsize,
-            )
-            placed.append((x0, y0))
 
     # 图例（语言跟随当前设置）
     from matplotlib.patches import Patch
@@ -892,7 +872,72 @@ def plot_volcano(
         Patch(facecolor=color_down, label=legend_labels[1], alpha=alpha),
         Patch(facecolor=color_ns, label=legend_labels[2], alpha=alpha),
     ]
-    ax.legend(handles=handles, loc="upper left", frameon=False)
+    legend = ax.legend(handles=handles, loc="upper left", frameon=False)
+
+    # 标注最显著的 top_n 个特征（显著性优先，其次按 |fc|）。
+    # 这里必须在图例创建之后做，因为 legend 本身也是实际版面的障碍物。
+    # 旧实现把 data-coordinate 距离直接当成 offset points，既不能保证文字之间
+    # 不碰撞，也无法避免图例与上边界；现在直接基于 renderer 的像素 bounding box
+    # 逐个试放，保证标注与已放文字、图例、坐标轴边界之间留出真实间距。
+    if annotate_top and labels is not None and top_n > 0:
+        score = neg_log10p + np.abs(fc) * 0.1
+        top_idx = np.argsort(score)[::-1][:top_n]
+        fontsize = max(6.0, float(plt.rcParams.get("font.size", 9)) - 2.0)
+
+        # 给顶部标注留出约 9% 的数据高度。margins 不改变零点/阈值语义，
+        # 只扩展自动 y limit；用户后续仍可显式 set_ylim 覆盖。
+        ax.margins(x=0.025, y=0.09)
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        axes_bbox = ax.get_window_extent(renderer=renderer)
+        legend_bbox = legend.get_window_extent(renderer=renderer).expanded(1.04, 1.08)
+
+        # 优先把文字放在点的“内侧”：左半边向右、右半边向左，降低轴外裁剪概率。
+        vertical_offsets = (7, 18, -9, 30, -20, 43, -33, 57, -47)
+        horizontal_offsets = (6, 13, 21)
+        placed_bboxes: List[Any] = []
+
+        def _bbox_inside_axes(box: Any, padding: float = 2.0) -> bool:
+            return (
+                box.x0 >= axes_bbox.x0 + padding
+                and box.x1 <= axes_bbox.x1 - padding
+                and box.y0 >= axes_bbox.y0 + padding
+                and box.y1 <= axes_bbox.y1 - padding
+            )
+
+        for idx in sorted(top_idx, key=lambda i: -neg_log10p[i]):
+            x0, y0 = float(fc[idx]), float(neg_log10p[idx])
+            side = 1 if x0 < 0 else -1
+            ha = "left" if side > 0 else "right"
+            accepted = None
+
+            for dx_abs in horizontal_offsets:
+                if accepted is not None:
+                    break
+                for dy in vertical_offsets:
+                    annotation = ax.annotate(
+                        str(labels[idx]),
+                        xy=(x0, y0),
+                        xytext=(side * dx_abs, dy),
+                        textcoords="offset points",
+                        ha=ha,
+                        va="center",
+                        fontsize=fontsize,
+                        annotation_clip=True,
+                    )
+                    fig.canvas.draw()
+                    box = annotation.get_window_extent(renderer=renderer).expanded(1.03, 1.08)
+                    collides = box.overlaps(legend_bbox) or any(
+                        box.overlaps(prev) for prev in placed_bboxes
+                    )
+                    if _bbox_inside_axes(box) and not collides:
+                        accepted = (annotation, box)
+                        break
+                    annotation.remove()
+
+            # 极端拥挤时宁可少标一个，也不要输出互相盖住、越界的文字。
+            if accepted is not None:
+                placed_bboxes.append(accepted[1])
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

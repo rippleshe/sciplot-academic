@@ -607,9 +607,26 @@ def plot_packed_bubble(
         categorical_legend = group_map
     if not 0 < min_size_frac < 1:
         raise ValueError(f"min_size_frac 必须在 (0, 1) 范围内，实际值: {min_size_frac!r}")
+    if not np.isfinite(min_font) or min_font <= 0:
+        raise ValueError(f"min_font 必须为正有限数，实际值: {min_font!r}")
+    if not np.isfinite(max_font) or max_font < min_font:
+        raise ValueError(
+            f"max_font 必须为有限数且不小于 min_font，实际值: {max_font!r}"
+        )
 
     pos, radii = _pack_bubbles(sizes_arr, min_size_frac=min_size_frac)
-    fontsize = plt.rcParams.get("font.size", 9)
+    fontsize = float(plt.rcParams.get("font.size", 9))
+    max_radius = float(max(radii))
+    _, fig_h = fig.get_size_inches()
+    axes_box = ax.get_position()
+    y_span = 2.5
+
+    # 文本 fit 依赖最终 data→display transform，必须在 renderer 测量之前锁定轴范围。
+    # 旧顺序在默认 [0, 1] 坐标上测字，随后再切到 [-1.25, 1.25]，会让“像素级适配”
+    # 失去意义并重新产生跨气泡文字碰撞。
+    ax.set_xlim(-1.25, 1.25)
+    ax.set_ylim(-1.25, 1.25)
+    ax.set_aspect("equal")
 
     from matplotlib.colors import to_rgb
 
@@ -621,23 +638,58 @@ def plot_packed_bubble(
             facecolor="#000000", alpha=0.10, edgecolor="none", zorder=0,
         )
         ax.add_patch(shadow)
-        circle = plt.Circle(
-            pos[i], r, facecolor=colors[i], alpha=alpha,
-            edgecolor="white", linewidth=1.2, zorder=1, **kwargs,
-        )
+        circle_kwargs = {
+            "facecolor": colors[i],
+            "alpha": alpha,
+            "edgecolor": "white",
+            "linewidth": 1.2,
+            "zorder": 1,
+        }
+        circle_kwargs.update(kwargs)
+        circle = plt.Circle(pos[i], r, **circle_kwargs)
         ax.add_patch(circle)
-        # 文字对比度：依据底色亮度选黑/白（packed 气泡文字面积极小，阈值略高）
+        # 文字对比度：依据底色亮度选黑/白（packed 气泡文字面积极小，阈值略高）。
+        # 字号同时受半径和真实可用直径约束；旧实现只看半径，长标签会跨出圆并
+        # 与相邻气泡文字碰撞。
         text_color = contrast_text_color(colors[i], threshold=0.62)
-        fs = max(min_font, min(max_font, fontsize * (0.7 + 1.3 * (r / max(radii)))))
-        ax.text(
-            pos[i][0], pos[i][1], label,
-            ha="center", va="center", fontsize=fs, color=text_color,
-            fontweight="bold", zorder=3,
-        )
+        radial_fs = fontsize * (0.7 + 1.3 * (r / max_radius))
+        height_pt = 2.0 * r / y_span * axes_box.height * fig_h * 72.0
+        height_cap = height_pt * (0.34 if show_values else 0.52)
+        fs = min(max_font, radial_fs, height_cap)
+
+        # min_font 是“可读下限”，不是强制把文字塞进过小气泡的理由。
+        # 若标签在下限字号仍无法容纳，宁可省略标签，保留数值和图例/外部说明。
+        # 文字宽度不能只靠字符数估计：中文、英文、字体 fallback 的真实宽度差异很大，
+        # 因此先创建文字，再用 renderer 的像素 bbox 反算一次字号，使其真正落在圆内。
+        if fs >= min_font:
+            label_y = pos[i][1] + (r * 0.13 if show_values else 0.0)
+            label_artist = ax.text(
+                pos[i][0], label_y, label,
+                ha="center", va="center", fontsize=fs, color=text_color,
+                fontweight="bold", zorder=3,
+            )
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            text_box = label_artist.get_window_extent(renderer=renderer)
+            circle_box = circle.get_window_extent(renderer=renderer)
+            # 标签略上移时圆的可用弦长小于直径，留 20% 安全边界能避免相邻
+            # 相切气泡之间的文字在视觉上“串台”。
+            width_ratio = (circle_box.width * 0.78) / max(text_box.width, 1.0)
+            height_ratio = (circle_box.height * (0.34 if show_values else 0.52)) / max(
+                text_box.height, 1.0
+            )
+            fit_ratio = min(1.0, width_ratio, height_ratio)
+            if fit_ratio < 1.0:
+                fitted_fs = fs * fit_ratio * 0.96
+                if fitted_fs < min_font:
+                    label_artist.remove()
+                else:
+                    label_artist.set_fontsize(fitted_fs)
         if show_values:
+            value_fs = min(max(5.0, min_font - 1.0), max(5.0, fs - 1.5))
             ax.text(
-                pos[i][0], pos[i][1] - r * 0.45, f"{size:{fmt}}",
-                ha="center", va="center", fontsize=max(5, fs - 2),
+                pos[i][0], pos[i][1] - r * 0.34, f"{size:{fmt}}",
+                ha="center", va="center", fontsize=value_fs,
                 color=text_color, zorder=3,
             )
 
@@ -650,9 +702,6 @@ def plot_packed_bubble(
         ]
         ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=8)
 
-    ax.set_xlim(-1.25, 1.25)
-    ax.set_ylim(-1.25, 1.25)
-    ax.set_aspect("equal")
     ax.set_axis_off()
     if title:
         ax.set_title(title)

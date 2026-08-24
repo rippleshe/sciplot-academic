@@ -25,6 +25,11 @@
   面积、画布尺寸和标签长度共同约束的字号与双行间距，避免大块文字过小或标签/数值挤压。
 - 修复 `plot_sunburst()` 层级半径方向颠倒的问题：第一层现在位于内环，后代逐层向外展开；
   同时拒绝重复标签、与根不连通的环/孤立层级以及非法 `ring_gap`。
+- 修复 `plot_packed_bubble()` 仅按半径估算字号导致长标签跨出气泡、互相覆盖的问题；
+  现在基于最终坐标变换后的 renderer 像素边界适配文字，空间不足时宁可省略标签而不输出溢出文字，
+  并补齐 `min_font` / `max_font` 校验与 Circle kwargs 覆盖语义。
+- 修复 `plot_volcano()` 顶部自动标注只按数据坐标“错开”、却仍会与图例/相邻文字/轴框重叠的问题；
+  现在按真实渲染后的 bounding box 逐个试放，并避免 `kwargs` 中 `c` / `alpha` 与火山图语义参数冲突。
 
 ### Changed
 
@@ -38,8 +43,8 @@
 ### Tests
 
 - 新增辅助 Axes 审计、UpSet 元数据、Alluvial 闭合路径、出版样式基线、多类图表 palette 隔离，
-  以及 Treemap 边框/字号与 Sunburst 层级拓扑/环方向回归测试。
-- 提交前全量验证：`1562 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
+  Treemap 边框/字号、Sunburst 层级拓扑/环方向，以及 Packed Bubble / Volcano 像素级文字布局回归测试。
+- 最新全量验证：`1567 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
 
 ---
 

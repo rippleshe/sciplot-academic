@@ -128,14 +128,50 @@ def test_volcano_save_png(tmp_path, volcano_data, cleanup_figures):
     assert paths[0].exists() and paths[0].stat().st_size > 0
 
 
-def test_volcano_annotation_stagger(cleanup_figures):
-    """近邻 top 基因标注应纵向错开避免重叠。"""
+def test_volcano_annotations_avoid_each_other_legend_and_axes(cleanup_figures):
+    """自动标注必须按真实像素边界避让，而不是只修改抽象 offset。"""
     rng = np.random.default_rng(7)
-    fc = np.r_[rng.normal(0, 1, 300), 2.9, 3.0]
-    p = np.r_[rng.random(300) ** 3, 1e-7, 1e-7]
-    labels = [f"G{i}" for i in range(300)] + ["TOP_A", "TOP_B"]
-    result = sp.plot_volcano(fc, p, labels=labels, annotate_top=True, top_n=8)
-    texts = [t for t in result.ax.texts if t.get_text() in ("TOP_A", "TOP_B")]
-    assert len(texts) == 2
-    ys = [t.get_position()[1] for t in texts]
-    assert abs(ys[0] - ys[1]) > 0.5, "近邻标签未错开"
+    fc = np.r_[rng.normal(0, 0.9, 260), -2.95, -2.82, -2.68, -2.53, 2.70, 2.84]
+    p = np.r_[rng.random(260) ** 2, [1e-8, 1.1e-8, 1.3e-8, 1.6e-8, 1.2e-8, 1.5e-8]]
+    labels = [f"G{i}" for i in range(260)] + [
+        "TOP_LEFT_A", "TOP_LEFT_B", "TOP_LEFT_C", "TOP_LEFT_D",
+        "TOP_RIGHT_A", "TOP_RIGHT_B",
+    ]
+    result = sp.plot_volcano(fc, p, labels=labels, annotate_top=True, top_n=6)
+    result.fig.canvas.draw()
+    renderer = result.fig.canvas.get_renderer()
+    annotations = [t for t in result.ax.texts if t.get_text().startswith("TOP_")]
+    assert len(annotations) >= 4
+
+    boxes = [t.get_window_extent(renderer=renderer).expanded(1.02, 1.05) for t in annotations]
+    for i, box_a in enumerate(boxes):
+        for box_b in boxes[i + 1:]:
+            assert not box_a.overlaps(box_b), "Volcano top 标签仍发生像素级重叠"
+
+    legend = result.ax.get_legend()
+    assert legend is not None
+    legend_box = legend.get_window_extent(renderer=renderer)
+    axes_box = result.ax.get_window_extent(renderer=renderer)
+    for box in boxes:
+        assert not box.overlaps(legend_box), "Volcano 标签与图例重叠"
+        assert box.x0 >= axes_box.x0 - 1.0 and box.x1 <= axes_box.x1 + 1.0
+        assert box.y0 >= axes_box.y0 - 1.0 and box.y1 <= axes_box.y1 + 1.0
+
+
+def test_volcano_scatter_kwargs_do_not_duplicate_semantic_keys(volcano_data, cleanup_figures):
+    fc, p, labels = volcano_data
+    result = sp.plot_volcano(
+        fc,
+        p,
+        labels=labels,
+        annotate_top=False,
+        s=31,
+        alpha=0.42,
+        c="#000000",
+    )
+    scatter = result.ax.collections[0]
+    assert scatter.get_sizes()[0] == pytest.approx(31)
+    assert scatter.get_alpha() == pytest.approx(0.42)
+    # c=... 不得覆盖 Volcano 上调/下调/不显著三分类的语义色。
+    unique = {tuple(c[:3].round(2)) for c in scatter.get_facecolors()}
+    assert len(unique) == 3
