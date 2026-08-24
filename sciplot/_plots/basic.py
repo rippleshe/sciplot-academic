@@ -13,7 +13,7 @@ from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import create_sciplot_figure, create_plot_result, cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data
 from sciplot._core.result import PlotResult
-from sciplot.utils.smart import smart_legend
+from sciplot.utils.smart import _series_line_kwargs, smart_legend
 
 
 LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
@@ -194,24 +194,25 @@ def plot_multi_line(
             f"x 列表长度 ({len(x)}) 与 y_list 长度 ({len(y_list)}) 不一致"
         )
 
+    explicit_color = "color" in kwargs or "c" in kwargs
+    effective_color_count = 1 if explicit_color else n_cycle_colors
+
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
         xi = x[i] if x_is_multi else x
         _validate_xy_lengths(xi, y, x_name=("x" if not x_is_multi else f"x[{i}]"), y_name=f"y_list[{i}]")  # type: ignore
-        if use_linestyles:
-            ls = LINE_STYLES[i % len(LINE_STYLES)]
-        else:
-            # 颜色循环用尽后，重复颜色必须叠加线型冗余编码，避免同色同线型不可区分。
-            cycle_round = i // n_cycle_colors
-            ls = LINE_STYLES[cycle_round % len(LINE_STYLES)]
+        line_kwargs = dict(kwargs)
         if highlight_last and i == len(y_list) - 1:
-            line_kwargs = dict(kwargs)
             line_kwargs.setdefault("linewidth", 2.6)
             line_kwargs.setdefault("marker", "*")
             line_kwargs.setdefault("markersize", 9)
             line_kwargs.setdefault("zorder", 5)
-            ax.plot(xi, y, label=lbl, linestyle=ls, **line_kwargs)
-        else:
-            ax.plot(xi, y, label=lbl, linestyle=ls, **kwargs)
+        line_kwargs = _series_line_kwargs(
+            line_kwargs,
+            i,
+            effective_color_count,
+            force_cycle=use_linestyles,
+        )
+        ax.plot(xi, y, label=lbl, **line_kwargs)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

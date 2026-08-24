@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, cast
+from typing import Any, List, Mapping, Optional, Tuple, cast
 import math
 import re
 
@@ -14,6 +14,30 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 _HEX_PATTERN = re.compile(r"^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$")
+_REDUNDANT_LINESTYLES = ("-", "--", "-.", ":")
+
+
+def _series_line_kwargs(
+    kwargs: Mapping[str, Any],
+    index: int,
+    color_count: int,
+    *,
+    force_cycle: bool = False,
+) -> dict[str, Any]:
+    """为多系列线图补充可辨识线型，同时尊重用户显式样式。
+
+    默认只有颜色循环耗尽后才切换线型；``force_cycle=True`` 时每个系列都
+    循环线型。若用户已经传入 ``linestyle`` / ``ls``，则完全保留用户设置。
+    """
+    result = dict(kwargs)
+    if "linestyle" in result or "ls" in result:
+        return result
+    if color_count <= 0:
+        raise ValueError(f"color_count 必须是正整数，实际值: {color_count!r}")
+
+    style_index = index if force_cycle else index // color_count
+    result["linestyle"] = _REDUNDANT_LINESTYLES[style_index % len(_REDUNDANT_LINESTYLES)]
+    return result
 
 
 def auto_rotate_labels(
@@ -130,8 +154,58 @@ def smart_legend(
             bbox_to_anchor=(1.02, 0.5),
             ncol=ncols,
         )
-    else:
-        ax.legend(handles, labels, loc=loc, ncol=ncols)
+        return
+
+    legend = ax.legend(handles, labels, loc=loc, ncol=ncols)
+
+    # 极窄单栏中的大型 legend 不应横穿数据区。仅对默认 loc="best" 自动介入；
+    # 用户显式指定位置时保持原意。通过真实 renderer bbox 判断，而不是按字符数猜。
+    get_figwidth = getattr(ax.figure, "get_figwidth", None)
+    if loc != "best" or len(handles) < 9 or not callable(get_figwidth):
+        return
+    if float(get_figwidth()) > 4.5:
+        return
+    try:
+        ax.figure.canvas.draw()
+        get_renderer = getattr(ax.figure.canvas, "get_renderer", None)
+        if not callable(get_renderer):
+            return
+        renderer = get_renderer()
+        legend_box = legend.get_window_extent(renderer=renderer)
+        axes_box = ax.get_window_extent(renderer=renderer)
+    except Exception:
+        return
+
+    text_boxes = [text.get_window_extent(renderer=renderer) for text in legend.get_texts()]
+    max_text_width = max((box.width for box in text_boxes), default=0.0)
+    dense_inside = (
+        legend_box.width >= axes_box.width * 0.85
+        or (
+            legend_box.height >= axes_box.height * 0.22
+            and max_text_width >= axes_box.width * 0.28
+        )
+    )
+    if not dense_inside:
+        return
+
+    # 图外下方比图外右侧更适合单栏：保持正文宽度，用纵向空间换可读性。
+    # 从至多两列开始试放，必要时降到单列，直到真实宽度能装进主轴。
+    for candidate_ncols in range(min(2, ncols), 0, -1):
+        legend = ax.legend(
+            handles,
+            labels,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.12),
+            borderaxespad=0.0,
+            ncol=candidate_ncols,
+        )
+        try:
+            ax.figure.canvas.draw()
+            legend_box = legend.get_window_extent(renderer=renderer)
+        except Exception:
+            break
+        if legend_box.width <= axes_box.width * 1.05:
+            break
 
 
 def optimize_layout(fig: Figure, tight: bool = True) -> None:

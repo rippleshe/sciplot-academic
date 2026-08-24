@@ -18,7 +18,7 @@ from datetime import date, datetime, timedelta
 from sciplot._core.layout import add_colorbar
 from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data, relative_fontsize
 from sciplot._core.result import PlotResult
-from sciplot.utils.smart import smart_legend
+from sciplot.utils.smart import _series_line_kwargs, smart_legend
 
 
 def _coerce_to_date(value: Any, field_name: str = "dates") -> date:
@@ -330,6 +330,8 @@ def plot_multi_timeseries(
     _validate_annotations_axis_compatibility(events_normalized, regions_normalized, x_type)
 
     colors = get_cycle_colors()
+    explicit_color = "color" in kwargs or "c" in kwargs
+    effective_color_count = 1 if explicit_color else max(1, len(colors))
 
     for region in regions_normalized:
         ax.axvspan(
@@ -350,7 +352,10 @@ def plot_multi_timeseries(
                 UserWarning,
                 stacklevel=2,
             )
-        ax.plot(t, y, label=lbl, color=cycle_color(colors, i), **kwargs)
+        line_kwargs = _series_line_kwargs(kwargs, i, effective_color_count)
+        if not explicit_color:
+            line_kwargs.setdefault("color", cycle_color(colors, i))
+        ax.plot(t, y, label=lbl, **line_kwargs)
 
     for event in events_normalized:
         event_time = event["time"]

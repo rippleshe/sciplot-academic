@@ -47,6 +47,8 @@
 - 多系列折线在当前 palette 颜色耗尽后自动增加线型冗余编码，避免同色同线型系列不可区分；`plot_multi()` / `plot_multi_line()` 同时修正为真正尊重 `set_defaults(palette=...)`。
 - 统一 `add_colorbar()` 的辅助信息层级：拒绝非法 `fraction` / `pad`，并让 outline、ticks 与字号略弱于主轴而不改变默认版心几何；热力图、混淆矩阵、聚类图、棒棒糖图和平行坐标不再机械 45° 旋转类别标签，改为真实 bbox 碰撞后才旋转。
 - `plot_multi_density()`、`plot_ridgeline()` 与 `plot_multi_timeseries()` 接入智能多列图例，在系列较多时自动压缩 legend 占用，少系列时保持原有单列行为。
+- 统一多系列线图的冗余编码策略：`plot_multi_line()`、`plot_multi_timeseries()`、`plot_multi_density()`、`plot_ridgeline()` 在 palette 颜色复用后自动切换线型；用户显式 `linestyle` / `ls` 始终优先，显式单色 `color=` 时也会自动用线型维持系列可辨识度。
+- `smart_legend()` 新增 IEEE/单栏窄画布压力策略：仅在 9 项以上、默认 `loc="best"` 且真实 renderer bbox 已明显侵占数据区时，将大型长图例移至图外下方，并按真实宽度控制列数；显式 `loc=` / `outside=True` 不受自动策略改写。
 - 清理 showcase 中纯粹用于“补基础风格”的 `tick_params(direction="in")`，示例只保留图本身需要的特殊设置，用真实输出验证默认层即可维持出版级完成度。
 - 重做并目视检查多个 showcase，降低雷达图填充遮挡、网络图边/标签密度，优化环形排名配色，
   并从实现层修复 Alluvial 流带视觉质量。
@@ -59,7 +61,7 @@
 - 新增辅助 Axes 审计、UpSet 元数据、Alluvial 闭合路径、出版样式基线、多类图表 palette 隔离，
   Treemap 边框/字号、Sunburst 层级拓扑/环方向、Packed Bubble / Volcano / Network3D 像素级文字布局，
   Chord 圆周闭合/流槽守恒/过滤后总量、Ternary simplex 网格几何，以及所有 venue 四边 inward/minor tick 与 600 DPI 原生保存兜底契约测试。
-- 最新全量验证：`1587 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图；另以无 `setup_style()` / 无手工 tick / 无显式 DPI 的零配置调用实测原生 `fig.savefig()` 输出 600 DPI 完成图。
+- 最新全量验证：`1596 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图；另以无 `setup_style()` / 无手工 tick / 无显式 DPI 的零配置调用实测原生 `fig.savefig()` 输出 600 DPI 完成图，并以 IEEE 3.5 英寸单栏对 12 系列长图例做 hostile 压力验证。
 
 ---
 

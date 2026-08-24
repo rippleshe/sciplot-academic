@@ -23,7 +23,7 @@ from sciplot._core.utils import (
     _require_optional,
 )
 from sciplot._core.result import PlotResult
-from sciplot.utils.smart import smart_legend
+from sciplot.utils.smart import _series_line_kwargs, smart_legend
 
 
 # _get_cycle_colors 已从 sciplot._core.utils 导入（其内部保证 prop_cycle 非空）
@@ -425,15 +425,23 @@ def plot_multi_density(
 
     all_values = np.concatenate(normalized_data)
     x_eval = np.linspace(all_values.min(), all_values.max(), 256)
+    colors = _get_cycle_colors()
+    explicit_color = "color" in kwargs or "c" in kwargs
+    effective_color_count = 1 if explicit_color else max(1, len(colors))
 
-    for values, label in zip(normalized_data, labels):
+    for i, (values, label) in enumerate(zip(normalized_data, labels)):
+        line_kwargs = _series_line_kwargs(kwargs, i, effective_color_count)
         if _is_constant(values):
-            # 常数序列：KDE 退化，绘制垂直线表示质量集中。
-            ax.axvline(x=float(values[0]), linestyle="--", linewidth=1.5, label=label)
+            # 常数序列：KDE 退化，绘制垂直线表示质量集中；保留退化语义的虚线，
+            # 但用户显式 linestyle / ls 仍具有最高优先级。
+            if "linestyle" not in kwargs and "ls" not in kwargs:
+                line_kwargs["linestyle"] = "--"
+            line_kwargs.setdefault("linewidth", 1.5)
+            ax.axvline(x=float(values[0]), label=label, **line_kwargs)
             continue
         kde = stats.gaussian_kde(values, bw_method=bw_method)
         y_eval = kde(x_eval)
-        (line,) = ax.plot(x_eval, y_eval, label=label, **kwargs)
+        (line,) = ax.plot(x_eval, y_eval, label=label, **line_kwargs)
         if fill:
             ax.fill_between(x_eval, y_eval, alpha=alpha, color=line.get_color())
 
@@ -523,6 +531,8 @@ def plot_ridgeline(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
+    explicit_color = "color" in kwargs or "c" in kwargs
+    effective_color_count = 1 if explicit_color else max(1, len(colors))
 
     all_values = np.concatenate(normalized_data)
     x_eval = np.linspace(all_values.min(), all_values.max(), 256)
@@ -531,11 +541,17 @@ def plot_ridgeline(
     for i, (values, label) in enumerate(zip(normalized_data, labels)):
         base = i * step
         color = cycle_color(colors, i)
+        line_kwargs = _series_line_kwargs(kwargs, i, effective_color_count)
+        if not explicit_color:
+            line_kwargs.setdefault("color", color)
 
         if _is_constant(values):
             # 常数序列：KDE 退化，绘制垂直线表示质量集中。
-            ax.plot([values[0], values[0]], [base, base + 0.85],
-                    color=color, linewidth=1.5, label=label, **kwargs)
+            line_kwargs.setdefault("linewidth", 1.5)
+            ax.plot(
+                [values[0], values[0]], [base, base + 0.85],
+                label=label, **line_kwargs,
+            )
             if show_median:
                 ax.axvline(x=float(values[0]), ymin=(base + 0.1) / (base + 1.2),
                            ymax=(base + 0.9) / (base + 1.2),
@@ -546,9 +562,10 @@ def plot_ridgeline(
         y_eval = kde(x_eval)
         y_norm = y_eval / y_eval.max()
 
-        ax.plot(x_eval, base + y_norm, color=color, linewidth=1.4, label=label, **kwargs)
+        line_kwargs.setdefault("linewidth", 1.4)
+        (line,) = ax.plot(x_eval, base + y_norm, label=label, **line_kwargs)
         if fill:
-            ax.fill_between(x_eval, base, base + y_norm, color=color, alpha=alpha)
+            ax.fill_between(x_eval, base, base + y_norm, color=line.get_color(), alpha=alpha)
 
         if show_median:
             median_val = float(np.median(values))
