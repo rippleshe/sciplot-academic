@@ -81,6 +81,30 @@ def test_treemap_custom_colors(cleanup_figures):
     assert result.fig is not None
 
 
+def test_treemap_respects_border_style(cleanup_figures):
+    result = sp.plot_treemap(
+        ["A", "B"],
+        [2, 1],
+        border_color="#123456",
+        border_width=2.5,
+    )
+    patch = result.ax.patches[0]
+    assert patch.get_linewidth() == pytest.approx(2.5)
+    assert patch.get_edgecolor()[:3] == pytest.approx(
+        (0x12 / 255, 0x34 / 255, 0x56 / 255)
+    )
+
+
+def test_treemap_fontsize_scales_with_area(cleanup_figures):
+    result = sp.plot_treemap(["Large", "Small"], [9, 1], min_font=6, max_font=16)
+    label_sizes = {
+        text.get_text(): text.get_fontsize()
+        for text in result.ax.texts
+        if text.get_text() in {"Large", "Small"}
+    }
+    assert label_sizes["Large"] > label_sizes["Small"]
+
+
 def test_treemap_colors_length_mismatch_raises(cleanup_figures):
     with pytest.raises(ValueError, match="colors 长度"):
         sp.plot_treemap(["A", "B", "C"], [1, 2, 3], colors=["#D62728"])

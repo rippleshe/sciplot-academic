@@ -9,7 +9,13 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, relative_fontsize
+from sciplot._core.utils import (
+    contrast_text_color,
+    cycle_color,
+    get_cycle_colors,
+    new_styled_figure,
+    relative_fontsize,
+)
 from sciplot._core.result import PlotResult
 
 # ============================================================================
@@ -136,6 +142,8 @@ def plot_treemap(
     if float(val_arr.sum()) <= 0:
         raise ValueError("values 之和必须大于 0")
 
+    fig, ax = new_styled_figure(venue, palette, lang)
+
     if colors is not None:
         if len(colors) != len(cat_arr):
             raise ValueError(
@@ -164,8 +172,6 @@ def plot_treemap(
 
     rects = _treemap_layout(list(val_arr), 0.0, 0.0, 1.0, 1.0)
 
-    fig, ax = new_styled_figure(venue, palette, lang)
-
     total_val = float(val_arr.sum())
 
     # ── 矩形（先画底色，再画内描边增强层次） ──
@@ -173,24 +179,47 @@ def plot_treemap(
     for (rx, ry, rw, rh), c, v, cat in zip(rects, color_list, val_arr, cat_arr):
         ax.add_patch(Rectangle(
             (rx, ry), rw, rh,
-            facecolor=c, edgecolor="white",
-            linewidth=1.6, zorder=1,
+            facecolor=c, edgecolor=border_color,
+            linewidth=border_width, zorder=1,
         ))
         # 文字：字号随矩形尺寸自适应（类别名 + 数值 + 百分比）
         if show_values and rw > 0.05 and rh > 0.035:
+            text_color = contrast_text_color(c, threshold=0.58)
             label_txt = str(cat)
-            fs_label = min(max_font, max(min_font, rw * 0.34 / max(1.0, len(label_txt))))
+            area = rw * rh
+            base_font = float(plt.rcParams.get("font.size", 9.0))
+            effective_units = sum(
+                1.0 if ord(ch) > 127 else 0.58 for ch in label_txt
+            )
+            fig_w, fig_h = fig.get_size_inches()
+            axes_box = ax.get_position()
+            width_cap = (
+                rw * axes_box.width * fig_w * 72.0 * 0.82
+                / max(effective_units, 1.0)
+            )
+            height_cap = rh * axes_box.height * fig_h * 72.0 * 0.34
+            fs_label = min(
+                max_font,
+                base_font * (0.72 + 1.35 * np.sqrt(area)),
+                width_cap,
+                height_cap,
+            )
+            line_offset = min(
+                rh * 0.18,
+                fs_label / (72.0 * axes_box.height * fig_h) * 0.55,
+            )
             if fs_label >= min_font:
-                y_top = ry + rh / 2 + (0.014 if rh > 0.08 else 0.0)
+                y_top = ry + rh / 2 + line_offset
                 ax.text(rx + rw / 2, y_top, label_txt,
                         ha="center", va="center", fontsize=fs_label,
-                        color="white", fontweight="bold", zorder=3)
+                        color=text_color, fontweight="bold", zorder=3)
             if rh > 0.07:
                 pct = v / total_val * 100.0
                 fs_val = max(min_font - 1.0, fs_label - 1.5)
-                ax.text(rx + rw / 2, ry + rh / 2 - 0.016, f"{v:{fmt}}  ({pct:.0f}%)",
+                value_y = ry + rh / 2 - line_offset
+                ax.text(rx + rw / 2, value_y, f"{v:{fmt}}  ({pct:.0f}%)",
                         ha="center", va="center", fontsize=fs_val,
-                        color="white", alpha=0.92, zorder=3)
+                        color=text_color, alpha=0.92, zorder=3)
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
@@ -267,6 +296,8 @@ def plot_donut(
     if not (0.0 < hole_ratio < 1.0):
         raise ValueError(f"hole_ratio 必须在 (0, 1) 范围内，实际值: {hole_ratio!r}")
 
+    fig, ax = new_styled_figure(venue, palette, lang)
+
     if colors is not None:
         if len(colors) != len(cat_arr):
             raise ValueError(
@@ -276,8 +307,6 @@ def plot_donut(
     else:
         cycle = get_cycle_colors()
         color_list = [cycle_color(cycle, i) for i in range(len(cat_arr))]
-
-    fig, ax = new_styled_figure(venue, palette, lang)
 
     total = float(val_arr.sum())
 
@@ -404,6 +433,12 @@ def plot_sunburst(
         raise ValueError("values 不能包含 NaN 或 Inf")
     if np.any(val < 0):
         raise ValueError("values 不能包含负值")
+    if len(set(lbl)) != n:
+        raise ValueError("labels 必须唯一，否则无法可靠解析父子关系")
+    if label_min_angle < 0:
+        raise ValueError("label_min_angle 不能为负值")
+    if ring_gap < 0:
+        raise ValueError("ring_gap 不能为负值")
 
     # 构建父子索引映射
     index_of = {name: i for i, name in enumerate(lbl)}
@@ -427,6 +462,20 @@ def plot_sunburst(
         for c in children[node]:
             depth[c] = depth[node] + 1
             queue.append(c)
+    reachable = set(roots)
+    queue = list(roots)
+    while queue:
+        node = queue.pop(0)
+        for c in children[node]:
+            if c not in reachable:
+                reachable.add(c)
+                queue.append(c)
+    if len(reachable) != n:
+        unreachable = [lbl[i] for i in range(n) if i not in reachable]
+        raise ValueError(
+            "所有节点都必须从根节点可达；检测到环或孤立层级: "
+            + ", ".join(unreachable)
+        )
     max_depth = max(depth)
 
     # ── 配色：第一层分支分配色相，层内按深度明度渐变 ──
@@ -436,6 +485,8 @@ def plot_sunburst(
     level1 = [i for i in range(n) if depth[i] == 1]
     if not level1:
         level1 = list(roots)
+
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     cycle = get_cycle_colors()
     if colors is None:
@@ -474,10 +525,12 @@ def plot_sunburst(
             else:
                 node_color[i] = darken_color(base, 0.14 * (depth[i] - 1))
 
-    fig, ax = new_styled_figure(venue, palette, lang)
-
     # 递归绘制扇区（从根开始，按数值分配角度）
-    ring_width = 1.0 / (max_depth + 1) if max_depth > 0 else 1.0
+    ring_width = 1.0 / max_depth if max_depth > 0 else 1.0
+    if ring_gap >= ring_width:
+        raise ValueError(
+            f"ring_gap ({ring_gap}) 必须小于单层环宽 ({ring_width:.3g})"
+        )
 
     from matplotlib.patches import Wedge
 
@@ -487,8 +540,8 @@ def plot_sunburst(
         theta0/theta1 为弧度，从 12 点方向顺时针展开。
         根节点（depth 0）不绘制扇区，中心留白。
         """
-        r_outer = 1.0 - depth_idx * ring_width
-        r_inner = max(0.0, r_outer - ring_width + ring_gap)
+        r_outer = depth_idx * ring_width
+        r_inner = max(0.0, (depth_idx - 1) * ring_width + ring_gap)
         if depth_idx > 0 and theta1 - theta0 > 1e-9 and r_outer - r_inner > 1e-9:
             # 弧度(从12点顺时针) → 度(matplotlib 从+x 逆时针)
             deg0 = 90.0 - np.degrees(theta0)
@@ -499,16 +552,26 @@ def plot_sunburst(
                       linewidth=1.0, zorder=2)
             ax.add_patch(w)
 
-            # 扇区标签（角度足够大才显示）
-            if show_labels and np.degrees(theta1 - theta0) >= label_min_angle:
+            # 扇区标签：不仅看角度，还要考虑文字长度与所在半径。
+            # 内环同样角度拥有更短的弧长，因此需要更严格的显示门槛，
+            # 否则多个短标签会在圆心附近互相覆盖。
+            angle_deg = float(np.degrees(theta1 - theta0))
+            effective_units = sum(1.0 if ord(ch) > 127 else 0.58 for ch in lbl[idx])
+            r_mid = (r_inner + r_outer) / 2
+            adaptive_min_angle = max(
+                float(label_min_angle),
+                5.5 * effective_units / max(r_mid, 0.18),
+            )
+            if show_labels and angle_deg >= adaptive_min_angle:
                 mid = (theta0 + theta1) / 2
-                r_mid = (r_inner + r_outer) / 2
                 fs = relative_fontsize(-2, floor=6)
                 # 12点顺时针坐标 → 笛卡尔
                 x_t = r_mid * np.sin(mid)
                 y_t = r_mid * np.cos(mid)
                 ax.text(x_t, y_t, lbl[idx], ha="center", va="center",
-                        fontsize=fs, color="white", fontweight="bold", zorder=5)
+                        fontsize=fs,
+                        color=contrast_text_color(node_color[idx], threshold=0.58),
+                        fontweight="bold", zorder=5)
 
         total_child = sum(val[c] for c in children[idx])
         if total_child <= 0:

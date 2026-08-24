@@ -1312,6 +1312,10 @@ def plot_waffle(
     if not isinstance(rows, int) or rows <= 0 or not isinstance(cols, int) or cols <= 0:
         raise ValueError("rows/cols 必须为正整数")
 
+    # palette 是本次调用的参数，应在读取颜色循环前生效，避免受到上一张图
+    # 全局 rcParams 的影响。
+    fig, ax = new_styled_figure(venue, palette, lang)
+
     if colors is not None:
         if len(colors) != len(categories):
             raise ValueError(
@@ -1320,8 +1324,6 @@ def plot_waffle(
     else:
         cycle = _get_cycle_colors()
         colors = [cycle_color(cycle, i) for i in range(len(categories))]
-
-    fig, ax = new_styled_figure(venue, palette, lang)
 
     # 按比例分配格数（最后一项补齐差额）
     n_cells = rows * cols

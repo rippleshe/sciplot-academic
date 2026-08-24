@@ -89,6 +89,12 @@ def test_sankey_node_width_invalid_raises(flow_data, cleanup_figures):
         sp.plot_sankey(sources, targets, values, node_width=1.5)
 
 
+def test_sankey_layer_gap_invalid_raises(flow_data, cleanup_figures):
+    sources, targets, values = flow_data
+    with pytest.raises(ValueError, match="layer_gap"):
+        sp.plot_sankey(sources, targets, values, layer_gap=0.0)
+
+
 def test_sankey_save_png(tmp_path, flow_data, cleanup_figures):
     sources, targets, values = flow_data
     result = sp.plot_sankey(sources, targets, values)
@@ -162,3 +168,28 @@ def test_sankey_label_collision_avoidance(cleanup_figures):
         ys.sort()
         for i in range(len(ys) - 1):
             assert ys[i + 1] - ys[i] >= 0.044, f"x={x} 列标签重叠: {ys[i]:.3f}→{ys[i+1]:.3f}"
+
+
+def test_sankey_auto_layer_gap_prevents_long_label_overlap(cleanup_figures):
+    """自动层间距应为长中文标签留出实际像素空间，而非只避免同层 y 碰撞。"""
+    sources = ["煤炭", "煤炭", "天然气", "天然气", "电力转化", "电力转化", "电力转化"]
+    targets = ["电力转化", "工业直接用电", "电力转化", "集中供暖", "居民生活用电", "商业服务用电", "交通电气化"]
+    values = [35, 18, 10, 6, 16, 12, 8]
+    result = sp.plot_sankey(sources, targets, values, venue="presentation", lang="zh")
+    result.fig.canvas.draw()
+    renderer = result.fig.canvas.get_renderer()
+    bboxes = [text.get_window_extent(renderer=renderer) for text in result.ax.texts]
+    for i, box_a in enumerate(bboxes):
+        for box_b in bboxes[i + 1:]:
+            assert not box_a.overlaps(box_b), "Sankey 长标签发生跨层像素重叠"
+
+
+def test_sankey_explicit_layer_gap_expands_geometry(cleanup_figures):
+    """显式 layer_gap 应可预测地扩大相邻层净间距。"""
+    from matplotlib.patches import Rectangle
+
+    compact = sp.plot_sankey(["A", "B"], ["B", "C"], [2, 2], layer_gap=0.12)
+    wide = sp.plot_sankey(["A", "B"], ["B", "C"], [2, 2], layer_gap=0.42)
+    compact_x = sorted({round(p.get_x(), 6) for p in compact.ax.patches if isinstance(p, Rectangle)})
+    wide_x = sorted({round(p.get_x(), 6) for p in wide.ax.patches if isinstance(p, Rectangle)})
+    assert wide_x[1] - wide_x[0] > compact_x[1] - compact_x[0]

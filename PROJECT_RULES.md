@@ -18,15 +18,16 @@
 
 ### 1.2 版本递增规则
 
-- **每次迭代最小版本号加一** (用户要求)
-- 版本号在 `pyproject.toml` 的 `[project]` 部分维护
-- 发布时同步更新所有引用版本号的位置
+- 开发迭代先记录在 `CHANGELOG.md` 的 **Unreleased**，不要为了每次本地修改制造版本号漂移。
+- 包版本由 `setuptools-scm` 根据 Git tag 推导；`pyproject.toml` 使用动态版本，**不要手写静态 `version = ...`**。
+- 只有准备正式发布时才按 SemVer 选择版本并创建对应 `vMAJOR.MINOR.PATCH` tag。
+- Skill 自身版本与 Python 包版本独立；Skill 行为有实质变化时单独递增，不复制包版本号。
 
-### 1.3 当前版本
+### 1.3 当前版本来源
 
-```
-当前版本: 1.12.0
-```
+运行时以 `sciplot.__version__` / `importlib.metadata.version("sciplot-academic")` 为准；
+仓库开发版可能带 setuptools-scm 的本地版本后缀。CHANGELOG 顶部记录最近发布历史，
+Git tag 是正式发布版本的权威来源。
 
 ---
 
@@ -345,12 +346,10 @@ Typical usage example:
 
 ### 7.2 发布步骤
 
-1. **更新版本号**
-   ```toml
-   # pyproject.toml
-   [project]
-   version = "2.0.0"
-   ```
+1. **确定发布版本**
+   - 根据 SemVer 选择 `MAJOR.MINOR.PATCH`。
+   - 保持 `pyproject.toml` 的动态版本配置，不写静态 `version`。
+   - 将 Unreleased 变更整理到对应版本章节。
 
 2. **更新 CHANGELOG.md**
    ```markdown
@@ -361,7 +360,7 @@ Typical usage example:
    - 修复颜色映射问题
    ```
 
-3. **创建 Git tag**
+3. **创建 Git tag（版本真源）**
    ```bash
    git tag -a v2.0.0 -m "Release version 2.0.0"
    git push origin v2.0.0

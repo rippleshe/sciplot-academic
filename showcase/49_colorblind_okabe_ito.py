@@ -44,6 +44,9 @@ ax2.set_title("绿色弱 (Deuteranopia) 模拟视角", fontsize=10)
 ax2.legend(frameon=False, fontsize=8)
 ax2.tick_params(direction="in", labelsize=8)
 
+# 论文式双面板必须有明确阅读顺序；使用库内统一面板标签而不是手写文本。
+sp.add_panel_labels(axes, x=-0.08, y=1.08)
+
 # ── 审计报告标注 ──────────────────────────────────────────────
 report = sp.audit_palette("okabe-ito")
 fig.suptitle(f"色盲安全审计: safe={report['safe']}，"

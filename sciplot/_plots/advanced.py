@@ -580,6 +580,10 @@ def plot_packed_bubble(
     if np.any(sizes_arr <= 0):
         raise ValueError("sizes 必须全部为正数")
 
+    # 先应用当前调用的 venue/palette，再读取颜色循环。这样单次函数调用的
+    # palette 参数始终是自包含的，不依赖上一张图留下的 rcParams 状态。
+    fig, ax = new_styled_figure(venue, palette, lang)
+
     if colors is not None:
         if len(colors) != len(labels):
             raise ValueError(
@@ -603,8 +607,6 @@ def plot_packed_bubble(
         categorical_legend = group_map
     if not 0 < min_size_frac < 1:
         raise ValueError(f"min_size_frac 必须在 (0, 1) 范围内，实际值: {min_size_frac!r}")
-
-    fig, ax = new_styled_figure(venue, palette, lang)
 
     pos, radii = _pack_bubbles(sizes_arr, min_size_frac=min_size_frac)
     fontsize = plt.rcParams.get("font.size", 9)

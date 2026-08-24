@@ -30,6 +30,7 @@ def plot_sankey(
     flow_alpha: float = 0.55,
     min_flow: float = 0.0,
     min_node_height: float = 0.012,
+    layer_gap: Optional[float] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -52,6 +53,8 @@ def plot_sankey(
         min_flow   : 小于该值的流被过滤（避免视觉噪音）
         min_node_height: 节点最小可见高度（归一化，默认 0.012）。
                        极小流量节点提升到此高度，避免条高被间隙吞掉只剩标签
+        layer_gap   : 相邻层节点之间的水平净间距；None 时根据标签长度自动估计。
+                      长中文/英文标签较多时可显式增大，避免标签侵入下一层
 
     示例:
         >>> fig, ax = sp.plot_sankey(
@@ -80,6 +83,8 @@ def plot_sankey(
         raise ValueError(f"node_width 必须在 (0, 1) 范围内，实际值: {node_width!r}")
     if min_flow < 0:
         raise ValueError(f"min_flow 必须非负，实际值: {min_flow!r}")
+    if layer_gap is not None and (not np.isfinite(layer_gap) or layer_gap <= 0):
+        raise ValueError(f"layer_gap 必须为正有限数或 None，实际值: {layer_gap!r}")
 
     # 过滤小流量
     keep = val_arr >= min_flow
@@ -110,6 +115,10 @@ def plot_sankey(
             label_of = {n: str(labels[i]) for i, n in enumerate(node_list)}
     else:
         label_of = {n: str(n) for n in node_list}
+
+    # 当前调用的 palette 必须先落到 rcParams，再读取颜色循环。
+    # 否则 Sankey 的默认节点色会悄悄继承上一张图的主题。
+    fig, ax = new_styled_figure(venue, palette, lang)
 
     if node_colors is not None:
         if len(node_colors) < n_nodes:
@@ -167,7 +176,18 @@ def plot_sankey(
         raw_h = node_value[n] / total_value
         node_h_eff[n] = max(raw_h, min_node_h)
 
-    x_stride = node_width * 2.5
+    # 水平层间距同时承担流带空间和标签空间。旧固定 1.5×node_width 的净间距
+    # 对中文/长英文标签不够，文字会侵入下一层。默认依据最长非末层标签自动扩张；
+    # 保留 layer_gap 让版面极端紧凑/宽松时可显式控制。
+    if layer_gap is None:
+        max_label_chars = max(
+            (len(label_of[n]) for n in node_list if level[n] < max_level),
+            default=1,
+        )
+        auto_gap = max(node_width * 1.5, 0.18 + 0.018 * min(max_label_chars, 14))
+    else:
+        auto_gap = float(layer_gap)
+    x_stride = node_width + auto_gap
     node_pos: Dict[Any, Tuple[float, float]] = {}
     node_h_display: Dict[Any, float] = {}  # 实际绘制高度（含最小提升与收缩）
     for lv, nodes in layers.items():
@@ -190,8 +210,6 @@ def plot_sankey(
     # 流出/流入偏移游标（用于流量带锚点）
     out_cursor: Dict[Any, float] = {n: 0.0 for n in node_list}
     in_cursor: Dict[Any, float] = {n: 0.0 for n in node_list}
-
-    fig, ax = new_styled_figure(venue, palette, lang)
 
     # ── 流量带（先画，zorder 低于节点） ──
     # 流带高度在源/目标侧分别按该节点自身流量归一化，
@@ -244,7 +262,10 @@ def plot_sankey(
             edgecolor="white", linewidth=0.8, zorder=3,
         ))
 
-    # ── 节点标签（末层在左，其余在右） ──
+    # ── 节点标签 ──
+    # 源层放节点左侧，其他层放节点右侧。旧策略把末层标签放在左侧，
+    # 会与倒数第二层的右侧标签在同一层间隙“迎头相撞”；统一向流向外侧
+    # 排布后，每个内部层间隙只承载一侧文字，长标签稳定得多。
     fs = max(7, plt.rcParams.get("font.size", 9) - 1)
 
     # 标签避让：同层标签按 y 排序后累积推挤，保证最小文字间距
@@ -265,7 +286,7 @@ def plot_sankey(
     for n in node_list:
         x, y = node_pos[n]
         h = node_h_display[n]
-        if level[n] == max_level:
+        if level[n] == 0:
             ax.text(x - 0.005, label_y[n], label_of[n],
                     ha="right", va="center", fontsize=fs, zorder=4)
         else:

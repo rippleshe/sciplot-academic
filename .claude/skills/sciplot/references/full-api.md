@@ -1,5 +1,9 @@
 # SciPlot 完整 API 参考
 
+> 本文件是便于 Claude 快速检索的人工参考，不是版本真源。若签名、别名或默认值
+> 与当前安装包不一致，以 `sciplot.__version__`、`inspect.signature()` 和源码为准。
+> 主工作流见 `../SKILL.md`；不要为了普通绘图任务一次性读取整份 API 文档。
+
 ## 安装
 
 ```bash

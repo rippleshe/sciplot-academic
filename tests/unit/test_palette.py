@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sciplot as sp
 from matplotlib import rcParams
+from matplotlib.colors import to_hex
 
 
 class TestPaletteBasics:
@@ -66,6 +67,52 @@ class TestPaletteApplication:
         fig, ax = sp.plot([1, 2], [1, 2])
         assert fig is not None
         plt.close(fig)
+
+    @pytest.mark.parametrize(
+        "builder",
+        [
+            lambda: sp.plot_packed_bubble(["A", "B"], [3, 2], palette="ocean"),
+            lambda: sp.plot_waffle(["A", "B"], [60, 40], palette="ocean"),
+            lambda: sp.plot_sankey(["A"], ["B"], [1], palette="ocean"),
+            lambda: sp.plot_donut(["A", "B"], [60, 40], palette="ocean"),
+        ],
+        ids=["packed-bubble", "waffle", "sankey", "donut"],
+    )
+    def test_plot_palette_argument_does_not_inherit_previous_cycle(self, reset_style, builder):
+        """各高层绘图函数的 palette 参数必须覆盖上一张图的全局颜色循环。"""
+        sp.setup_style(palette="pastel")
+        result = builder()
+        expected = sp.get_palette("ocean")[0].lower()
+        visible_patches = [patch for patch in result.ax.patches if patch.get_visible()]
+        assert visible_patches
+        # Packed bubble 的首个 patch 是阴影；选择第一个非黑色 patch。
+        actual_colors = [
+            to_hex(patch.get_facecolor(), keep_alpha=False).lower()
+            for patch in visible_patches
+        ]
+        assert expected in actual_colors
+
+    def test_hierarchical_palette_argument_changes_derived_colors(self, reset_style):
+        """Treemap/Sunburst 即使派生明暗色，也必须从当前 palette 而非旧状态出发。"""
+        sp.setup_style(palette="pastel")
+        tree = sp.plot_treemap(["A", "B"], [2, 1], palette="ocean")
+        tree_color = to_hex(tree.ax.patches[0].get_facecolor(), keep_alpha=False)
+
+        sp.setup_style(palette="pastel")
+        tree_pastel = sp.plot_treemap(["A", "B"], [2, 1], palette="pastel")
+        pastel_color = to_hex(tree_pastel.ax.patches[0].get_facecolor(), keep_alpha=False)
+        assert tree_color != pastel_color
+
+        labels = ["root", "A", "B", "A1", "B1"]
+        parents = [None, "root", "root", "A", "B"]
+        values = [10, 6, 4, 6, 4]
+        sp.setup_style(palette="pastel")
+        sun = sp.plot_sunburst(labels, parents, values, palette="ocean")
+        ocean_sun_colors = [to_hex(p.get_facecolor(), keep_alpha=False) for p in sun.ax.patches]
+        sp.setup_style(palette="pastel")
+        sun_pastel = sp.plot_sunburst(labels, parents, values, palette="pastel")
+        pastel_sun_colors = [to_hex(p.get_facecolor(), keep_alpha=False) for p in sun_pastel.ax.patches]
+        assert ocean_sun_colors != pastel_sun_colors
 
 
 class TestPaletteSubsets:

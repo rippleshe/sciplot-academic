@@ -61,6 +61,44 @@ def test_sunburst_zero_root_raises(cleanup_figures):
         sp.plot_sunburst(labels=["A"], parents=[None], values=[0])
 
 
+def test_sunburst_duplicate_labels_raise(cleanup_figures):
+    with pytest.raises(ValueError, match="labels 必须唯一"):
+        sp.plot_sunburst(
+            labels=["root", "A", "A"],
+            parents=[None, "root", "root"],
+            values=[2, 1, 1],
+        )
+
+
+def test_sunburst_disconnected_cycle_raises(cleanup_figures):
+    with pytest.raises(ValueError, match="从根节点可达"):
+        sp.plot_sunburst(
+            labels=["root", "A", "B"],
+            parents=[None, "B", "A"],
+            values=[1, 1, 1],
+        )
+
+
+def test_sunburst_rings_expand_outward(cleanup_figures):
+    result = sp.plot_sunburst(
+        labels=["root", "A", "A1", "A1a"],
+        parents=[None, "root", "A", "A1"],
+        values=[1, 1, 1, 1],
+    )
+    radii = [patch.r for patch in result.ax.patches]
+    assert radii == sorted(radii)
+    assert radii[-1] == pytest.approx(1.0)
+
+
+def test_sunburst_ring_gap_validation(cleanup_figures):
+    with pytest.raises(ValueError, match="ring_gap"):
+        sp.plot_sunburst(
+            labels=["root", "A"],
+            parents=[None, "root"],
+            values=[1, 1],
+            ring_gap=1.0,
+        )
+
 def test_sunburst_colors_mismatch(cleanup_figures):
     with pytest.raises(ValueError, match="colors"):
         sp.plot_sunburst(

@@ -1,1452 +1,191 @@
 ---
 name: sciplot
 description: >-
-  SciPlot Academic 科研绘图技能（sciplot-academic 包配套 skill，本仓库默认绘图入口）。
-  当用户请求绘制科研/论文/竞赛图表（折线、散点、柱状、箱线、小提琴、热力、气泡热力、
-  边际分布、雨云、蜂群、山脊、六边形、哑铃、发散条形、甘特、打包气泡、雷达、3D 曲面/瀑布、
-  网络/3D 网络、维恩、密度、QQ、残差、PCA 等 45+ 类型），或表达画图/出图/可视化/论文插图/
-  实验结果展示等意图时触发。库名提及 matplotlib/seaborn/plotly 时引导使用 sciplot。
-version: 1.12.6
+  SciPlot Academic 科研绘图与论文插图工作流。用户要求画科研图、论文图、实验结果图、
+  统计图、多面板图、期刊投稿图，或需要优化现有 matplotlib 科研图时触发；也适用于
+  “这些数据怎么可视化”“把图做得像顶刊”“提升论文图质量”等未指定图型的任务。
+  优先使用项目内 sciplot API 完成静态科研可视化；明确要求交互式网页图、地图或动画时不触发。
+version: 2.0.0
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
 ---
 
-# SciPlot Academic — 科研绘图 Skill (v1.12.6)
+# SciPlot Academic — publication figure workflow
 
----
+这个 Skill 的目标不是“调用一个画图函数”，而是把数据变成**语义正确、视觉克制、可复核、可投稿**的科研图。
 
-## 触发规则
+## 1. 先判断，不要急着画
 
-**只要用户涉及以下任一维度，立即触发，无需确认：**
+先回答四个问题：
 
-| 维度 | 关键词模式 |
-|------|-----------|
-| **动作** | 画/绘/出图/可视化/plot/chart/figure/展示数据/做成图 |
-| **图表** | 折线/散点/柱状/箱线/热力/气泡/山脊/瀑布/雷达/3D/网络/维恩/密度/QQ/残差/六边形/雨云/蜂群/哑铃/甘特/边际/火山/泰勒/弦图/三角/华夫 |
-| **场景** | 论文图/期刊图/竞赛图/PPT图/实验结果/对比分析/趋势/分布 |
-| **库名** | matplotlib/seaborn/plotly 提及 → 引导用 sciplot |
-| **隐含** | 上传 CSV/Excel + "分析"；数值结果 + "怎么展示" |
+1. **图要证明什么？** 趋势、差异、分布、相关、构成、流向、模型诊断还是机制流程？
+2. **数据是什么结构？** 连续/类别/时间/矩阵/网络/层级/多阶段流；是否有重复测量、误差或显著性？
+3. **使用场景是什么？** `nature` / `ieee` / `thesis` / `presentation`，中文还是英文？
+4. **读者第一眼应该看到什么？** 主结论必须比装饰、网格、背景、次要系列更抢眼。
 
-**不触发**：明确要求 plotly/d3/pyecharts 交互式、动画视频、地图地理、实时仪表板、或明确拒绝 matplotlib。
+不要为了“高级”选择复杂图型。普通折线、散点、箱线、森林图如果更准确，就优先用它们。
 
----
+## 2. 图型选择
 
-## 决策树
+常用入口：
 
-```
-用户需求 → 涉及数据/图表？
-  ├─ 否 → 跳过
-  └─ 是 → 明确要求其他交互式库？
-       ├─ 是 → 跳过
-       └─ 否 → 确定场景 → 选择图表类型 → 生成脚本
-```
+| 研究问题 | 首选 |
+|---|---|
+| 单/多组趋势 | `sp.plot()` / `sp.plot_multi()` |
+| 两连续变量关系 | `sp.plot_scatter()`；高密度用 `sp.plot_hexbin()` |
+| 分类数值比较 | `sp.plot_bar()` / `sp.plot_grouped_bar()` |
+| 前后/两条件变化 | `sp.plot_dumbbell()` |
+| 分布与原始点 | `sp.plot_raincloud()` / `sp.plot_beeswarm()` |
+| 经典分布摘要 | `sp.plot_box()` / `sp.plot_violin()` |
+| 矩阵/相关性 | `sp.plot_heatmap()` / `sp.plot_bubble_heatmap()` |
+| 模型比较与不确定性 | `sp.plot_errorbar()` / `sp.plot_forest()` / `sp.plot_taylor()` |
+| 组成占比 | `sp.plot_treemap()` / `sp.plot_donut()` / `sp.plot_waffle()` |
+| 排名变化 | `sp.plot_bump()` / `sp.plot_circular_barplot()` |
+| 多阶段流动 | `sp.plot_sankey()` / `sp.plot_alluvial()` |
+| 层级构成 | `sp.plot_sunburst()` |
+| 网络结构 | `sp.plot_network()` / `sp.plot_network_communities()` |
+| 多组分 | `sp.plot_ternary()` |
+| 多维性能 | `sp.plot_radar()`，但维度少且尺度一致时才用 |
+| 多面板论文图 | `sp.figure_panels()` + 各绘图 API |
 
-### Step 1: 确定场景
+完整函数表和参数细节按需读取 `references/full-api.md`；常见组合范式读取 `references/recipes.md`；配色与视觉语义读取 `references/color-style.md`。不要把整个参考文件无差别读入上下文，只读当前任务需要的部分。
 
-| 用户场景 | venue | formats | dpi | lang |
-|---------|-------|---------|-----|------|
-| Word 中文论文 | `thesis` | png | 1200 | zh |
-| IEEE 英文投稿 | `ieee` | pdf | — | en |
-| Nature 英文投稿 | `nature` | pdf | — | en |
-| 学位论文 | `thesis` | png/pdf | 1200 | zh |
-| 演示文稿 | `presentation` | png | 300 | zh |
-| 深色背景演示 | `presentation` | png | 300 | zh + `theme="dark"` |
-
-### Step 2: 选择图表
-
-| 用户意图 | 函数 | 别名 |
-|---------|------|------|
-| 趋势/曲线 | `sp.plot()` | `sp.line()` |
-| 多线对比 | `sp.plot_multi()` | `sp.multi()` |
-| 散点关系 | `sp.plot_scatter()` | `sp.scatter()` |
-| 分类对比 | `sp.plot_bar()` | `sp.bar()` |
-| 多方法对比 | `sp.plot_grouped_bar()` | — |
-| 堆叠占比 | `sp.plot_stacked_bar()` | `sp.stacked_bar()` |
-| 水平排名 | `sp.plot_horizontal_bar()` | `sp.hbar()` |
-| 分布形状 | `sp.plot_box()` / `sp.plot_violin()` | `sp.box()` / `sp.violin()` |
-| 频率分布 | `sp.plot_histogram()` | `sp.hist()` |
-| 密度估计 | `sp.plot_density()` | `sp.density()` |
-| 热力/相关矩阵 | `sp.plot_heatmap()` | `sp.heatmap()` |
-| 气泡热力图 | `sp.plot_bubble_heatmap()` | `sp.bubble_heatmap()` |
-| 二维气泡图 | `sp.plot_bubble()` | `sp.bubble()` |
-| 六边形密度图 | `sp.plot_hexbin()` | `sp.hexbin()` |
-| 山脊图(多分布堆叠) | `sp.plot_ridgeline()` | `sp.ridgeline()` |
-| 雨云图(点+箱线+半小提琴) | `sp.plot_raincloud()` | `sp.raincloud()` |
-| 蜂群图(原始数据分布) | `sp.plot_beeswarm()` | `sp.beeswarm()` |
-| 边际分布图(散点+边缘分布) | `sp.plot_marginal()` | `sp.marginal()` |
-| 哑铃图(前后对比) | `sp.plot_dumbbell()` | `sp.dumbbell()` |
-| 发散条形图(正负对比) | `sp.plot_diverging_bar()` | `sp.diverging_bar()` |
-| 甘特图(任务时间线) | `sp.plot_gantt()` | `sp.gantt()` |
-| 打包气泡图(占比构成) | `sp.plot_packed_bubble()` | `sp.packed_bubble()` |
-| 火山图(组学差异) | `sp.plot_volcano()` | `sp.volcano()` |
-| 日历热图(全年活动) | `sp.plot_calendar_heatmap()` | `sp.calendar_heatmap()` |
-| 泰勒图(模型评估) | `sp.plot_taylor()` | `sp.taylor()` |
-| 弦图(流量/共现) | `sp.plot_chord()` | `sp.chord()` |
-| 桑基图(能量/物质流) | `sp.plot_sankey()` | `sp.sankey()` |
-| 瀑布图(增量分解) | `sp.plot_waterfall()` | `sp.waterfall()` |
-| 流图(时序构成演变) | `sp.plot_streamgraph()` | `sp.streamgraph()` |
-| 环形条形图(环形排名) | `sp.plot_circular_barplot()` | `sp.circular_barplot()` |
-| 矩形树图(占比构成) | `sp.plot_treemap()` | `sp.treemap()` |
-| 环形图(占比构成) | `sp.plot_donut()` | `sp.donut()` |
-| 三角相图(三组分) | `sp.plot_ternary()` | `sp.ternary()` |
-| 华夫图(占比格子) | `sp.plot_waffle()` | `sp.waffle()` |
-| 3D 瀑布图(多组堆叠) | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
-| 误差/不确定性 | `sp.plot_errorbar()` / `sp.plot_confidence()` | `sp.errorbar()` |
-| 时间序列 | `sp.plot_timeseries()` | `sp.timeseries()` |
-| 多维评估 | `sp.plot_radar()` | `sp.radar()` |
-| 柱+线双轴 | `sp.plot_combo()` | `sp.combo()` |
-| 一致性分析 | `sp.plot_bland_altman()` | `sp.bland_altman()` |
-| 正态检验 | `sp.plot_qq()` | `sp.qq()` |
-| 模型诊断 | `sp.plot_residuals()` | `sp.residuals()` |
-| 棒棒糖排名 | `sp.plot_lollipop()` | `sp.lollipop()` |
-| PCA 降维 | `sp.plot_pca()` | — |
-| 混淆矩阵 | `sp.plot_confusion_matrix()` | — |
-| 特征重要性 | `sp.plot_feature_importance()` | — |
-| 3D 曲面 | `sp.plot_surface()` | — |
-| 3D 瀑布 | `sp.plot_waterfall3d()` | `sp.waterfall3d()` |
-| 等高线 | `sp.plot_contour()` | — |
-| 网络关系 | `sp.plot_network()` | — |
-| 3D 网络 | `sp.plot_network3d()` | — |
-| 社区网络 | `sp.plot_network_communities()` | — |
-| 聚类树 | `sp.plot_dendrogram()` | — |
-| 集合交集 | `sp.plot_venn2()` / `sp.plot_venn3()` | — |
-| 复合图布局 | `sp.figure_panels()` | — |
-
----
-
-## 复合图模板（Nature 五大布局原型）
-
-> 多面板复合图是顶刊图表的默认形态。以下五个原型覆盖 Nature/Science
-> 2024–2026 的绝大多数版面，每个原型都有开箱即用的 showcase 脚本。
-
-| 原型 | 结构 | 适用场景 | showcase 参考 |
-|------|------|---------|--------------|
-| **条件矩阵** | 2×3/3×3 网格，行=因素 A、列=因素 B | 交叉因素设计（药物×剂量、温度×浓度） | `34_composite_condition_matrix.py` |
-| **对照双列** | 1×2 并排，左=基线、右=方法，共享 y 轴 | 因果对比、消融实验 | `35_composite_comparative.py` |
-| **中心-辐条** | 中心总览 + 4~6 卫星面板 + 连线 | 模型整体性能 + 各维度诊断 | `36_composite_hub_spoke.py` |
-| **流水线** | 横向 1×4~6 阶段 + 阶段间箭头 | 方法学论文（流程即叙事） | `37_composite_pipeline.py` |
-| **时间推进** | 同一系统的时刻快照网格 + 共享色标 | 扩散/演化/时序快照 | `38_composite_time_march.py` |
-
-### 复合图通用规范（对齐 Nature 投稿要求）
-
-- **面板标签**：阅读顺序 (a)(b)(c)，粗体、统一字号、左上角，用 `sp.figure_panels(..., panel_labels=True)` 或 `sp.add_panel_labels(axes)`
-- **尺寸**：单栏 89mm / 双栏 183mm 起步，用 `venue="nature"/"thesis"` 自动设置
-- **对齐**：同列面板共享 y 轴（`sharey=True`），同面板内刻度方向统一 `tick_params(direction="in")`
-- **配色**：同一复合图内保持统一视觉语言——语义色（基线=中性灰蓝、方法=饱和主色）、
-  双编码（行=色相、列=明度梯度）；避免跨面板乱用彩虹色
-- **图例**：能合并就合并，图例块放在图下方约 20mm 处，不超过 300 词
-- **面板数**：整页图不超过 6 个面板（Nature 建议）
-
-### 手写非规则布局（hub-and-spoke / pipeline 的进阶版）
+如果参考文档与实际安装版本冲突，以运行时为准：
 
 ```python
-import matplotlib.pyplot as plt
-from matplotlib.patches import ConnectionPatch
+import inspect
 import sciplot as sp
-
-sp.setup_style("thesis", "ocean", lang="zh")
-fig = plt.figure(figsize=(7.0, 6.5))
-gs = fig.add_gridspec(3, 3, hspace=0.55, wspace=0.40)
-ax_center = fig.add_subplot(gs[1, 1])   # 中心
-ax_tl = fig.add_subplot(gs[0, 0])       # 卫星
-# ... 各面板绘图 ...
-# 辐条连线（fig 坐标）
-cp = ConnectionPatch(xyA=(0.5, 0.5), coordsA=ax_center.transAxes,
-                     xyB=(0.5, 0.5), coordsB=ax_tl.transAxes,
-                     color="#BBBBBB", linewidth=0.8, linestyle="--")
-fig.add_artist(cp)
+print(sp.__version__)
+print(inspect.signature(sp.plot_scatter))
 ```
 
----
+## 3. 默认工作流
 
-## 函数调用手册（数据约定 · 参数语义 · 返回值）
-
-> 本节回答“具体某个函数怎么调”。所有签名已按 v1.12.3 核对。
-
-### 通用输入约定（所有 plot_* 一致）
-
-| 约定 | 规则 |
-|------|------|
-| 数组类型 | 接受 `list` / `np.ndarray` / pandas `Series`，内部统一 `np.asarray` 归一 |
-| 长度匹配 | 轴数据必须等长，否则 ValueError 会带具体长度提示（无需猜测） |
-| NaN/Inf | 分布统计类（density/qq/residuals/bland_altman）自动过滤；热力/气泡/边际/甘特/日历等**严格报错** |
-| 日期输入 | `datetime` / `date` / `np.datetime64` / 字符串 `"YYYY-MM-DD"` 四类通用（timeseries / gantt / calendar_heatmap） |
-| 颜色参数 | 单色字符串（如 `"#D62728"`）或颜色列表（长度与数据对齐）；连续映射用 `cmap` + `color` 数值列 |
-| 可选依赖 | scipy：density/qq/raincloud/ridgeline 等；scikit-learn：pca/confusion_matrix/feature_importance；matplotlib-venn：venn2/venn3。缺失时抛 ImportError 并附安装提示 |
-
-### 返回值约定
-
-- 所有 `plot_*` 返回 `PlotResult`；`plot_combo` 返回 `ComboPlotResult`（额外有 `ylabel_left`/`ylabel_right`）
-- 两种消费方式：
-  ```python
-  # 方式 A：元组解包（传统）
-  fig, ax = sp.plot(x, y)
-  sp.save(fig, "fig")
-
-  # 方式 B：链式（推荐，一步到位）
-  sp.plot(x, y).xlabel("X").ylabel("Y").title("标题").save("fig")
-  ```
-- 常用方法：`save(formats, dpi, dir, close)` / `show()` / `title()` / `xlabel()` / `ylabel()` / `legend()` / `tight_layout()` / `axhline()` / `axvline()` / `annotate()` / `set_labels()` / `grid()` / `tick_params()`
-
-### 数据形状与关键参数（按家族）
-
-| 家族 | 函数 | 核心入参 | 关键参数 | 注意事项 |
-|------|------|---------|---------|---------|
-| 基础 | `plot` / `line` | `(x, y)` | `label`, `**kwargs`(透传 plt.plot) | 单线最简单入口 |
-| 阶梯 | `plot_step` | `(x, y)` | `where=mid/pre/post` | 离散变化过程 |
-| 面积 | `plot_area` | `(x, y)` | `alpha=0.3`, `fill=True` | 填充曲线 |
-| 多面积 | `plot_multi_area` | `(x, y_list)` | `stacked=False` | stacked=True 堆叠面积 |
-| 堆叠条 | `plot_stacked_bar` | `(categories, data)` | `show_values`, `value_fmt` | data 为 2D（行=类目，列=系列） |
-| 水平条 | `plot_horizontal_bar` | `(categories, values)` | `sort=False`, `show_values` | 排名类首选 |
-| 棒棒糖 | `plot_lollipop` | `(categories, values)` | `sort=True`, `marker_size`, `baseline` | 排名变体 |
-| 箱线 | `plot_box` | `(data, labels)` | `showfliers` | data 为数组列表或 2D |
-| 小提琴 | `plot_violin` | `(data, labels)` | `showmeans`, `showmedians` | 分布形状 |
-| 多线 | `plot_multi` / `multi` | `(x, y_list)` | `labels`, `use_linestyles`, `highlight_last` | x 可标量数组或逐线数组；highlight_last 加粗最后一条 |
-| 散点 | `plot_scatter` | `(x, y)` | `s=20`, `alpha=0.7` | 回归线需手动：`slope, ic = np.polyfit(x, y, 1)` 后 `ax.plot`（参考 showcase/03） |
-| 柱状 | `plot_bar` | `(categories, values)` | `width=0.6` | categories 为标签列表 |
-| 分组柱 | `plot_grouped_bar` | `(groups, data)` | `gap=0.05`, `show_values`, `value_fmt`, `colors` | data 为 2D 数组（行=组，列=系列）；colors 自定义系列色 |
-| 直方 | `plot_histogram` | `(data,)` | `bins=30`, `density` | bins 必须正整数 |
-| 热力 | `plot_heatmap` | `(data,)` 2D | `cmap`, `show_values`, `fmt`, `vmin/vmax` | NaN 报错；NaN 矩阵用 `masked` 语义请预清洗 |
-| 气泡热力 | `plot_bubble_heatmap` | `(data,)` 2D | `background=True`, `bubble_scale` | 气泡大小编码 \|值\|，颜色编码值 |
-| 气泡 | `plot_bubble` | `(x, y, size)` | `color`(数值→cmap), `size_scale` | color 省略时单色 |
-| 六边形 | `plot_hexbin` | `(x, y)` | `gridsize=30`, `bins="log"`, `mincnt` | 大样本密度首选 |
-| 边际 | `plot_marginal` | `(x, y)` | `marginal=hist/box/kde`, `show_corr` | x/y 含 NaN 会报错 |
-| 雨云 | `plot_raincloud` | `(data_list,)` | `orientation=h/v`, `show_violin` | data_list 元素为数组；需 scipy |
-| 蜂群 | `plot_beeswarm` | `(data_list,)` | `method=swarm/jitter`, `orient=v`, `show_box` | 大样本可换 `method="jitter"` 加速 |
-| 山脊 | `plot_ridgeline` | `(data_list, labels)` | `overlap=0.3`, `show_median` | 需 scipy |
-| 密度 | `plot_density` | `(data,)` | `bw_method` | 需 scipy |
-| 多密度 | `plot_multi_density` | `(data_list, labels)` | `fill`, `alpha` | 多分布叠加 |
-| 哑铃 | `plot_dumbbell` | `(categories, start, end)` | `sort_by=delta`, `improve_color` | 方向自动着色（改善/恶化） |
-| 发散条 | `plot_diverging_bar` | `(categories, values)` | `threshold=0.0`, `sort=True` | 正负分色 |
-| 甘特 | `plot_gantt` | `(tasks, start)` | `duration` 或 `end` 二选一；`groups`/`milestones`/`dependencies`/`now` | 日期或数值轴自动检测 |
-| 打包气泡 | `plot_packed_bubble` | `(labels, sizes)` | `color_by`, `min_size_frac` | 占比构成首选 |
-| 火山 | `plot_volcano` | `(log2fc, p_values)` | `fc_threshold`, `p_threshold`, `annotate_top` | p=0 已安全处理 |
-| 日历热图 | `plot_calendar_heatmap` | `(dates, values)` | `weekday_start=0/6`, `show_month_lines` | 字符串必须 `YYYY-MM-DD`；支持跨年 |
-| 泰勒 | `plot_taylor` | `(observations, models_dict)` | `obs_name`, `rms_levels` | models 为 {名称: 预测数组} 字典 |
-| 弦图 | `plot_chord` | `(matrix, labels)` | `min_flow`, `color_by`, `show_values` | matrix 为 2D 流量矩阵 |
-| 桑基 | `plot_sankey` | `(sources, targets, values)` | `labels`(列表/dict), `node_colors`, `min_flow` | 节点高度与带宽度 ∝ 流量；无新依赖 |
-| 瀑布 | `plot_waterfall` | `(categories, values)` | `start_value`, `show_connectors`, 三色自定义 | 增=绿/减=红/总计=深灰；累计虚线 |
-| 流图 | `plot_streamgraph` | `(x, y_list)` | `baseline=wiggle/center/zero`, `alpha` | 时序构成演变；非负序列 |
-| 环形条形 | `plot_circular_barplot` | `(categories, values)` | `sort`, `start_angle`, `bar_width` | 极坐标排名；外圈水平标签 |
-| 矩形树图 | `plot_treemap` | `(categories, values)` | `colors`, `show_values`, `fmt` | squarify 布局；面积编码占比 |
-| 环形图 | `plot_donut` | `(categories, values)` | `hole_ratio`, `show_percent`, `start_angle`, `center_text` | 外圈“类别+百分比”，环内数值，中心可显总和 |
-| 三角相图 | `plot_ternary` | `(a, b, c)` | `color_by`, `grid_levels` | 要求非负且每行之和>0；行和自动归一化 |
-| 华夫 | `plot_waffle` | `(categories, values)` | `rows/cols`, `show_percent` | 占比格子图 |
-| 雷达 | `plot_radar` | `(categories, values_list)` | `fill`, `show_labels` | values_list 每个元素一条多边形 |
-| 平行坐标 | `plot_parallel` | `(data, columns)` | `normalize=minmax/zscore/none`, `color_by` | 接受 DataFrame（columns 选列） |
-| 散点矩阵 | `plot_scatter_matrix` | `(data, columns)` | `diag=hist`, `color_by` | 多维两两关系 |
-| 聚类热图 | `plot_clustermap` | `(data,)` 2D | `row_cluster`, `col_cluster`, `cmap` | 行列聚类 + 树状图 |
-| 双轴 | `plot_combo` | `(x, bar_data)` | `line_data`, `bar_width` | 返回 ComboPlotResult |
-| 时序 | `plot_timeseries` | `(t, y)` | `events`, `shade_regions`, `rolling_mean` | 自动检测日期轴 |
-| 多时序 | `plot_multi_timeseries` | `(t, y_list)` | `labels`, `events`, `shade_regions` | 多线时序 |
-| 斜率图 | `plot_slope` | `(labels, before, after)` | `left_label`, `right_label`, `show_diff` | 前后对比连线 |
-| 误差条 | `plot_errorbar` | `(x, y, yerr)` | `fmt='o'`, `capsize` | yerr 与 y 等长 |
-| 置信带 | `plot_confidence` | `(x, y_mean, y_std)` | `n_std=1.0`, `label_std` | 均值线 + 带状区间 |
-| 一致性 | `plot_bland_altman` | `(y1, y2)` | `show_ci`, `ci=0.95` | 默认中文标签 |
-| QQ | `plot_qq` | `(data,)` | `distribution=norm/expon/uniform/t` | scipy 缺失时用纯 numpy 近似；至少 3 个有效值 |
-| 残差 | `plot_residuals` | `(y_true, y_pred)` | `show_zero_line`, `show_loess` | show_loess 需 statsmodels |
-| 网络 | `plot_network` | `(G,)` | `node_color_by`, `node_size_by`, `labels=10` | 属性列名=字符串→分类色；数值→连续 cmap |
-| 矩阵建网 | `plot_network_from_matrix` | `(adj_matrix,)` | `threshold=0.0`, `labels` | 邻接矩阵→图 |
-| 社区网络 | `plot_network_communities` | `(G,)` | `communities`, `labels` | 社区分色 |
-| 3D 网络 | `plot_network3d` | `(G,)` | `z_by`, `labels=10` | 同上 |
-| 聚类树 | `plot_dendrogram` | `(data_or_linkage,)` | `orientation`, `color_threshold` | 传数据矩阵或现成 linkage |
-| 维恩 | `plot_venn2/3` | `(subsets,)` | `set_labels`, `show_counts` | 需 matplotlib-venn |
-| PCA | `plot_pca` | `(data,)` | `n_components=2`, `labels` | 需 scikit-learn |
-| 混淆矩阵 | `plot_confusion_matrix` | `(y_true, y_pred)` | `normalize`, `labels` | 需 scikit-learn |
-| 特征重要 | `plot_feature_importance` | `(features, importance)` | `top_n` | 自动降序条形 |
-| 学习曲线 | `plot_learning_curve` | `(train_scores, val_scores)` | `train_sizes`, `label_train/label_val` | 模型诊断；需 sklearn |
-| 3D 曲面 | `plot_surface` | `(X, Y, Z)` 网格 | `elev/azim`, `cmap` | X/Y 需 meshgrid 网格 |
-| 3D 散点 | `plot_3d_scatter` | `(x, y, z)` | `c`(数值→cmap), `s`, `alpha` | 三维点云 |
-| 线框 | `plot_wireframe` | `(X, Y, Z)` 网格 | `rstride`, `alpha` | 曲面线框 |
-| 等高线 | `plot_contour` | `(X, Y, Z)` 网格 | `levels`, `filled` | 同 meshgrid |
-| 3D 瀑布 | `plot_waterfall3d` | `(x, y_list)` | `spacing`, `fill`, `baseline` | 多组堆叠 3D |
-
-### 参数语义速查（跨函数一致）
-
-- `venue` / `palette` / `lang` / `theme`：**每个函数都有**，传 `None` 表示沿用全局（`setup_style` / `set_defaults` / `style_context` 设置）
-- palette 子集语法：`"pastel-2"` 取前 2 色、`"ocean-4"` 取前 4 色
-- `title` 默认 `""`（无标题原则，投稿图不自动加标题）
-- `lang="zh"`：自动切中文字体与标签；bland_altman/qq/residuals 的默认标签本身已是中文
-- `**kwargs` 透传给底层 matplotlib 调用（`ax.plot`/`ax.scatter`/…），可直接传 `linewidth`、`marker` 等
-- 所有图默认 `figsize` 由 venue 决定（如 `ieee` 单栏 3.5in 宽）
-
-### 常见错误与规避
-
-1. **长度不匹配**：轴数据不等长 → ValueError 会打印两边实际长度，对照修正即可
-2. **bins 非正整数**：`plot_histogram` / `plot_marginal` 的 `bins` 必须是正整数
-3. **gantt 参数冲突**：`duration` 与 `end` 只能二选一，同时传会报错
-4. **marginal 的 NaN**：`plot_marginal` 对 x/y 的 NaN 严格报错（统计图会过滤，这里不会）
-5. **qq 的分布名**：仅 `norm` / `expon` / `uniform` / `t`，其他名字直接 ValueError
-6. **calendar 字符串日期**：必须是 `YYYY-MM-DD`，其他格式（如 `2024/01/01`）报错
-7. **可选依赖缺失**：错误消息自带安装命令（`pip install scipy` / `scikit-learn` / `matplotlib-venn`），按提示安装即可；qq 在无 scipy 时静默降级为纯 numpy 近似
-8. **空颜色循环**：库已在图形创建入口兜底（不会出现 matplotlib 内部取色崩溃）
-
----
-
-## 最佳实践骨架（必备设置）
-
-> **核心思想**：SciPlot 的设计哲学是"一次设置，全局生效"。正确的起手骨架能让后续代码更简洁、更专业。
-
-### 三种入口模式
-
-| 模式 | 适用场景 | 示例 |
-|------|---------|------|
-| **`setup_style()`** | 脚本开头，一次性设置 | `sp.setup_style("nature", "pastel", lang="zh")` |
-| **`set_defaults()`** | 项目级持久化配置 | `sp.set_defaults(venue="ieee", palette="earth")` |
-| **`style_context()`** | 临时切换样式 | `with sp.style_context("ieee"): ...` |
-
-### 配置优先级（高→低）
-
-```
-函数参数 > 代码设置(set_defaults) > 配置文件 > 内置默认
-```
-
-### 起手骨架模板
-
-#### 模式 A：单图脚本（最常用）
+### Step A — 建立样式
 
 ```python
-"""
-科研绘图脚本
-依赖: pip install sciplot-academic
-"""
-import numpy as np
 import sciplot as sp
-
-# ═══════════════════════════════════════════════════════════════
-# 1️⃣ 起手设置（必须在绘图前）
-# ═══════════════════════════════════════════════════════════════
-sp.setup_style("thesis", "pastel-2", lang="zh")
-#             ─┬─────  ─┬────────  ─┬────
-#              │        │           └── 语言：zh=中文, en=英文
-#              │        └── 配色：pastel/ocean/forest/sunset/earth/rmb + 子集
-#              └── 期刊：nature/ieee/aps/springer/thesis/presentation
-
-# ═══════════════════════════════════════════════════════════════
-# 2️⃣ 数据准备
-# ═══════════════════════════════════════════════════════════════
-x = np.linspace(0, 10, 200)
-y = np.sin(x)
-
-# ═══════════════════════════════════════════════════════════════
-# 3️⃣ 绘图（setup_style 已自动设置 figsize/fontsize/字体/刻度）
-# ═══════════════════════════════════════════════════════════════
-fig, ax = sp.plot(x, y, xlabel="时间 (s)", ylabel="幅度 (V)")
-
-# ═══════════════════════════════════════════════════════════════
-# 4️⃣ 保存（Word=PNG 1200dpi, LaTeX=PDF）
-# ═══════════════════════════════════════════════════════════════
-sp.save(fig, "结果图", formats=("png",), dpi=1200)
+sp.setup_style("nature", palette="ocean", lang="en")
 ```
 
-#### 模式 B：多子图脚本
+常用场景：
+
+- 英文期刊：`nature` 或 `ieee`，优先 PDF/SVG。
+- 中文论文/学位论文：`thesis`, `lang="zh"`。
+- PPT/答辩：`presentation`，PNG 300 dpi 足够。
+- 不要因为用户没指定，就默认深色、渐变背景、玻璃拟态、阴影卡片。
+
+### Step B — 画主图
+
+高层 `plot_*` 默认返回 `PlotResult`，可以继续拿 `fig` / `ax` 做最后 10% 的定制：
 
 ```python
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "pastel-3", lang="zh")
-
-# ═══════════════════════════════════════════════════════════════
-# 用 paper_subplots()/figure_panels() 锁定版心尺寸（不要用 plt.subplots）
-# figure_panels 额外支持：宽高比 + 自动面板标签 (a)(b)(c)
-# ═══════════════════════════════════════════════════════════════
-fig, axes = sp.figure_panels(1, 2, venue="thesis", widths=[1, 1], panel_labels=True)
-#                             ─┬  ─┬
-#                              │   └── 列数
-#                              └── 行数
-
-# 子图 (a)
-axes[0].plot(x, y1, label="方法A")
-axes[0].plot(x, y2, label="方法B")
-axes[0].set_xlabel("X")
-axes[0].set_ylabel("Y")
-axes[0].legend()
-
-# 子图 (b)
-axes[1].scatter(x[::10], y1[::10], label="数据")
-axes[1].set_xlabel("X")
-axes[1].set_ylabel("Y")
-axes[1].legend()
-
-# ═══════════════════════════════════════════════════════════════
-# 添加 (a)(b) 面板标签
-# ═══════════════════════════════════════════════════════════════
-sp.add_panel_labels(axes)
-sp.save(fig, "多子图", formats=("png",), dpi=1200)
+result = sp.plot_scatter(x, y, xlabel="Dose (mg)", ylabel="Response")
+fig, ax = result
 ```
 
-#### 模式 C：链式调用（快速出图）
+优先调用 SciPlot 已有参数，而不是在外面重复造一套 matplotlib 样式。
+
+### Step C — 只做有意义的收尾
+
+可以做：参考线、置信区间、少量重点标注、轴范围、科学计数法、共享图例、面板标签。
+
+不要做：无意义标题、厚重外框、强网格、每个点都标数值、彩虹色、3D 化普通柱状图、为了“高级感”堆渐变和阴影。
+
+### Step D — 审计
 
 ```python
-import numpy as np
-import sciplot as sp
-
-x = np.linspace(0, 10, 200)
-
-# 一行搞定：设置样式 → 配色 → 绘图 → 保存
-sp.style("nature").palette("ocean").plot(x, np.sin(x), xlabel="X", ylabel="Y").save("快速出图")
+report = sp.audit_figure(fig, verbose=True)
 ```
 
-#### 模式 D：项目级配置（推荐用于大型项目）
+至少检查：
+
+- 轴标签和单位是否完整；
+- 字号是否到出版下限；
+- 多面板是否有 `(a)(b)(c)`；
+- 图例是否遮挡数据；
+- 色彩是否仅承担必要语义；
+- 误差条/CI/显著性是否与数据和方法一致；
+- 轴截断是否可能误导比较。
+
+### Step E — 保存并真正看图
 
 ```python
-# 在项目入口文件（如 main.py）中设置一次
-import sciplot as sp
-
-# 设置项目级默认值（所有后续脚本自动继承）
-sp.set_defaults(venue="thesis", palette="pastel", lang="zh")
-
-# 或者通过配置文件（pyproject.toml）
-# [tool.sciplot]
-# venue = "thesis"
-# palette = "pastel"
-# lang = "zh"
+sp.save(fig, "figures/fig1", formats=("pdf", "png"), dpi=600)
 ```
 
-### 必备设置清单
+生成后必须打开 PNG 做视觉检查。**测试通过不等于图好看。**重点看：留白、主次、标签碰撞、图例位置、色条、极端值、小屏缩放、中文字体和多面板对齐。发现问题优先修通用实现，而不是只在 showcase 脚本里遮住。
 
-| 设置项 | 说明 | 默认值 | 何时修改 |
-|--------|------|--------|---------|
-| `venue` | 期刊样式 | `nature` | 投稿 IEEE/APS/Springer 时 |
-| `palette` | 配色方案 | `pastel` | 需要不同风格时 |
-| `lang` | 语言 | `zh` | 英文投稿改为 `en` |
-| `theme` | 主题 | `light` | 演示/PPT 改为 `dark` |
+## 4. 科研绘图的硬规则
 
-### 自动化行为（无需手动设置）
+### 数据语义优先
 
-SciPlot 已内置以下行为，**不要重复设置**：
+- 不篡改数据，不为了好看删异常值。
+- 柱高、面积、颜色、点大小等编码必须与真实量对应。
+- 误差条必须知道是 SD、SE、CI 还是其他量；不知道就不要代填。
+- 显著性标记必须来自真实统计检验，不能凭均值差距画星号。
+- 时间序列保持时间顺序；类别排序要有理由（数值、实验顺序或自然顺序）。
 
-| 行为 | 说明 | 代码 |
-|------|------|------|
-| ✅ 无网格 | 科研图默认无网格 | `ax.grid(False)` 已内置 |
-| ✅ 刻度朝内 | 专业感 | `tick_params(direction="in")` 已内置 |
-| ✅ 自动 figsize | 根据 venue 设定 | nature=7×5, ieee=3.5×3, thesis=6.1×4.3 |
-| ✅ 自动 fontsize | 根据 venue 设定 | nature=8pt, ieee=6pt, thesis=8pt |
-| ✅ 自动字体 | 中文=宋体, 英文=Times New Roman | 根据 lang 自动切换 |
-| ✅ 负号修复 | 避免 Unicode 负号 | `axes.unicode_minus=False` 已内置 |
+### 颜色是信息，不是装饰
 
----
+- 2–5 个离散系列优先使用少量、可区分的颜色。
+- 连续量用连续色图；有正负中心时用发散色图。
+- 同一语义跨面板保持同色。
+- 强调项用一个主色，其余可以降饱和或中性化。
+- 不把不同类别全部做成高饱和“糖果色”。
+- 需要色盲安全时使用 `sp.check_colorblind_safe()` / `sp.audit_palette()`。
 
-## 代码生成规则
+### 线、点、字要有层级
 
-### 必须遵守
+- 数据线 > 辅助线 > 网格。
+- 主方法可以加粗或提高 z-order；不要同时加粗、放大、换色、加阴影四重强调。
+- 大散点样本降低 alpha 或改 hexbin；小样本保留真实点更重要。
+- 标题不是必须。论文图通常由 caption 承担完整说明。
 
-1. **始终生成独立可运行的 Python 脚本**，不要只给代码片段
-2. **脚本开头**: `import sciplot as sp` + `import numpy as np`
-3. **默认无网格**: 所有图表默认 `ax.grid(False)`（已内置）
-4. **刻度朝内**: 所有图表默认 `tick_params(direction="in")`（已内置）
-5. **保存**: 必须调用 `sp.save(fig, "文件名", ...)` 或 `result.save(...)`
-6. **中文**: 默认 `lang="zh"`，英文投稿用 `lang="en"`
-7. **close=True**: 批量绘图时使用 `sp.save(fig, "name", close=True)` 释放内存
+### 多面板图必须统一
 
-### 禁止事项（反模式）
-
-| 错误写法 | 正确写法 |
-|---------|---------|
-| `fig, ax = plt.subplots()` | `fig, ax = sp.new_figure(venue)` 或直接用 `sp.plot()` |
-| `plt.style.use("science")` | `sp.setup_style("nature")` |
-| `plt.show()` | 删除（脚本模式不需要） |
-| `ax.grid(True)` | 删除（科研图默认无网格） |
-| `ax.tick_params(direction="in")` | 删除（已自动设置） |
-| 手动 `figsize=(10, 8)` | 用 `venue` 自动设定或 `sp.paper_subplots()` |
-| `from sciplot._ext.ml import ...` | 直接 `sp.plot_pca()` 等（已通过 `__init__.py` 导出） |
-| `plt.savefig(...)` | `sp.save(fig, "name", ...)` |
-
-### 标准脚本模板
+优先：
 
 ```python
-"""
-科研绘图脚本
-依赖: pip install sciplot-academic
-运行: python plot_result.py
-"""
-import numpy as np
-import sciplot as sp
-
-# ── 数据准备 ──
-x = np.linspace(0, 10, 200)
-y1, y2 = np.sin(x), np.cos(x)
-
-# ── 绘图 ──
-sp.setup_style("thesis", "pastel-2", lang="zh")
-fig, ax = sp.plot(x, y1, label="sin", xlabel="时间 (s)", ylabel="幅度")
-ax.plot(x, y2, label="cos")
-ax.legend()
-
-# ── 保存 ──
-sp.save(fig, "结果图", formats=("png",), dpi=1200)
-print("✓ 已保存")
+fig, axes = sp.figure_panels(2, 2, venue="nature", panel_labels=True)
 ```
 
-### 多子图模板
-
-```python
-sp.setup_style("thesis", "pastel-2", lang="zh")
-fig, axes = sp.paper_subplots(1, 2, venue="thesis")
-
-axes[0].plot(x, y1)
-axes[0].set_xlabel("X"); axes[0].set_ylabel("Y")
-axes[1].scatter(x, y2)
-axes[1].set_xlabel("X"); axes[1].set_ylabel("Y")
-
-sp.add_panel_labels(axes)
-sp.save(fig, "多子图", formats=("png",), dpi=1200)
-```
-
-### 暗色主题模板
-
-```python
-sp.setup_style("presentation", "pastel", lang="zh", theme="dark")
-fig, ax = sp.plot(x, y, xlabel="时间", ylabel="幅度", label="数据")
-ax.legend()
-sp.save(fig, "暗色主题图", formats=("png",), dpi=300)
-```
-
----
-
-## Showcase 展示案例
-
-> 以下 24 个案例覆盖 SciPlot 最常用图表类型，每个均可独立运行。
-> 展示图片位于 `showcase/` 目录（01-12 基础/统计/扩展，13-17 第一轮高级图，18-24 第二轮高级图）。
-
-### 01. 多线对比图 (`01_multi_line.py`)
-
-```python
-"""多线对比图 — 展示不同方法在相同数据上的表现"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "ocean", lang="en")
-
-x = np.linspace(0, 4 * np.pi, 300)
-methods = {
-    "Method A": np.sin(x) + 0.1 * np.random.randn(300),
-    "Method B": np.sin(x) * 0.95 + 0.05 * np.random.randn(300),
-    "Method C": np.sin(x) * 1.05 + 0.15 * np.random.randn(300),
-    "Ground Truth": np.sin(x),
-}
-
-fig, ax = sp.new_figure("nature")
-for label, y in methods.items():
-    style = {"linestyle": "--", "linewidth": 1.5} if label == "Ground Truth" else {}
-    ax.plot(x, y, label=label, **style)
-
-ax.set_xlabel("Time (s)")
-ax.set_ylabel("Amplitude")
-ax.legend()
-sp.save(fig, "01_multi_line", formats=("pdf", "png"))
-```
-
-### 02. 分组柱状图 (`02_grouped_bar.py`)
-
-```python
-"""分组柱状图 — 多方法在多个数据集上的性能对比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("ieee", "pastel", lang="en")
-
-datasets = ["Dataset A", "Dataset B", "Dataset C", "Dataset D"]
-methods = ["Ours", "Baseline 1", "Baseline 2"]
-scores = np.array([
-    [92.3, 88.1, 85.7],
-    [87.5, 84.2, 82.9],
-    [94.1, 90.8, 88.3],
-    [89.6, 86.4, 84.0],
-])
-
-fig, ax = sp.plot_grouped_bar(
-    datasets, scores, labels=methods,
-    xlabel="Dataset", ylabel="Accuracy (%)"
-)
-ax.set_ylim(75, 100)
-sp.save(fig, "02_grouped_bar", formats=("pdf", "png"))
-```
-
-### 03. 散点回归图 (`03_scatter_regression.py`)
-
-```python
-"""散点回归图 — 展示两变量关系及拟合曲线"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "forest", lang="zh")
-
-np.random.seed(42)
-x = np.random.uniform(10, 50, 80)
-y = 2.5 * x + 15 + np.random.normal(0, 8, 80)
-
-fig, ax = sp.plot_scatter(
-    x, y,
-    xlabel="温度 (°C)", ylabel="反应速率 (μmol/min)",
-    regression=True,  # 自动拟合线性回归
-    show_r2=True,     # 显示 R² 值
-)
-sp.save(fig, "03_scatter_regression", formats=("png",), dpi=1200)
-```
-
-### 04. 小提琴箱线图 (`04_violin_box.py`)
-
-```python
-"""小提琴+箱线组合图 — 展示多组数据分布"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "sunset", lang="en")
-
-np.random.seed(42)
-data = {
-    "Control":   np.random.normal(100, 15, 200),
-    "Treatment A": np.random.normal(115, 20, 200),
-    "Treatment B": np.random.normal(108, 12, 200),
-    "Treatment C": np.random.normal(125, 18, 200),
-}
-
-fig, ax = sp.plot_violin(
-    data, show_box=True,  # 内嵌箱线图
-    xlabel="Group", ylabel="Response Score",
-)
-sp.annotate_significance(ax, x1=0, x2=3, y=165, p_value=0.0003)
-sp.save(fig, "04_violin_box", formats=("pdf", "png"))
-```
-
-### 05. 热力图 (`05_heatmap.py`)
-
-```python
-"""热力图 — 相关性矩阵可视化"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("ieee", "rdbu", lang="en")
-
-np.random.seed(42)
-features = ["Feature A", "Feature B", "Feature C", "Feature D", "Feature E"]
-corr = np.corrcoef(np.random.randn(5, 100))
-np.fill_diagonal(corr, 1.0)
-
-fig, ax = sp.plot_heatmap(
-    corr, xlabels=features, ylabels=features,
-    cmap="rdbu", vmin=-1, vmax=1,
-    annotate=True, fmt=".2f",
-    title="Feature Correlation Matrix",
-)
-sp.save(fig, "05_heatmap", formats=("pdf", "png"))
-```
-
-### 06. 时间序列图 (`06_timeseries.py`)
-
-```python
-"""时间序列图 — 带置信区间的时间趋势"""
-import numpy as np
-import pandas as pd
-import sciplot as sp
-
-sp.setup_style("thesis", "ocean", lang="zh")
-
-dates = pd.date_range("2024-01-01", periods=365, freq="D")
-trend = np.linspace(50, 80, 365)
-seasonal = 10 * np.sin(2 * np.pi * np.arange(365) / 30)
-noise = np.random.normal(0, 3, 365)
-values = trend + seasonal + noise
-
-fig, ax = sp.plot_timeseries(
-    dates, values,
-    xlabel="日期", ylabel="测量值",
-    confidence=0.95,  # 95% 置信区间
-    highlight_peaks=True,
-)
-sp.save(fig, "06_timeseries", formats=("png",), dpi=1200)
-```
-
-### 07. 雷达图 (`07_radar.py`)
-
-```python
-"""雷达图 — 多维能力评估对比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("presentation", "pastel", lang="zh")
-
-categories = ["准确性", "效率", "鲁棒性", "可解释性", "泛化能力", "易用性"]
-model_a = [0.92, 0.85, 0.78, 0.88, 0.90, 0.95]
-model_b = [0.88, 0.92, 0.85, 0.75, 0.82, 0.88]
-
-fig, ax = sp.plot_radar(
-    [model_a, model_b],
-    categories=categories,
-    labels=["Model A", "Model B"],
-    fill=True, alpha=0.25,
-)
-sp.save(fig, "07_radar", formats=("png",), dpi=300)
-```
-
-### 08. 多密度 KDE 图 (`08_density.py`)
-
-```python
-"""多密度 KDE 图 — 多组数据分布对比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "forest", lang="en")
-
-np.random.seed(42)
-groups = {
-    "Group A": np.random.normal(0, 1, 500),
-    "Group B": np.random.normal(1.5, 1.2, 500),
-    "Group C": np.random.normal(-0.5, 0.8, 500),
-}
-
-fig, ax = sp.plot_density(
-    groups,
-    xlabel="Value", ylabel="Density",
-    fill=True, alpha=0.3,
-    show_median=True,
-)
-ax.legend()
-sp.save(fig, "08_density", formats=("pdf", "png"))
-```
-
-### 09. PCA 可视化 (`09_pca.py`)
-
-```python
-"""PCA 降维可视化 — 高维数据投影到 2D"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("ieee", "pastel", lang="en")
-
-np.random.seed(42)
-n_per_cluster = 50
-X = np.vstack([
-    np.random.randn(n_per_cluster, 10) + np.array([2, 0] + [0]*8),
-    np.random.randn(n_per_cluster, 10) + np.array([-2, 0] + [0]*8),
-    np.random.randn(n_per_cluster, 10) + np.array([0, 2] + [0]*8),
-])
-labels = ["Cluster 1"] * n_per_cluster + ["Cluster 2"] * n_per_cluster + ["Cluster 3"] * n_per_cluster
-
-fig, ax = sp.plot_pca(
-    X, labels=labels,
-    xlabel="PC1", ylabel="PC2",
-    show_variance=True,  # 显示方差解释率
-    show_ellipses=True,  # 显示置信椭圆
-)
-sp.save(fig, "09_pca", formats=("pdf", "png"))
-```
-
-### 10. 3D 曲面图 (`10_3d_surface.py`)
-
-```python
-"""3D 曲面图 — 二元函数可视化"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("presentation", "ocean", lang="en")
-
-x = np.linspace(-3, 3, 100)
-y = np.linspace(-3, 3, 100)
-X, Y = np.meshgrid(x, y)
-Z = np.sin(np.sqrt(X**2 + Y**2))
-
-fig, ax = sp.plot_surface(
-    X, Y, Z,
-    xlabel="X", ylabel="Y", zlabel="Z",
-    cmap="ocean", alpha=0.9,
-    show_contour=True,  # 底部等高线投影
-)
-sp.save(fig, "10_3d_surface", formats=("png",), dpi=300)
-```
-
-### 11. 网络社区图 (`11_network.py`)
-
-```python
-"""网络社区图 — 节点聚类可视化"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "sunset", lang="zh")
-
-np.random.seed(42)
-n_nodes = 30
-# 生成邻接矩阵（块对角结构模拟社区）
-adj = np.zeros((n_nodes, n_nodes))
-for i in range(3):
-    block = np.random.rand(10, 10)
-    adj[i*10:(i+1)*10, i*10:(i+1)*10] = (block + block.T) / 2
-adj = (adj > 0.6).astype(float)
-np.fill_diagonal(adj, 0)
-
-communities = [0]*10 + [1]*10 + [2]*10
-
-fig, ax = sp.plot_network(
-    adj, communities=communities,
-    node_size=200, edge_alpha=0.3,
-    labels=["社区 A", "社区 B", "社区 C"],
-)
-sp.save(fig, "11_network", formats=("png",), dpi=300)
-```
-
-### 12. 多面板组合图 (`12_multi_panel.py`)
-
-```python
-"""多面板组合图 — 2x2 布局展示完整分析"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "pastel", lang="en")
-
-fig, axes = sp.paper_subplots(2, 2, venue="nature")
-
-# Panel (a): 折线图
-x = np.linspace(0, 10, 200)
-axes[0].plot(x, np.sin(x), label="sin")
-axes[0].plot(x, np.cos(x), label="cos", linestyle="--")
-axes[0].set_xlabel("Time (s)")
-axes[0].set_ylabel("Amplitude")
-axes[0].legend(fontsize=8)
-
-# Panel (b): 散点图
-np.random.seed(42)
-axes[1].scatter(np.random.randn(50), np.random.randn(50), alpha=0.7)
-axes[1].set_xlabel("X")
-axes[1].set_ylabel("Y")
-
-# Panel (c): 柱状图
-categories = ["A", "B", "C", "D"]
-values = [23, 45, 12, 67]
-axes[2].bar(categories, values)
-axes[2].set_xlabel("Category")
-axes[2].set_ylabel("Count")
-
-# Panel (d): 箱线图
-data = [np.random.normal(m, 1, 100) for m in [0, 2, 1, 3]]
-axes[3].boxplot(data, labels=["G1", "G2", "G3", "G4"])
-axes[3].set_xlabel("Group")
-axes[3].set_ylabel("Value")
-
-sp.add_panel_labels(axes, style="LETTER")
-sp.save(fig, "12_multi_panel", formats=("pdf", "png"))
-```
-
-### 13. 气泡热力图 (`13_bubble_heatmap.py`)
-
-```python
-"""气泡热力图 — 大小+颜色双通道编码矩阵数据"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "ocean", lang="en")
-
-np.random.seed(42)
-expr = np.random.rand(8, 10) * 10
-
-fig, ax = sp.plot_bubble_heatmap(
-    expr,
-    row_labels=[f"Gene {i}" for i in range(8)],
-    col_labels=[f"Sample {i}" for i in range(10)],
-    cmap="RdBu_r", vmin=0, vmax=10,
-    show_values=True, fmt=".0f",
-    xlabel="Sample", ylabel="Gene",
-)
-sp.save(fig, "13_bubble_heatmap", formats=("pdf", "png"))
-```
-
-### 14. 3D 瀑布图 (`14_waterfall3d.py`)
-
-```python
-"""3D 瀑布图 — 多组光谱/信号堆叠对比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "pastel", lang="zh")
-
-x = np.linspace(400, 4000, 400)
-spectra = []
-for center in [1200, 1600, 2000, 2400]:
-    peak = np.exp(-((x - center) / 150) ** 2)
-    noise = 0.03 * np.random.default_rng(center).randn(400)
-    spectra.append(peak + noise)
-
-fig, ax = sp.plot_waterfall3d(
-    x, spectra, labels=[f"样品{i}" for i in range(4)],
-    xlabel="波数 (cm⁻¹)", ylabel="样品", zlabel="强度",
-    fill=True, fill_alpha=0.25,
-)
-sp.save(fig, "14_waterfall3d", formats=("png",), dpi=300)
-```
-
-### 15. 二维气泡图 (`15_bubble.py`)
-
-```python
-"""二维气泡图 — 面积编码第三维，颜色编码第四维"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("ieee", "pastel", lang="en")
-
-np.random.seed(42)
-n = 40
-x = np.random.uniform(0, 10, n)
-y = np.random.uniform(0, 10, n)
-output = np.random.uniform(1, 30, n)
-growth = np.random.uniform(-0.5, 1.5, n)
-
-fig, ax = sp.plot_bubble(
-    x, y, size=output, color=growth,
-    xlabel="Investment", ylabel="Labor",
-    colorbar_label="Growth rate",
-)
-sp.save(fig, "15_bubble", formats=("pdf", "png"))
-```
-
-### 16. 山脊图 (`16_ridgeline.py`)
-
-```python
-"""山脊图 — 多组分布堆叠对比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "forest", lang="en")
-
-np.random.seed(42)
-groups = [np.random.normal(m, s, 400) for m, s in
-          [(0, 1.0), (0.8, 1.2), (1.6, 0.8), (2.2, 1.4)]]
-
-fig, ax = sp.plot_ridgeline(
-    groups, labels=["Control", "T1", "T2", "T3"],
-    xlabel="Response", ylabel="Group",
-    show_median=True,
-)
-sp.save(fig, "16_ridgeline", formats=("pdf", "png"))
-```
-
-### 17. 六边形密度图 (`17_hexbin.py`)
-
-```python
-"""六边形密度图 — 大样本二维密度"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("ieee", "ocean", lang="en")
-
-np.random.seed(42)
-x = np.random.randn(20000)
-y = 0.7 * x + 0.6 * np.random.randn(20000)
-
-fig, ax = sp.plot_hexbin(
-    x, y, gridsize=40, bins="log",
-    xlabel="PC1", ylabel="PC2",
-    colorbar_label="Count (log)",
-)
-sp.save(fig, "17_hexbin", formats=("pdf", "png"))
-```
-
-### 18. 边际分布图 (`18_marginal.py`)
-
-```python
-"""边际分布图 — 散点 + 边缘直方图 + 相关系数"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "ocean", lang="zh")
-
-np.random.seed(42)
-n = 400
-gdp = np.random.lognormal(mean=5.0, sigma=0.6, size=n)
-consumption = np.clip(0.35 * gdp + np.random.normal(0, 20, n), 5, None)
-
-fig, ax = sp.plot_marginal(
-    gdp, consumption, marginal="hist", bins=35, show_corr=True,
-    xlabel="GDP (亿元)", ylabel="人均消费 (千元)",
-)
-sp.save(fig, "18_marginal", formats=("png",), dpi=300)
-```
-
-### 19. 雨云图 (`19_raincloud.py`)
-
-```python
-"""雨云图 — 原始数据点+箱线+半小提琴三合一"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "forest", lang="zh")
-
-rng = np.random.default_rng(42)
-yields = [
-    rng.normal(5.2, 0.6, 150),
-    rng.normal(6.1, 0.8, 150),
-    rng.normal(6.8, 0.7, 150),
-]
-
-fig, ax = sp.plot_raincloud(
-    yields, labels=["对照组", "方案A", "方案B"],
-    xlabel="产量 (t/ha)", ylabel="处理组",
-    show_median=True,
-)
-sp.save(fig, "19_raincloud", formats=("png",), dpi=300)
-```
-
-### 20. 蜂群图 (`20_beeswarm.py`)
-
-```python
-"""蜂群图 — 原始数据紧凑分布 + 箱线摘要"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("ieee", "pastel", lang="zh")
-
-rng = np.random.default_rng(42)
-scores = [rng.normal(m, s, n) for m, s, n in
-          [(72, 12, 90), (78, 10, 85), (75, 15, 95), (83, 9, 80)]]
-
-fig, ax = sp.plot_beeswarm(
-    scores, labels=["1班", "2班", "3班", "4班"],
-    ylabel="考试成绩 (分)", show_box=True,
-)
-sp.save(fig, "20_beeswarm", formats=("png",), dpi=300)
-```
-
-### 21. 哑铃图 (`21_dumbbell.py`)
-
-```python
-"""哑铃图 — 培训前后成绩对比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "ocean", lang="zh")
-
-students = ["学员A", "学员B", "学员C", "学员D", "学员E", "学员F"]
-before = np.array([62, 71, 55, 68, 74, 58])
-after = np.array([81, 79, 74, 85, 83, 76])
-
-fig, ax = sp.plot_dumbbell(
-    students, before, after,
-    xlabel="测评分数 (分)", ylabel="学员",
-    start_label="培训前", end_label="培训后",
-    show_values=True, sort_by="delta",
-)
-sp.save(fig, "21_dumbbell", formats=("png",), dpi=300)
-```
-
-### 22. 甘特图 (`22_gantt.py`)
-
-```python
-"""甘特图 — 项目任务时间线（类别着色）"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "pastel", lang="zh")
-
-tasks = ["文献调研", "数据采集", "模型开发", "实验验证", "论文撰写", "投稿准备"]
-start = [0, 1, 2, 4, 5, 7]
-duration = [1.5, 3, 2.5, 2, 1.5, 1]
-phases = ["前期", "前期", "中期", "中期", "后期", "后期"]
-
-fig, ax = sp.plot_gantt(
-    tasks, start=start, duration=duration, color_by=phases,
-    xlabel="周次", ylabel="任务",
-)
-sp.save(fig, "22_gantt", formats=("png",), dpi=300)
-```
-
-### 23. 打包气泡图 (`23_packed_bubble.py`)
-
-```python
-"""打包气泡图 — 经费构成占比"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("presentation", "ocean", lang="zh")
-
-directions = ["设备购置", "人才引进", "基础研究", "应用开发", "学术交流", "运维保障"]
-budgets = np.array([480, 260, 320, 180, 90, 70])
-
-fig, ax = sp.plot_packed_bubble(
-    directions, budgets, show_values=True, fmt=".0f",
-)
-sp.save(fig, "23_packed_bubble", formats=("png",), dpi=300)
-```
-
-### 24. 3D 网络图 (`24_network3d.py`)
-
-```python
-"""3D 网络图 — 节点高度编码表达量，颜色编码模块"""
-import networkx as nx
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("thesis", "sunset", lang="zh")
-
-G = nx.barabasi_albert_graph(40, 2, seed=42)
-expression = np.random.lognormal(mean=1.0, sigma=0.7, size=40)
-modules = [f"模块{chr(ord('A') + (i % 4))}" for i in range(40)]
-nx.set_node_attributes(G, {i: float(expression[i]) for i in G.nodes}, "expression")
-nx.set_node_attributes(G, {i: modules[i] for i in G.nodes}, "module")
-
-fig, ax = sp.plot_network3d(
-    G, z_by="expression", node_color_by="module",
-    node_size_by="expression", labels=10,
-)
-sp.save(fig, "24_network3d", formats=("png",), dpi=300)
-```
-
----
-
-## Nature 质量图表
-
-> 以下示例生成符合 Nature/Science 期刊标准的出版级图表。
-
-### 单栏图 (89mm)
-
-```python
-"""Nature 单栏图 — 精确匹配版心宽度 89mm"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "ocean", lang="en")
-
-fig, ax = sp.new_figure("nature")  # 自动 89mm 宽
-
-x = np.linspace(0, 2 * np.pi, 200)
-ax.plot(x, np.sin(x), label="sin(x)", linewidth=1.5)
-ax.plot(x, np.cos(x), label="cos(x)", linewidth=1.5, linestyle="--")
-ax.set_xlabel("x (rad)")
-ax.set_ylabel("f(x)")
-ax.legend(frameon=False, fontsize=8)
-
-sp.save(fig, "nature_single", formats=("pdf",))
-```
-
-### 双栏图 (183mm)
-
-```python
-"""Nature 双栏图 — 横跨两栏的宽图"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "pastel", lang="en")
-
-fig, axes = sp.paper_subplots(1, 3, venue="nature")  # 双栏宽度
-
-np.random.seed(42)
-for i, ax in enumerate(axes):
-    data = np.random.normal(i, 0.5, 100)
-    ax.violinplot(data, showmeans=True, showmedians=False)
-    ax.set_xlabel(f"Group {i+1}")
-    ax.set_ylabel("Value")
-
-sp.add_panel_labels(axes)
-sp.save(fig, "nature_double", formats=("pdf",))
-```
-
-### 带误差棒的柱状图
-
-```python
-"""Nature 风格 — 带误差棒和显著性标注"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "sunset", lang="en")
-
-categories = ["WT", "KO", "Rescue"]
-means = [100, 65, 88]
-sems = [5.2, 7.8, 6.1]
-
-fig, ax = sp.new_figure("nature")
-bars = ax.bar(categories, means, yerr=sems, capsize=3,
-              color=sp.get_palette("sunset", 3), edgecolor="black", linewidth=0.5)
-
-sp.annotate_significance(ax, x1=0, x2=1, y=120, p_value=0.001)
-sp.annotate_significance(ax, x1=1, x2=2, y=135, p_value=0.03)
-
-ax.set_ylabel("Relative Expression (%)")
-ax.set_ylim(0, 150)
-sp.save(fig, "nature_bar_error", formats=("pdf",))
-```
-
-### 生存曲线 (Kaplan-Meier)
-
-```python
-"""Nature 风格 — Kaplan-Meier 生存曲线"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "ocean", lang="en")
-
-np.random.seed(42)
-time = np.linspace(0, 60, 100)
-survival_treatment = np.exp(-0.02 * time) + np.random.normal(0, 0.02, 100)
-survival_control = np.exp(-0.04 * time) + np.random.normal(0, 0.02, 100)
-
-fig, ax = sp.new_figure("nature")
-ax.step(time, np.clip(survival_treatment, 0, 1), where="post", label="Treatment")
-ax.step(time, np.clip(survival_control, 0, 1), where="post", label="Control", linestyle="--")
-ax.fill_between(time, np.clip(survival_treatment - 0.05, 0, 1),
-                np.clip(survival_treatment + 0.05, 0, 1), step="post", alpha=0.15)
-ax.set_xlabel("Time (months)")
-ax.set_ylabel("Survival Probability")
-ax.legend(frameon=False)
-ax.set_ylim(0, 1.05)
-sp.save(fig, "nature_kaplan", formats=("pdf",))
-```
-
----
-
-## 配色方案展示
-
-> SciPlot 内置多种科研友好配色，通过 `sp.setup_style()` 或 `sp.get_palette()` 调用。
-
-### 所有内置配色
-
-```python
-"""配色方案一览 — 展示所有内置调色板"""
-import sciplot as sp
-
-palettes = [
-    ("pastel",  "柔和粉彩 (默认)"),
-    ("ocean",   "海洋蓝绿"),
-    ("forest",  "森林渐变"),
-    ("sunset",  "日落暖色"),
-    ("earth",   "大地色系"),
-    ("rdbu",    "红蓝发散"),
-    ("coolwarm","冷暖发散"),
-    ("100yuan", "百元人民币"),
-    ("50yuan",  "五十元"),
-    ("20yuan",  "二十元"),
-    ("10yuan",  "十元"),
-    ("5yuan",   "五元"),
-    ("1yuan",   "一元"),
-]
-
-fig, axes = sp.paper_subplots(len(palettes), 1, venue="thesis")
-for ax, (name, desc) in zip(axes, palettes):
-    colors = sp.get_palette(name)
-    for i, color in enumerate(colors):
-        ax.barh(0, 1, left=i, color=color, edgecolor="white", linewidth=0.5)
-    ax.set_xlim(0, len(colors))
-    ax.set_yticks([])
-    ax.set_title(f"{name}  —  {desc}", fontsize=8, loc="left")
-    ax.set_xticks([])
-
-sp.save(fig, "palette_overview", formats=("png",), dpi=300)
-```
-
-### 子集配色
-
-```python
-"""子集配色 — 从调色板中取前 N 个颜色"""
-import sciplot as sp
-
-# 取前 2 色
-colors_2 = sp.get_palette("pastel-2")   # ['#A8D8EA', '#AA96DA']
-
-# 取前 4 色
-colors_4 = sp.get_palette("ocean-4")    # 4 种蓝色调
-
-# 用法
-sp.setup_style("thesis", "pastel-2", lang="zh")  # 只用 2 种颜色
-```
-
-### 场景推荐
-
-| 场景 | 推荐配色 | 原因 |
-|------|---------|------|
-| 2-3 组对比 | `pastel-2` / `pastel-3` | 柔和不刺眼 |
-| 4-6 组分类 | `ocean` / `forest` | 色相区分度高 |
-| 热力/相关矩阵 | `rdbu` / `coolwarm` | 发散型，中性色居中 |
-| 地理/环境 | `earth` / `forest` | 自然色调 |
-| 演示/PPT | `sunset` | 鲜艳醒目 |
-| 色盲友好 | `ocean` + `use_linestyles=True` | 蓝色系 + 线型区分 |
-| 中国特色 | `100yuan` ~ `1yuan` | 人民币配色，独特有趣 |
-
-### 色盲友好模式
-
-```python
-"""色盲友好 — 使用线型+标记区分"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("nature", "ocean", lang="en")
-
-x = np.linspace(0, 10, 100)
-fig, ax = sp.new_figure("nature")
-
-for i, (label, style) in enumerate(zip(
-    ["Method A", "Method B", "Method C"],
-    [{"linestyle": "-"}, {"linestyle": "--"}, {"linestyle": ":"}]
-)):
-    ax.plot(x, np.sin(x + i * 0.5), label=label, **style, marker="o",
-            markevery=20, markersize=5)
-
-ax.legend()
-ax.set_xlabel("X")
-ax.set_ylabel("Y")
-sp.save(fig, "colorblind_friendly", formats=("pdf",))
-```
-
-### 深色主题配色
-
-```python
-"""深色背景 — 演示/海报场景"""
-import numpy as np
-import sciplot as sp
-
-sp.setup_style("presentation", "pastel", lang="zh", theme="dark")
-
-x = np.linspace(0, 10, 200)
-fig, ax = sp.plot(x, np.sin(x), xlabel="时间", ylabel="幅度", label="信号")
-ax.legend()
-sp.save(fig, "dark_theme", formats=("png",), dpi=300)
-```
-
----
-
-## API 速查
-
-### 样式与配置
-```python
-sp.setup_style(venue="nature", palette="pastel", lang="zh", theme="light")
-sp.set_defaults(venue="ieee", palette="earth")  # 设置后 setup_style() 自动读取
-sp.style_context("ieee", palette="forest")       # 上下文管理器
-```
-
-### 5 种 API 风格
-```python
-# 1. 传统 API
-fig, ax = sp.plot(x, y, xlabel="X", ylabel="Y")
-sp.save(fig, "fig")
-
-# 2. 链式调用
-sp.style("nature").palette("pastel").plot(x, y).save("fig")
-
-# 3. 简洁别名
-fig, ax = sp.line(x, y, xlabel="X", ylabel="Y")
-
-# 4. PlotResult 链式
-sp.plot(x, y).xlabel("X").ylabel("Y").save("fig")
-
-# 5. 上下文管理器
-with sp.style_context("ieee", palette="ocean"):
-    fig, ax = sp.plot(x, y)
-    sp.save(fig, "fig")
-```
-
-### 配色速查
-| 名称 | 风格 | 色数 |
-|------|------|------|
-| `pastel` | 柔和粉彩（默认） | 6 |
-| `ocean` | 海洋蓝绿 | 6 |
-| `forest` | 森林渐变 | 6 |
-| `sunset` | 日落暖色 | 5 |
-| `earth` | 大地色系 | 5 |
-| `100yuan`~`1yuan` | 人民币主题 | 5 |
-| `rdbu` / `coolwarm` | 发散型 | 7 |
-
-子集: `pastel-2` 取前 2 色，`ocean-4` 取前 4 色。
-
-### 双编码配色（复合图专用）
-```python
-# 行=色相、列=明度梯度（条件矩阵：2 处理 × 3 剂量）
-colors = sp.dual_encode_colors(["#E07B54", "#5B7DB1"], 3)
-# colors[0] = 处理A 的 3 档浅→深；colors[1] = 处理B 的 3 档
-```
-
-### 高级图表速查
-```python
-sp.plot_bubble_heatmap(data, cmap="viridis", background=True, show_values=True)
-sp.plot_bubble(x, y, size=values, color=colors, size_scale=200)
-sp.plot_hexbin(x, y, gridsize=30, bins="log")
-sp.plot_marginal(x, y, marginal="hist", show_corr=True)      # 散点+边缘分布
-sp.plot_raincloud(data_list, labels=[...], show_median=True)  # 雨云图
-sp.plot_beeswarm(data_list, method="swarm", show_box=True)   # 蜂群图
-sp.plot_dumbbell(cats, before, after, sort_by="delta")       # 哑铃图
-sp.plot_diverging_bar(cats, values, threshold=0)              # 发散条形
-sp.plot_gantt(tasks, start=..., duration=...)                 # 甘特图
-sp.plot_packed_bubble(labels, sizes)                          # 打包气泡
-sp.plot_ridgeline(data_list, labels=[...], overlap=0.3, show_median=True)
-sp.plot_waterfall3d(x, y_list, labels=[...], spacing=1.0, fill=True)
-sp.plot_network(G, node_color_by="module", labels=10)         # top-N 标签
-sp.plot_network3d(G, z_by="expression", labels=10)           # 3D 网络
-sp.plot_volcano(log2fc, p_values, labels=genes)              # 火山图
-sp.plot_calendar_heatmap(dates, values)                      # 日历热图
-sp.plot_taylor(obs, {"模型A": pred_a})                       # 泰勒图
-sp.plot_chord(flow_matrix, labels=cities)                    # 弦图
-sp.plot_ternary(a, b, c, labels=["砂", "粉", "黏"])          # 三角相图
-sp.plot_waffle(cats, values)                                 # 华夫图
-# 别名: ... / volcano / calendar_heatmap / taylor / chord / ternary / waffle
-```
-
-### 保存选项
-```python
-sp.save(fig, "文件名")                                    # 默认 PDF + PNG 1200dpi
-sp.save(fig, "文件名", formats=("png",), dpi=1200)         # Word 用
-sp.save(fig, "文件名", formats=("pdf",))                   # LaTeX 用
-sp.save(fig, "文件名", dir="outputs/figures")               # 指定目录
-sp.save(fig, "文件名", close=True)                          # 保存后关闭释放内存
-```
-
-### 子图布局
-```python
-fig, axes = sp.paper_subplots(1, 2, venue="thesis")  # 精确匹配版心
-fig, axes = sp.create_subplots(2, 2, venue="ieee")    # 按比例缩放
-fig, gs = sp.create_gridspec(2, 3, venue="nature")    # 不规则布局
-sp.add_panel_labels(axes)                              # (a)(b)(c) 标签
-sp.add_panel_labels(axes, style="LETTER")              # (A)(B)(C) 标签
-```
-
-### 显著性标注
-```python
-sp.annotate_significance(ax, x1=1, x2=2, y=8.5, p_value=0.03)   # *
-sp.annotate_significance(ax, x1=1, x2=3, y=9.5, p_value=0.0005)  # ***
-```
-
-### 智能辅助
-```python
-sp.auto_rotate_labels(ax)                    # 自动旋转标签
-sp.smart_legend(ax, outside=True)            # 智能图例位置
-sp.optimize_layout(fig)                      # 自动优化布局
-sp.suggest_figsize(n_items=20)               # 建议尺寸
-sp.check_color_contrast("#FFF", "#000")      # 对比度检查
-```
-
----
-
-## 黄金法则
-
-```
-1. Word 用 PNG 1200 DPI，LaTeX 用 PDF
-2. 多子图用 paper_subplots() 锁定总宽
-3. 中文用 lang="zh"，英文用 lang="en"
-4. ≥4 条线用 use_linestyles=True（色盲友好）
-5. 必须生成独立可运行的 Python 脚本
-6. 默认无网格、刻度朝内（已自动设置）
-7. 演示/屏幕场景用 theme="dark"
-8. Nature/Science 用 venue="nature" 精确匹配版心
-9. 显著性标注用 sp.annotate_significance()，不要手动画线
-10. 配色用 sp.get_palette() 获取，不要硬编码颜色值
-```
-
----
-
-## 能力边界
-
-| 不支持 | 替代方案 |
-|--------|---------|
-| 决策树可视化 | `sklearn.tree.plot_tree` |
-| 神经网络结构 | `PlotNeuralNet` / `Netron` |
-| 流程图 | `graphviz` / `Mermaid` |
-| 交互式图表 | `plotly` / `pyecharts` |
-| 地图/地理 | `cartopy` / `folium` |
-
----
-
-## 完整文档
-
-详细 API 参考: [references/full-api.md](./references/full-api.md)
-场景配方: [references/recipes.md](./references/recipes.md)
-配色与样式: [references/color-style.md](./references/color-style.md)
-
----
-
-版本: **1.12.0** | PyPI: `pip install sciplot-academic` | GitHub: `rippleshe/sciplot-academic`
+保持同类面板的轴范围、单位、字体、图例、配色语义一致。共享坐标轴时减少重复标签。不要把每个 panel 做成不同风格的独立海报。
+
+## 5. 不同图型的高质量下限
+
+- **折线**：时间/有序 x 才连接；多系列必要时叠加线型，避免只靠颜色。
+- **散点**：点重叠时降低 alpha/size；样本很大时考虑 hexbin；回归线必须说明模型。
+- **柱状**：默认从零基线；长类别名优先水平条形；组数过多不要堆几十种颜色。
+- **箱线/小提琴/雨云**：样本不大时尽量展示原始点；不要让小提琴形状掩盖 n 很小的事实。
+- **热力图**：色图必须匹配语义；相关矩阵优先以 0 为中心的发散色；标数字时保证对比度。
+- **雷达**：只用于少量同尺度维度；多组填充 alpha 要低，轮廓承担主要比较。
+- **Sankey/Alluvial**：流带宽度是真实量；颜色应跟随源/类别语义，流多时先过滤视觉噪音。
+- **Treemap/Sunburst**：面积/角度承担数值，颜色用于层级或分组，不再额外编码无关变量。
+- **网络图**：先减少边噪音和标签密度，再谈配色；社区结构应该一眼可辨。
+- **3D**：只有数据本身存在第三空间维度或曲面结构时使用，普通分类比较不要 3D。
+
+## 6. Showcase 与包开发时的额外要求
+
+如果任务是改 SciPlot 本身，而不只是调用它：
+
+1. 先跑基线测试，再改代码。
+2. 遇到难看的 showcase，要追到绘图实现；不要只换一组更“配合”的数据。
+3. 新增/修复 API 后补回归测试，特别关注 palette、NaN/Inf、空输入、长度错配、辅助 Axes、多面板和保存。
+4. 修改全局样式后，重新运行受影响 showcase 并目视检查。
+5. 运行 `ruff`、`mypy`、`pytest`；能跑全量就跑全量。
+6. 不用截图“证明”代码正确，也不用测试通过“证明”视觉优秀——两种证据都需要。
+
+## 7. 交付标准
+
+一次合格的科研绘图任务应交付：
+
+- 可复现脚本；
+- 实际生成的图；
+- 清楚的轴标签/单位/统计语义；
+- 与目标媒介匹配的格式和 dpi；
+- 通过必要的 figure audit；
+- 至少一次真实视觉检查。
+
+当用户说“做得更像 Nature/Science/顶刊”时，不要理解成复制某一家期刊的装饰风格。真正要提高的是：**信息层级、排版纪律、数据墨水比、可读性、统计表达和跨图一致性。**
