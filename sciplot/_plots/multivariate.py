@@ -260,7 +260,6 @@ def plot_parallel(
     ax.set_ylabel(y_label)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -379,7 +378,6 @@ def plot_scatter_matrix(
             else:
                 ax.set_yticklabels([])
 
-            ax.tick_params(direction="in")
             ax.grid(False)
 
     fig.tight_layout()

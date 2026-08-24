@@ -13,6 +13,7 @@ from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import create_sciplot_figure, create_plot_result, cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data
 from sciplot._core.result import PlotResult
+from sciplot.utils.smart import smart_legend
 
 
 LINE_STYLES: List[str] = ["-", "--", "-.", ":"]
@@ -23,7 +24,15 @@ _LINE2D_KWARGS = frozenset(Line2D([], []).properties().keys())
 
 def _resolve_auto_subset_palette(palette: Optional[str], n_series: int) -> str:
     """根据系列数自动选择内置配色子集。"""
-    effective_palette = palette or DEFAULT_PALETTE
+    if palette is None:
+        from sciplot._core.config import get_config
+
+        configured = get_config("palette")
+        effective_palette = (
+            configured if isinstance(configured, str) and configured else DEFAULT_PALETTE
+        )
+    else:
+        effective_palette = palette
     if "-" in effective_palette:
         return effective_palette
 
@@ -101,7 +110,7 @@ def plot_multi(
     智能配色规则（pastel / earth / ocean）：
         N ≤ 4 → 自动选 palette-N 子集（如 pastel-2）
         N = 5 → 使用完整 5 色
-        N ≥ 6 → 直接循环完整配色（建议手动指定如 ocean）
+        N 超过当前颜色循环长度 → 保留用户配色，并从第二轮重复颜色开始自动换线型
 
     参数:
         x      : X 轴数据（共享一个数组）或 X 数据列表（每条线各自的 X）
@@ -172,6 +181,8 @@ def plot_multi_line(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     labels = validate_labels_match_data(labels, y_list)
+    cycle_colors = get_cycle_colors()
+    n_cycle_colors = max(1, len(cycle_colors))
 
     # 标准化 x：普通 list（元素非 array）视为共享 X 轴数据
     x_is_multi = isinstance(x, list) and all(isinstance(xi, np.ndarray) for xi in x)
@@ -186,7 +197,12 @@ def plot_multi_line(
     for i, (y, lbl) in enumerate(zip(y_list, labels)):
         xi = x[i] if x_is_multi else x
         _validate_xy_lengths(xi, y, x_name=("x" if not x_is_multi else f"x[{i}]"), y_name=f"y_list[{i}]")  # type: ignore
-        ls = LINE_STYLES[i % len(LINE_STYLES)] if use_linestyles else "-"
+        if use_linestyles:
+            ls = LINE_STYLES[i % len(LINE_STYLES)]
+        else:
+            # 颜色循环用尽后，重复颜色必须叠加线型冗余编码，避免同色同线型不可区分。
+            cycle_round = i // n_cycle_colors
+            ls = LINE_STYLES[cycle_round % len(LINE_STYLES)]
         if highlight_last and i == len(y_list) - 1:
             line_kwargs = dict(kwargs)
             line_kwargs.setdefault("linewidth", 2.6)
@@ -202,8 +218,7 @@ def plot_multi_line(
     if title:
         ax.set_title(title)
     if show_legend:
-        ax.legend()
-    ax.tick_params(direction="in")
+        smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -288,7 +303,6 @@ def plot_step(
         ax.set_title(title)
     if label:
         ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -342,7 +356,6 @@ def plot_area(
         ax.set_title(title)
     if label:
         ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -440,8 +453,7 @@ def plot_multi_area(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend()
-    ax.tick_params(direction="in")
+    smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": effective_palette})
 
 

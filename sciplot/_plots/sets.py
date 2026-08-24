@@ -165,7 +165,6 @@ def plot_upset(
     ax_set.invert_yaxis()
     ax_set.set_xlabel("集合大小", fontsize=relative_fontsize(-1))
     ax_set.tick_params(axis="x", labelsize=fs_tiny)
-    ax_set.tick_params(direction="in")
     ax_set.set_xlim(0, max(set_sizes) * 1.22)
     for spine in ["top", "right"]:
         ax_set.spines[spine].set_visible(False)
@@ -205,7 +204,6 @@ def plot_upset(
     ax_main.set_xticks(x_pos)
     ax_main.set_xticklabels([])
     ax_main.set_yticks([])
-    ax_main.tick_params(direction="in")
 
     # ── 顶：交集大小柱（默认渐变蓝，显式 intersection_color 时用单色） ──
     sizes = [c[1] for c in combos]
@@ -222,7 +220,6 @@ def plot_upset(
     ax_bar.set_ylabel("交集大小", fontsize=relative_fontsize(-1))
     ax_bar.tick_params(axis="x", labelbottom=False)
     ax_bar.tick_params(axis="y", labelsize=fs_tiny)
-    ax_bar.tick_params(direction="in")
     for spine_name in ["top", "right"]:
         ax_bar.spines[spine_name].set_visible(False)
     ax_bar.set_xticks(x_pos)

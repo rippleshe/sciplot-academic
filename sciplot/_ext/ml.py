@@ -116,7 +116,6 @@ def plot_pca(
         ax.set_ylabel(f"PC2 ({var[1]*100:.1f}%)")
     else:
         ax.set_ylabel("PC2")
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -198,7 +197,6 @@ def plot_confusion_matrix(
 
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -264,7 +262,6 @@ def plot_feature_importance(
     ax.set_yticklabels(sorted_features)
     ax.set_xlabel("Importance")
     ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -336,7 +333,6 @@ def plot_learning_curve(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 

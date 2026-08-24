@@ -39,20 +39,38 @@ def auto_rotate_labels(
     if axis not in {"x", "y"}:
         raise ValueError(f"axis 必须是 'x' 或 'y'，实际值: {axis!r}")
 
+    renderer = None
     try:
         ax.figure.canvas.draw()
+        get_renderer = getattr(ax.figure.canvas, "get_renderer", None)
+        if callable(get_renderer):
+            renderer = get_renderer()
     except Exception:
-        # 无显示后端或特殊环境下 draw 可能失败，降级为直接读取。
-        pass
+        # 无显示后端或特殊环境下 draw 可能失败，降级到旧的字符数启发式。
+        renderer = None
+
+    def _overlaps(labels: list) -> bool:
+        if renderer is None:
+            return False
+        visible = [
+            label for label in labels
+            if label.get_visible() and bool(label.get_text())
+        ]
+        if len(visible) < 2:
+            return False
+        boxes = [label.get_window_extent(renderer=renderer) for label in visible]
+        return any(a.overlaps(b) for a, b in zip(boxes, boxes[1:]))
 
     if axis == "x":
         labels = ax.get_xticklabels()
         tick_labels = [t.get_text() for t in labels]
 
-        should_rotate = (
+        heuristic = (
             len(tick_labels) > max_labels
             or any(len(str(l)) > threshold for l in tick_labels)
         )
+        # renderer 可用时只在“真的碰撞”时旋转；字符数只作为无渲染环境的回退。
+        should_rotate = _overlaps(labels) if renderer is not None else heuristic
 
         if should_rotate:
             plt.setp(ax.get_xticklabels(), rotation=rotation, ha="right")
@@ -60,10 +78,11 @@ def auto_rotate_labels(
         labels = ax.get_yticklabels()
         tick_labels = [t.get_text() for t in labels]
 
-        should_rotate = (
+        heuristic = (
             len(tick_labels) > max_labels
             or any(len(str(l)) > threshold for l in tick_labels)
         )
+        should_rotate = _overlaps(labels) if renderer is not None else heuristic
 
         if should_rotate:
             plt.setp(ax.get_yticklabels(), rotation=rotation, ha="right")
@@ -101,7 +120,8 @@ def smart_legend(
 
     # 自动计算列数
     if ncols is None:
-        ncols = max(1, len(handles) // 4) if len(handles) > 4 else 1
+        # 每列约 4 项：5–8 项两列、9–12 项三列；最多 4 列避免横向过宽。
+        ncols = min(4, max(1, math.ceil(len(handles) / 4)))
 
     if outside:
         ax.legend(

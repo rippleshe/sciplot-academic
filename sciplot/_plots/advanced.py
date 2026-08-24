@@ -92,7 +92,6 @@ def plot_errorbar(
         ax.set_title(title)
     if label:
         ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -179,7 +178,6 @@ def plot_confidence(
         ax.set_title(title)
     if label_mean or (label_std is not None and label_std):
         ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -283,7 +281,6 @@ def plot_heatmap(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -461,7 +458,6 @@ def plot_bubble_heatmap(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -1117,7 +1113,6 @@ def plot_marginal(
     ax_x.tick_params(labelbottom=False)
     ax_y.tick_params(labelleft=False)
     for m_ax in (ax_x, ax_y):
-        m_ax.tick_params(direction="in")
         m_ax.grid(False)
 
     if show_corr:
@@ -1132,7 +1127,6 @@ def plot_marginal(
     ax_main.set_ylabel(ylabel)
     if title:
         ax_main.set_title(title)
-    ax_main.tick_params(direction="in")
     return PlotResult(fig, ax_main, metadata={"venue": venue, "palette": palette})
 
 
@@ -1207,7 +1201,6 @@ def plot_hexbin(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -1381,5 +1374,4 @@ def plot_bubble(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

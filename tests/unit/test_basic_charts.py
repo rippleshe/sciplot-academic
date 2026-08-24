@@ -62,6 +62,22 @@ class TestPlotMulti:
         # 应该自动选择3色
         assert len(ax.lines) == 3
 
+    def test_plot_multi_repeated_colors_gain_linestyle_redundancy(
+        self, test_data, cleanup_figures
+    ):
+        """系列数超过 palette 色数时，同色线不能保持同线型。"""
+        x = test_data["x"]
+        series = [np.sin(x) + i * 0.1 for i in range(8)]
+        result = sp.plot_multi_line(
+            x,
+            series,
+            labels=[f"S{i}" for i in range(8)],
+            palette="pastel",
+        )
+        assert result.ax.lines[0].get_color() == result.ax.lines[6].get_color()
+        assert result.ax.lines[0].get_linestyle() != result.ax.lines[6].get_linestyle()
+        assert getattr(result.ax.get_legend(), "_ncols", None) == 2
+
 
 class TestScatter:
     """测试散点图"""

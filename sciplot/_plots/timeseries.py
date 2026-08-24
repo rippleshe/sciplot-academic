@@ -274,7 +274,6 @@ def plot_timeseries(
         ax.set_title(title)
     if has_legend_item:
         ax.legend()
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -377,7 +376,6 @@ def plot_multi_timeseries(
     if title:
         ax.set_title(title)
     ax.legend()
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -444,7 +442,6 @@ def plot_slope(
         ax.set_title(title)
     if show_grid:
         ax.grid(axis="y", linestyle="--", alpha=0.4)
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -694,7 +691,6 @@ def plot_gantt(
         ax.set_title(title)
     if legend_handles:
         ax.legend(handles=legend_handles, loc="lower right", frameon=False)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -832,7 +828,6 @@ def plot_calendar_heatmap(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -928,7 +923,6 @@ def plot_streamgraph(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     if labels is not None:
         ax.legend(frameon=False)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
@@ -1070,7 +1064,6 @@ def plot_bump(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 

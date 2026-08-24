@@ -125,7 +125,6 @@ def plot_dendrogram(
     if title:
         ax.set_title(title)
 
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -245,7 +244,6 @@ def plot_clustermap(
         ax_heatmap.set_yticks(np.arange(len(row_labels)))
         ax_heatmap.set_yticklabels(row_labels)
 
-    ax_heatmap.tick_params(direction="in")
 
     add_colorbar(fig, im, ax=ax_heatmap)
 

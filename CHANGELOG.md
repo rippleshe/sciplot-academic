@@ -42,6 +42,9 @@
 ### Changed
 
 - 进一步把出版级视觉下限固化为 SciPlot 自身契约：所有 venue 显式启用四边向内主/次刻度、完整四边轴脊、无框图例与稳定线宽/保存边距，不再依赖 SciencePlots 的间接默认；直接 `fig.savefig()` 的位图兜底提升至 600 DPI，`sp.save()` 仍保持配置默认 1200 DPI。
+- 清理普通绘图函数与布局 helper 中历史遗留的 `tick_params(direction="in")` 补丁，让新建主轴统一由底层 publication rcParams 提供视觉纪律；showcase 全量重画验证删补丁不改变输出。
+- `auto_rotate_labels()` 改为优先使用 renderer 的真实像素 bbox 判断标签是否碰撞，只有确实重叠时才旋转；`smart_legend()` 对 5–12 项自动使用多列布局，减少默认图例吞占绘图区。
+- 多系列折线在当前 palette 颜色耗尽后自动增加线型冗余编码，避免同色同线型系列不可区分；`plot_multi()` / `plot_multi_line()` 同时修正为真正尊重 `set_defaults(palette=...)`。
 - 清理 showcase 中纯粹用于“补基础风格”的 `tick_params(direction="in")`，示例只保留图本身需要的特殊设置，用真实输出验证默认层即可维持出版级完成度。
 - 重做并目视检查多个 showcase，降低雷达图填充遮挡、网络图边/标签密度，优化环形排名配色，
   并从实现层修复 Alluvial 流带视觉质量。
@@ -54,7 +57,7 @@
 - 新增辅助 Axes 审计、UpSet 元数据、Alluvial 闭合路径、出版样式基线、多类图表 palette 隔离，
   Treemap 边框/字号、Sunburst 层级拓扑/环方向、Packed Bubble / Volcano / Network3D 像素级文字布局，
   Chord 圆周闭合/流槽守恒/过滤后总量、Ternary simplex 网格几何，以及所有 venue 四边 inward/minor tick 与 600 DPI 原生保存兜底契约测试。
-- 最新全量验证：`1575 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图；另以无 `setup_style()` / 无手工 tick / 无显式 DPI 的零配置调用实测原生 `fig.savefig()` 输出 600 DPI 完成图。
+- 最新全量验证：`1579 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图；另以无 `setup_style()` / 无手工 tick / 无显式 DPI 的零配置调用实测原生 `fig.savefig()` 输出 600 DPI 完成图。
 
 ---
 

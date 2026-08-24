@@ -36,6 +36,20 @@ class TestHighPriorityHardeningRound7:
         finally:
             sp.reset_config()
 
+    def test_plot_multi_respects_config_default_palette(self, cleanup_figures):
+        """plot_multi 不应在 palette=None 时偷偷回退到 pastel。"""
+        try:
+            sp.reset_config()
+            sp.set_defaults(palette="earth")
+            result = sp.plot_multi(
+                [0, 1, 2],
+                [[0, 1, 2], [2, 1, 0]],
+                labels=["A", "B"],
+            )
+            assert [line.get_color() for line in result.ax.lines] == sp.get_palette("earth-2")
+        finally:
+            sp.reset_config()
+
     def test_chain_without_lang_preserves_current_global_lang(self, cleanup_figures):
         try:
             sp.setup_style(lang="en")

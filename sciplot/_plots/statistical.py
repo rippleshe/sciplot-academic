@@ -144,7 +144,6 @@ def plot_residuals(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -235,7 +234,6 @@ def plot_qq(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -331,7 +329,6 @@ def plot_bland_altman(
     if title:
         ax.set_title(title)
     ax.legend(loc="best")
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -380,7 +377,6 @@ def plot_density(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -445,7 +441,6 @@ def plot_multi_density(
     if title:
         ax.set_title(title)
     ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -570,7 +565,6 @@ def plot_ridgeline(
     if title:
         ax.set_title(title)
     ax.legend()
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -745,7 +739,6 @@ def plot_raincloud(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -943,7 +936,6 @@ def plot_volcano(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -1105,7 +1097,6 @@ def plot_forest(
     ax.set_xlabel(xlabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
 
     # 右侧数值区留白：数据区右侧留出标签空间（axes 坐标 1.0 之外）
     xlim = ax.get_xlim()
@@ -1229,7 +1220,6 @@ def plot_funnel(
         ax.set_title(title)
     if show_legend:
         ax.legend(loc="upper right", frameon=False, fontsize="small")
-    ax.tick_params(direction="in")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 

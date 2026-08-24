@@ -24,6 +24,7 @@ from sciplot._core.utils import (
     new_styled_figure,
 )
 from sciplot._core.result import PlotResult, ComboPlotResult
+from sciplot.utils.smart import auto_rotate_labels, smart_legend
 
 
 # ============================================================================
@@ -84,6 +85,7 @@ def plot_bar(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
+    auto_rotate_labels(ax, axis="x")
     return create_plot_result(fig, ax, venue, palette, lang)
 
 
@@ -194,8 +196,8 @@ def plot_grouped_bar(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend(loc=legend_loc)
-    ax.tick_params(direction="in")
+    auto_rotate_labels(ax, axis="x")
+    smart_legend(ax, loc=legend_loc)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -270,7 +272,8 @@ def plot_box(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
+    if labels is not None:
+        auto_rotate_labels(ax, axis="x")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -348,7 +351,8 @@ def plot_violin(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
+    if labels is not None:
+        auto_rotate_labels(ax, axis="x")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -401,7 +405,6 @@ def plot_histogram(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -500,8 +503,8 @@ def plot_stacked_bar(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend(loc=legend_loc)
-    ax.tick_params(direction="in")
+    auto_rotate_labels(ax, axis="x")
+    smart_legend(ax, loc=legend_loc)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -587,7 +590,6 @@ def plot_horizontal_bar(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -647,7 +649,6 @@ def plot_lollipop(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -772,7 +773,6 @@ def plot_combo(
     ax_line = None
     if normalized_line_data:
         ax_line = ax_bar.twinx()
-        ax_line.tick_params(direction="in")
 
         line_colors = colors[n_bars:]
         if len(line_colors) < len(normalized_line_data):
@@ -792,7 +792,6 @@ def plot_combo(
 
     if title:
         ax_bar.set_title(title)
-    ax_bar.tick_params(direction="in")
 
     return ComboPlotResult(
         fig,
@@ -1027,7 +1026,6 @@ def plot_beeswarm(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -1161,7 +1159,6 @@ def plot_dumbbell(
     if title:
         ax.set_title(title)
     ax.legend(loc="best", frameon=False)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -1252,7 +1249,6 @@ def plot_diverging_bar(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 

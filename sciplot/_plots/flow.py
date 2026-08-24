@@ -425,7 +425,6 @@ def plot_waterfall(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -650,5 +649,4 @@ def plot_alluvial(
         spine.set_visible(False)
     if title:
         ax.set_title(title)
-    ax.tick_params(direction="in")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})

@@ -32,10 +32,18 @@ class TestAutoRotateLabels:
         rotations = [label.get_rotation() for label in labels]
         assert any(r != 0 for r in rotations)
 
-    def test_y_axis(self):
-        fig, ax = plt.subplots()
-        categories = [f"LongCategory_{i}" for i in range(8)]
-        ax.barh(categories, range(8))
+    def test_long_x_labels_that_fit_stay_horizontal(self):
+        """字符很长但画布足够宽时不应机械旋转。"""
+        fig, ax = plt.subplots(figsize=(12, 3))
+        categories = ["LongCategoryAlpha", "LongCategoryBeta", "LongCategoryGamma"]
+        ax.bar(categories, [1, 2, 3])
+        sp.auto_rotate_labels(ax, axis="x", max_labels=10, threshold=4)
+        assert all(label.get_rotation() == 0.0 for label in ax.get_xticklabels())
+
+    def test_y_axis_overlap_rotation(self):
+        fig, ax = plt.subplots(figsize=(2, 1.5))
+        categories = [f"LongCategory_{i}" for i in range(20)]
+        ax.barh(categories, range(20))
         sp.auto_rotate_labels(ax, axis="y", max_labels=5, threshold=4)
         labels = ax.get_yticklabels()
         rotations = [label.get_rotation() for label in labels]
@@ -100,6 +108,16 @@ class TestSmartLegend:
         sp.smart_legend(ax)  # auto ncols for >4 items
         legend = ax.get_legend()
         assert legend is not None
+        assert getattr(legend, "_ncols", None) == 2
+
+    def test_auto_ncols_twelve_items(self):
+        fig, ax = plt.subplots()
+        for i in range(12):
+            ax.plot([1, 2, 3], label=f"Item {i}")
+        sp.smart_legend(ax)
+        legend = ax.get_legend()
+        assert legend is not None
+        assert getattr(legend, "_ncols", None) == 3
 
 
 class TestSuggestFigsize:
