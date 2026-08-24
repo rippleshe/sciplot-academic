@@ -7,8 +7,8 @@ SciPlot Academic — PyPI 发布脚本
   uv add --dev build twine
 
 步骤：
-  1. 修改 pyproject.toml 中的 version
-  2. 运行本脚本：python publish.py
+  1. 版本由 Git tag + setuptools-scm 生成，不要手改 pyproject.toml
+  2. 在目标发布 tag（例如 v1.14.0）上运行：python publish.py
      - 交互模式：直接运行 python publish.py
      - 一键发布：python publish.py --token <your-pypi-token> --yes
   3. 如果是交互模式，按提示输入 PyPI token（前缀 __token__）
@@ -76,6 +76,10 @@ def main():
     if not dist_files:
         print("❌ dist/ 目录为空，构建可能失败")
         sys.exit(1)
+
+    # 上传前先校验发行包元数据与 README 渲染
+    run([sys.executable, "-m", "twine", "check", *dist_files])
+    print("✓ twine check 通过")
 
     # 准备上传指令
     upload_cmd = [sys.executable, "-m", "twine", "upload"]

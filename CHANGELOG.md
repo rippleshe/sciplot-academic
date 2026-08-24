@@ -9,6 +9,10 @@
 
 ## Unreleased
 
+---
+
+## [1.14.0] - 2026-08-24
+
 ### Fixed
 
 - 修复 `audit_figure()` 将 colorbar、twin axis、边际分布辅助轴误判为独立论文面板的问题；
@@ -49,6 +53,7 @@
 - `plot_multi_density()`、`plot_ridgeline()` 与 `plot_multi_timeseries()` 接入智能多列图例，在系列较多时自动压缩 legend 占用，少系列时保持原有单列行为。
 - 统一多系列线图的冗余编码策略：`plot_multi_line()`、`plot_multi_timeseries()`、`plot_multi_density()`、`plot_ridgeline()` 在 palette 颜色复用后自动切换线型；用户显式 `linestyle` / `ls` 始终优先，显式单色 `color=` 时也会自动用线型维持系列可辨识度。
 - `smart_legend()` 新增 IEEE/单栏窄画布压力策略：仅在 9 项以上、默认 `loc="best"` 且真实 renderer bbox 已明显侵占数据区时，将大型长图例移至图外下方，并按真实宽度控制列数；显式 `loc=` / `outside=True` 不受自动策略改写。
+- 清理 PyPI sdist 发布内容：不再把 `.claude/`、`.github/`、docs、tests、50 张 showcase PNG、QA 临时目录和根目录调试图片打进源码分发包；发布工作流在上传前新增 `twine check`。
 - 清理 showcase 中纯粹用于“补基础风格”的 `tick_params(direction="in")`，示例只保留图本身需要的特殊设置，用真实输出验证默认层即可维持出版级完成度。
 - 重做并目视检查多个 showcase，降低雷达图填充遮挡、网络图边/标签密度，优化环形排名配色，
   并从实现层修复 Alluvial 流带视觉质量。

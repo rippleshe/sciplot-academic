@@ -1,0 +1,13 @@
+# Keep PyPI source distributions focused on installable source and release metadata.
+prune .claude
+prune .github
+prune docs
+prune showcase
+prune tests
+prune tmp_p10
+prune tmp_xyz
+exclude PROJECT_RULES.md
+exclude CONTRIBUTING.md
+exclude publish.py
+exclude run_tests.py
+exclude .pre-commit-config.yaml
