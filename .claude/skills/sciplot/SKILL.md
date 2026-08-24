@@ -5,7 +5,7 @@ description: >-
   统计图、多面板图、期刊投稿图，或需要优化现有 matplotlib 科研图时触发；也适用于
   “这些数据怎么可视化”“把图做得像顶刊”“提升论文图质量”等未指定图型的任务。
   优先使用项目内 sciplot API 完成静态科研可视化；明确要求交互式网页图、地图或动画时不触发。
-version: 2.0.6
+version: 2.0.7
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
@@ -146,6 +146,7 @@ sp.save(fig, "figures/fig1", formats=("pdf", "png"), dpi=600)
 - 标题不是必须。论文图通常由 caption 承担完整说明。
 - 密集自动标注必须在最终坐标变换后用 renderer 检查真实像素碰撞；空间不够时宁可少标或省略，也不要让文字越界、压住图例或互相覆盖。
 - 类别轴标签不要按“字符数”机械旋转；先按最终字体和画布的真实 bbox 判断是否碰撞，放得下就保持水平，只有确实重叠时才旋转。
+- colorbar 是辅助信息而不是第二主轴：outline、ticks 和字号应比主坐标轴略弱，尺寸/间距保持克制；不要让色条抢占数据区或成为视觉焦点。
 
 ### 多面板图必须统一
 

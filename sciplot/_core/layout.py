@@ -250,14 +250,28 @@ def add_colorbar(
     pad: float = 0.04,
     **kwargs: Any,
 ):
-    """创建 colorbar 并设置标签（统一外观参数）。
+    """创建 colorbar 并设置统一的辅助信息层级。
 
-    默认使用期刊排版常用参数（fraction=0.046, pad=0.04）；3D 图可传
-    ``shrink=0.5, aspect=10`` 覆盖。
+    默认保持稳定的版心占用（fraction=0.046, pad=0.04）；3D 图可传
+    ``shrink=0.5, aspect=10`` 覆盖。colorbar 应弱于主轴，因此 outline 与
+    tick 线宽默认略低于正文坐标轴，但不会改写用户显式传入的几何参数。
     """
+    if not np.isfinite(fraction) or fraction <= 0:
+        raise ValueError(f"fraction 必须是正的有限数，实际值: {fraction!r}")
+    if not np.isfinite(pad) or pad < 0:
+        raise ValueError(f"pad 必须是非负有限数，实际值: {pad!r}")
+
     cbar = fig.colorbar(mappable, ax=ax, fraction=fraction, pad=pad, **kwargs)
     if label:
         cbar.set_label(label)
+
+    axes_lw = float(plt.rcParams.get("axes.linewidth", 0.8))
+    tick_lw = float(plt.rcParams.get("ytick.major.width", axes_lw))
+    plt.setp(cbar.outline, linewidth=max(0.4, axes_lw * 0.8))
+    cbar.ax.tick_params(
+        width=max(0.4, tick_lw * 0.8),
+        labelsize=max(5.0, float(plt.rcParams.get("font.size", 9)) - 1.0),
+    )
     return cbar
 
 

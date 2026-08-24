@@ -16,6 +16,7 @@ from typing import Any, List, Optional, Tuple
 from sciplot._core.layout import add_colorbar
 from sciplot._core.result import PlotResult
 from sciplot._core.utils import get_cycle_colors, new_styled_figure
+from sciplot.utils.smart import auto_rotate_labels
 
 
 def _check_sklearn() -> Tuple[Any, Any]:
@@ -185,8 +186,9 @@ def plot_confusion_matrix(
         ticks = np.arange(len(labels))
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
-        ax.set_xticklabels(labels, rotation=45, ha="right")
+        ax.set_xticklabels(labels)
         ax.set_yticklabels(labels)
+        auto_rotate_labels(ax, axis="x")
 
     fmt = ".2f" if normalize else "d"
     thresh = cm.max() / 2.0

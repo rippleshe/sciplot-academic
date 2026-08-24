@@ -19,6 +19,7 @@ from sciplot._core.layout import add_colorbar
 from sciplot._core.style import VENUES
 from sciplot._core.utils import apply_resolved_style, new_styled_figure, _try_import_optional, _require_optional
 from sciplot._core.result import PlotResult
+from sciplot.utils.smart import auto_rotate_labels
 
 
 def _check_scipy():
@@ -239,7 +240,8 @@ def plot_clustermap(
 
     if col_labels is not None:
         ax_heatmap.set_xticks(np.arange(len(col_labels)))
-        ax_heatmap.set_xticklabels(col_labels, rotation=45, ha="right")
+        ax_heatmap.set_xticklabels(col_labels)
+        auto_rotate_labels(ax_heatmap, axis="x")
     if row_labels is not None:
         ax_heatmap.set_yticks(np.arange(len(row_labels)))
         ax_heatmap.set_yticklabels(row_labels)

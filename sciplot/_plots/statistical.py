@@ -23,6 +23,7 @@ from sciplot._core.utils import (
     _require_optional,
 )
 from sciplot._core.result import PlotResult
+from sciplot.utils.smart import smart_legend
 
 
 # _get_cycle_colors 已从 sciplot._core.utils 导入（其内部保证 prop_cycle 非空）
@@ -440,7 +441,7 @@ def plot_multi_density(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend()
+    smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -564,7 +565,7 @@ def plot_ridgeline(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend()
+    smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 

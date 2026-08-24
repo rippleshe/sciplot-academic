@@ -644,7 +644,8 @@ def plot_lollipop(
     ax.scatter(x, values_arr, s=marker_size**2, color=main_color, zorder=3, **kwargs)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(categories, rotation=45, ha="right")
+    ax.set_xticklabels(categories)
+    auto_rotate_labels(ax, axis="x")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:

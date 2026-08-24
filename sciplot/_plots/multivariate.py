@@ -17,6 +17,7 @@ from sciplot._core.layout import add_colorbar
 from sciplot._core.style import VENUES, get_current_venue
 from sciplot._core.utils import apply_resolved_style, cycle_color, get_cmap_safe, get_cycle_colors, new_styled_figure
 from sciplot._core.result import PlotResult
+from sciplot.utils.smart import auto_rotate_labels
 
 
 def _normalize_minmax(data: np.ndarray) -> np.ndarray:
@@ -234,7 +235,8 @@ def plot_parallel(
             ax.plot(x, data_norm[i, :], alpha=alpha, linewidth=linewidth, **kwargs)
 
     ax.set_xticks(x)
-    ax.set_xticklabels(columns, rotation=45, ha="right")
+    ax.set_xticklabels(columns)
+    auto_rotate_labels(ax, axis="x")
     ax.set_xlim(-0.5, n_features - 0.5)
 
     finite_values = data_norm[np.isfinite(data_norm)]

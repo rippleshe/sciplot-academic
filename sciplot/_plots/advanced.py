@@ -22,6 +22,7 @@ from sciplot._core.utils import (
     new_styled_figure,
 )
 from sciplot._core.result import PlotResult
+from sciplot.utils.smart import auto_rotate_labels
 
 
 def _resolve_norm(
@@ -249,7 +250,8 @@ def plot_heatmap(
     # 轴标签
     if col_labels is not None:
         ax.set_xticks(np.arange(len(col_labels)))
-        ax.set_xticklabels(col_labels, rotation=45, ha="right")
+        ax.set_xticklabels(col_labels)
+        auto_rotate_labels(ax, axis="x")
     if row_labels is not None:
         ax.set_yticks(np.arange(len(row_labels)))
         ax.set_yticklabels(row_labels)
@@ -388,7 +390,8 @@ def plot_bubble_heatmap(
     # 坐标轴刻度与标签
     if col_labels is not None:
         ax.set_xticks(np.arange(len(col_labels)))
-        ax.set_xticklabels(col_labels, rotation=45, ha="right")
+        ax.set_xticklabels(col_labels)
+        auto_rotate_labels(ax, axis="x")
     if row_labels is not None:
         ax.set_yticks(np.arange(len(row_labels)))
         ax.set_yticklabels(row_labels)

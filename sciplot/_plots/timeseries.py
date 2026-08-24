@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta
 from sciplot._core.layout import add_colorbar
 from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data, relative_fontsize
 from sciplot._core.result import PlotResult
+from sciplot.utils.smart import smart_legend
 
 
 def _coerce_to_date(value: Any, field_name: str = "dates") -> date:
@@ -375,7 +376,7 @@ def plot_multi_timeseries(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend()
+    smart_legend(ax)
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
