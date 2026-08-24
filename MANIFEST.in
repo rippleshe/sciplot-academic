@@ -11,3 +11,5 @@ exclude CONTRIBUTING.md
 exclude publish.py
 exclude run_tests.py
 exclude .pre-commit-config.yaml
+exclude .gitignore
+exclude uv.lock
