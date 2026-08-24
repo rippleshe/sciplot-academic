@@ -46,9 +46,9 @@ def _load_env_token() -> str:
     return ""
 
 
-def run(cmd: list[str]) -> None:
+def run(cmd: list[str], *, env: dict[str, str] | None = None) -> None:
     print(f"\n>>> {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=env)
 
 
 def main():
@@ -81,12 +81,13 @@ def main():
     run([sys.executable, "-m", "twine", "check", *dist_files])
     print("✓ twine check 通过")
 
-    # 准备上传指令
-    upload_cmd = [sys.executable, "-m", "twine", "upload"]
+    # 准备上传指令。Token 只通过子进程环境传递，避免出现在 argv / 日志中。
+    upload_cmd = [sys.executable, "-m", "twine", "upload", *dist_files]
+    upload_env: dict[str, str] | None = None
     if token:
-        upload_cmd.extend(["-u", "__token__", "-p", token])
-
-    upload_cmd.extend(dist_files)
+        upload_env = os.environ.copy()
+        upload_env["TWINE_USERNAME"] = "__token__"
+        upload_env["TWINE_PASSWORD"] = token
 
     # 确认发布
     if args.yes:
@@ -96,7 +97,7 @@ def main():
         do_upload = (answer == "y")
 
     if do_upload:
-        run(upload_cmd)
+        run(upload_cmd, env=upload_env)
         print("\n✅ 发布成功！")
         print("查看：https://pypi.org/project/sciplot-academic/")
     else:

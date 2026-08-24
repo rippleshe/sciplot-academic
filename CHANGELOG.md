@@ -9,6 +9,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- 修复 `publish.py` 将 PyPI token 放入命令行参数并可能随命令日志输出的问题；现在仅通过 `TWINE_USERNAME` / `TWINE_PASSWORD` 子进程环境变量传递凭据。
+
 ---
 
 ## [1.14.0] - 2026-08-24
