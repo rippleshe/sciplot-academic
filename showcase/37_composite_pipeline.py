@@ -17,8 +17,6 @@ rng = np.random.default_rng(13)
 sp.setup_style("thesis", "ocean", lang="zh")
 fig, axes = sp.figure_panels(template="pipeline", venue="thesis")
 axes = np.atleast_1d(axes)
-for ax in axes:
-    ax.tick_params(direction="in")
 
 # ── (a) 数据采集：原始信号分布（含噪声） ─────────────────────
 raw = rng.normal(0.5, 0.28, 800)

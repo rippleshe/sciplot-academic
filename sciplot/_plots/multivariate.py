@@ -483,22 +483,31 @@ def plot_ternary(
 
     # 三角形边框
     tri = np.array([[0.0, 0.0], [1.0, 0.0], [0.5, np.sqrt(3) / 2], [0.0, 0.0]])
-    ax.plot(tri[:, 0], tri[:, 1], color="#444444", linewidth=1.2, zorder=1)
+    ax.plot(tri[:, 0], tri[:, 1], color="#444444", linewidth=1.2, zorder=2)
 
     # 网格线（平行于三边）
     if grid:
+        h = np.sqrt(3) / 2
         for k in range(1, grid_levels + 1):
             frac = k / (grid_levels + 1)
-            # 平行于 BC（a 恒定）
-            x0, y0 = 0.5 * frac, frac * np.sqrt(3) / 2
-            x1, y1 = 1 - 0.5 * frac, frac * np.sqrt(3) / 2
-            ax.plot([x0, x1], [y0, y1], color="#CCCCCC", linewidth=0.5, zorder=1)
-            # 平行于 AC（b 恒定）
-            x2, y2 = 0.5 * frac, frac * np.sqrt(3) / 2
-            ax.plot([x2 - 0.5 * frac, x2], [y2, 0.0], color="#CCCCCC", linewidth=0.5, zorder=1)
-            # 平行于 AB（c 恒定）
-            x3, y3 = 1 - 0.5 * frac, frac * np.sqrt(3) / 2
-            ax.plot([x3, x3 - 0.5 * frac], [y3, 0.0], color="#CCCCCC", linewidth=0.5, zorder=1)
+            # c = frac：平行于 AB（水平线）。
+            ax.plot(
+                [0.5 * frac, 1.0 - 0.5 * frac],
+                [h * frac, h * frac],
+                color="#CCCCCC", linewidth=0.5, zorder=1,
+            )
+            # b = frac：端点分别落在 AB 与 BC 上，平行于 AC。
+            ax.plot(
+                [frac, 0.5 + 0.5 * frac],
+                [0.0, h * (1.0 - frac)],
+                color="#CCCCCC", linewidth=0.5, zorder=1,
+            )
+            # a = frac：端点分别落在 AC 与 AB 上，平行于 BC。
+            ax.plot(
+                [0.5 * (1.0 - frac), 1.0 - frac],
+                [h * (1.0 - frac), 0.0],
+                color="#CCCCCC", linewidth=0.5, zorder=1,
+            )
 
     # 散点
     if color_arr is not None:

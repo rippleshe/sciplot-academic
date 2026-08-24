@@ -63,9 +63,33 @@ class TestSetupStyle:
         assert rcParams["lines.linewidth"] == pytest.approx(1.35)
         assert rcParams["xtick.direction"] == "in"
         assert rcParams["ytick.direction"] == "in"
+        assert rcParams["xtick.top"] is True
+        assert rcParams["ytick.right"] is True
+        assert rcParams["xtick.minor.visible"] is True
+        assert rcParams["ytick.minor.visible"] is True
+        assert rcParams["axes.spines.left"] is True
+        assert rcParams["axes.spines.right"] is True
+        assert rcParams["axes.spines.top"] is True
+        assert rcParams["axes.spines.bottom"] is True
         assert rcParams["legend.frameon"] is False
         assert rcParams["savefig.bbox"] == "tight"
         assert rcParams["savefig.pad_inches"] == pytest.approx(0.04)
+        assert rcParams["savefig.dpi"] == pytest.approx(600)
+
+    def test_all_venues_share_publication_tick_contract(self, reset_style):
+        """所有 venue 都由 SciPlot 自己锁定四边向内刻度和 minor ticks，不依赖外部 style 偶然值。"""
+        for venue in sp.list_venues():
+            sp.setup_style(venue, lang="en")
+            assert rcParams["xtick.direction"] == "in"
+            assert rcParams["ytick.direction"] == "in"
+            assert rcParams["xtick.top"] is True
+            assert rcParams["ytick.right"] is True
+            assert rcParams["xtick.minor.visible"] is True
+            assert rcParams["ytick.minor.visible"] is True
+            assert rcParams["axes.spines.top"] is True
+            assert rcParams["axes.spines.right"] is True
+            assert rcParams["savefig.dpi"] == pytest.approx(600)
+            sp.reset_style()
 
     def test_presentation_baseline_is_visually_stronger(self, reset_style):
         """演示场景使用更强的线条/标记，不直接复用论文细线参数。"""

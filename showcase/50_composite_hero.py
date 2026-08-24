@@ -47,7 +47,7 @@ ax_ic50.set_xticks(range(1, 5))
 ax_ic50.set_xticklabels([f"{d:.1f}" for d in doses], fontsize=7)
 ax_ic50.set_xlabel("剂量 (mg/kg)", fontsize=8)
 ax_ic50.set_ylabel("IC50", fontsize=8)
-ax_ic50.tick_params(direction="in", labelsize=7)
+ax_ic50.tick_params(labelsize=7)
 
 ax_conc = result.ax_satellite(1)
 ax_conc.scatter(dose_pts, conc, s=36, color="#C0392B",
@@ -55,6 +55,6 @@ ax_conc.scatter(dose_pts, conc, s=36, color="#C0392B",
 ax_conc.plot(dose_pts, conc, color="#C0392B", linewidth=0.9, alpha=0.6)
 ax_conc.set_xlabel("剂量 (mg/kg)", fontsize=8)
 ax_conc.set_ylabel("稳态浓度", fontsize=8)
-ax_conc.tick_params(direction="in", labelsize=7)
+ax_conc.tick_params(labelsize=7)
 
 sp.save(result.fig, "showcase/50_composite_hero", formats=("png",), dpi=300)

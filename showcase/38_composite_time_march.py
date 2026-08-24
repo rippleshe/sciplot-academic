@@ -37,7 +37,6 @@ for ax, t, fld in zip(axes.flat, times, fields):
                    vmin=vmin, vmax=vmax, origin="lower")
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.tick_params(direction="in")
     # 时间戳（角落标注）
     ax.text(0.03, 0.93, f"t = {t:.0f} h", transform=ax.transAxes,
             fontsize=8, color="#7A2E10", fontweight="bold",

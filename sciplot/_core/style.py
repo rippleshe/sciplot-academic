@@ -172,6 +172,14 @@ def _publication_rc(venue: str) -> Dict[str, Any]:
         "patch.linewidth": 0.9 if presentation else 0.65,
         "xtick.direction": "in",
         "ytick.direction": "in",
+        "xtick.top": True,
+        "ytick.right": True,
+        "xtick.minor.visible": True,
+        "ytick.minor.visible": True,
+        "axes.spines.left": True,
+        "axes.spines.right": True,
+        "axes.spines.top": True,
+        "axes.spines.bottom": True,
         "xtick.major.size": 4.5 if presentation else 3.2,
         "ytick.major.size": 4.5 if presentation else 3.2,
         "xtick.major.width": 1.0 if presentation else 0.72,
@@ -187,6 +195,8 @@ def _publication_rc(venue: str) -> Dict[str, Any]:
         "legend.borderaxespad": 0.35,
         "savefig.bbox": "tight",
         "savefig.pad_inches": 0.04,
+        # 直接调用 fig.savefig() 时也保持投稿级位图下限；sp.save() 仍使用配置默认 1200 dpi。
+        "savefig.dpi": 600,
     }
 
 

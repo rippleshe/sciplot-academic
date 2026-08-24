@@ -48,7 +48,7 @@ for ax, series, label, color in zip(
     ax.set_xlabel("周", fontsize=8)
     ax.set_ylabel("指标值", fontsize=8)
     ax.legend(frameon=False, fontsize=7, loc="lower right")
-    ax.tick_params(direction="in", labelsize=7)
+    ax.tick_params(labelsize=7)
 
 # ── 中行：森林图（效应量） ────────────────────────────────────
 for ax in axes[1]:
@@ -60,7 +60,7 @@ for ax in axes[1]:
     ax.set_yticklabels(subgroups, fontsize=7)
     ax.invert_yaxis()
     ax.set_xlabel("效应量 (95% CI)", fontsize=8)
-    ax.tick_params(direction="in", labelsize=7)
+    ax.tick_params(labelsize=7)
 
 # ── 下行：汇总柱 ──────────────────────────────────────────────
 x_cat = np.arange(6)
@@ -76,7 +76,7 @@ for ax, vals, label, color in zip(
     ax.set_xticks(x_cat)
     ax.set_xticklabels([f"G{i+1}" for i in range(6)], fontsize=7)
     ax.set_ylabel(label, fontsize=8)
-    ax.tick_params(direction="in", labelsize=7)
+    ax.tick_params(labelsize=7)
 
 # ── 保存 ──────────────────────────────────────────────────────
 sp.save(fig, "showcase/48_composite_triptych", formats=("png",), dpi=300)

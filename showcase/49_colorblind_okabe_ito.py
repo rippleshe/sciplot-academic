@@ -33,7 +33,7 @@ for s, c, lb in zip(series, colors, labels):
     ax.plot(x, s, color=c, linewidth=1.6, label=lb)
 ax.set_title("Okabe-Ito 调色板（正常视角）", fontsize=10)
 ax.legend(frameon=False, fontsize=8)
-ax.tick_params(direction="in", labelsize=8)
+ax.tick_params(labelsize=8)
 
 # ── 下半：绿色弱（deuteranopia）模拟视角 ──────────────────────
 ax2 = axes[1]
@@ -42,7 +42,7 @@ for s, c, lb in zip(series, sim, labels):
     ax2.plot(x, s, color=c, linewidth=1.6, label=lb)
 ax2.set_title("绿色弱 (Deuteranopia) 模拟视角", fontsize=10)
 ax2.legend(frameon=False, fontsize=8)
-ax2.tick_params(direction="in", labelsize=8)
+ax2.tick_params(labelsize=8)
 
 # 论文式双面板必须有明确阅读顺序；使用库内统一面板标签而不是手写文本。
 sp.add_panel_labels(axes, x=-0.08, y=1.08)

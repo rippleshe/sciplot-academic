@@ -76,6 +76,30 @@ def test_ternary_grid_off(ternary_data, cleanup_figures):
     assert result.fig is not None
 
 
+def test_ternary_grid_segments_stay_inside_simplex(ternary_data, cleanup_figures):
+    """三族辅助线的全部端点都必须落在三角形内部/边界，不能穿出 simplex。"""
+    a, b, c = ternary_data
+    levels = 4
+    result = sp.plot_ternary(a, b, c, grid=True, grid_levels=levels)
+    # 第一条 Line2D 是三角形边框，后续每级有 c/b/a 三条网格线。
+    grid_lines = result.ax.lines[1:]
+    assert len(grid_lines) == levels * 3
+
+    h = np.sqrt(3) / 2
+    for line in grid_lines:
+        xs = np.asarray(line.get_xdata(), dtype=float)
+        ys = np.asarray(line.get_ydata(), dtype=float)
+        c_coord = ys / h
+        b_coord = xs - 0.5 * c_coord
+        a_coord = 1.0 - b_coord - c_coord
+        assert np.all(a_coord >= -1e-12)
+        assert np.all(b_coord >= -1e-12)
+        assert np.all(c_coord >= -1e-12)
+        assert np.all(a_coord <= 1.0 + 1e-12)
+        assert np.all(b_coord <= 1.0 + 1e-12)
+        assert np.all(c_coord <= 1.0 + 1e-12)
+
+
 def test_ternary_length_mismatch_raises(cleanup_figures):
     with pytest.raises(ValueError, match="长度必须一致"):
         sp.plot_ternary([1.0, 2.0], [1.0], [1.0])

@@ -35,7 +35,6 @@ ax.plot(time, k_340, label="340 K", color=colors[2])
 ax.set_xlabel("反应时间 (min)")
 ax.set_ylabel("反应速率 (mol·L⁻¹·s⁻¹)")
 ax.legend()
-ax.tick_params(direction="in")
 
 # ═══════════════════════════════════════════════════════════════
 # (b) 柱状图：不同催化剂的转化率
@@ -51,7 +50,6 @@ bars = ax.bar(catalysts, conversion, yerr=errors, capsize=4,
 ax.set_xlabel("催化剂类型")
 ax.set_ylabel("转化率 (%)")
 ax.set_ylim(0, 105)
-ax.tick_params(direction="in")
 
 # ═══════════════════════════════════════════════════════════════
 # (c) 散点图：粒径 vs 催化活性
@@ -71,7 +69,6 @@ ax.plot(x_fit, p(x_fit), "--", color="#666666", linewidth=1, label="趋势拟合
 ax.set_xlabel("纳米粒径 (nm)")
 ax.set_ylabel("催化活性 (μmol·g⁻¹·s⁻¹)")
 ax.legend()
-ax.tick_params(direction="in")
 
 # ═══════════════════════════════════════════════════════════════
 # (d) 热力图：实验条件参数扫描

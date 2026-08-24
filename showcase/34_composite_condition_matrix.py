@@ -55,7 +55,6 @@ for ax, (i, j) in zip(axes.flat, [(r, c) for r in range(2) for c in range(3)]):
                linestyle="--", linewidth=1.0)
     ax.set_ylim(0.0, 1.05)
     ax.set_xticks([])
-    ax.tick_params(direction="in")
     ax.set_title(dose, fontsize=9)
 
 # 行标签（左侧）与 y 轴标签

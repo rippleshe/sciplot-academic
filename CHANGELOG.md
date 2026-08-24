@@ -36,10 +36,13 @@
 - 修复 `plot_chord()` 的两处数据编码错误：节点弧长原先先占满 `2π` 再额外加入 `gap`，会使圆周超出一圈；
   弦端点也未按累计流量分槽，多条流会挤在固定位置。现在基于 `min_flow` 过滤后的可见流严格扣除全部 gap，
   并在源端/目标端按真实流量守恒切分弧段；`show_values=True` 同步显示过滤后的可见总量并使用稳定双行标签。
+- 修复 `plot_ternary()` 两族斜向网格端点公式错误导致辅助线穿出 simplex 边界的问题；
+  现在三族网格分别按 `a/b/c = 常数` 的重心坐标精确计算端点，所有线段严格落在等边三角形内部或边界上。
 
 ### Changed
 
-- 统一出版级基础 rcParams：稳定线宽、刻度、图例间距与保存边距，演示场景保留更强视觉权重。
+- 进一步把出版级视觉下限固化为 SciPlot 自身契约：所有 venue 显式启用四边向内主/次刻度、完整四边轴脊、无框图例与稳定线宽/保存边距，不再依赖 SciencePlots 的间接默认；直接 `fig.savefig()` 的位图兜底提升至 600 DPI，`sp.save()` 仍保持配置默认 1200 DPI。
+- 清理 showcase 中纯粹用于“补基础风格”的 `tick_params(direction="in")`，示例只保留图本身需要的特殊设置，用真实输出验证默认层即可维持出版级完成度。
 - 重做并目视检查多个 showcase，降低雷达图填充遮挡、网络图边/标签密度，优化环形排名配色，
   并从实现层修复 Alluvial 流带视觉质量。
 - Claude Skill 重构为精简的科研绘图工作流（Skill v2.0.0）：主文件聚焦选图、视觉纪律、
@@ -50,8 +53,8 @@
 
 - 新增辅助 Axes 审计、UpSet 元数据、Alluvial 闭合路径、出版样式基线、多类图表 palette 隔离，
   Treemap 边框/字号、Sunburst 层级拓扑/环方向、Packed Bubble / Volcano / Network3D 像素级文字布局，
-  以及 Chord 圆周闭合、流槽守恒与过滤后总量回归测试。
-- 最新全量验证：`1573 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
+  Chord 圆周闭合/流槽守恒/过滤后总量、Ternary simplex 网格几何，以及所有 venue 四边 inward/minor tick 与 600 DPI 原生保存兜底契约测试。
+- 最新全量验证：`1575 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图；另以无 `setup_style()` / 无手工 tick / 无显式 DPI 的零配置调用实测原生 `fig.savefig()` 输出 600 DPI 完成图。
 
 ---
 

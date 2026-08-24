@@ -5,7 +5,7 @@ description: >-
   统计图、多面板图、期刊投稿图，或需要优化现有 matplotlib 科研图时触发；也适用于
   “这些数据怎么可视化”“把图做得像顶刊”“提升论文图质量”等未指定图型的任务。
   优先使用项目内 sciplot API 完成静态科研可视化；明确要求交互式网页图、地图或动画时不触发。
-version: 2.0.3
+version: 2.0.5
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
@@ -74,6 +74,7 @@ sp.setup_style("nature", palette="ocean", lang="en")
 - 英文期刊：`nature` 或 `ieee`，优先 PDF/SVG。
 - 中文论文/学位论文：`thesis`, `lang="zh"`。
 - PPT/答辩：`presentation`，PNG 300 dpi 足够。
+- 基础出版风格由 SciPlot 默认层兜底：四边向内主/次刻度、完整轴脊、无框图例、稳定线宽和保存边距；不要在业务代码里重复写这些“补妆”设置。
 - 不要因为用户没指定，就默认深色、渐变背景、玻璃拟态、阴影卡片。
 
 ### Step B — 画主图
@@ -164,6 +165,7 @@ fig, axes = sp.figure_panels(2, 2, venue="nature", panel_labels=True)
 - **雷达**：只用于少量同尺度维度；多组填充 alpha 要低，轮廓承担主要比较。
 - **Sankey/Alluvial/Chord**：流带宽度必须是真实量并在节点两端守恒；颜色应跟随源/类别语义，流多时先过滤视觉噪音。
 - **Treemap/Sunburst**：面积/角度承担数值，颜色用于层级或分组，不再额外编码无关变量。
+- **Ternary**：投影、顶点和三族辅助网格必须服从同一套 simplex/重心坐标几何；任何辅助线都不能越出三角形边界。
 - **网络图**：先减少边噪音和标签密度，再谈配色；3D 标签要在最终视角投影后检查屏幕空间重叠，社区结构应该一眼可辨。
 - **3D**：只有数据本身存在第三空间维度或曲面结构时使用，普通分类比较不要 3D。
 

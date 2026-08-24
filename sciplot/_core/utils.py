@@ -281,9 +281,8 @@ def new_styled_figure(
 ) -> Tuple[Any, Any]:
     """套用样式并创建图形（apply_resolved_style + new_figure 的固定组合）。
 
-    与 create_sciplot_figure 的区别：不额外修改 tick_params，严格等价于
-    ``effective_venue = apply_resolved_style(...); fig, ax = new_figure(...)``
-    两行，可安全替换各绘图函数中的手写配对。
+    严格等价于 ``effective_venue = apply_resolved_style(...); fig, ax = new_figure(...)``
+    两行。基础刻度/轴脊规范由 SciPlot 的全局出版级 rcParams 统一保证。
     """
     _, fig, ax = _apply_style_and_figure(venue, palette, lang)
     return fig, ax
@@ -297,7 +296,7 @@ def create_sciplot_figure(
     """
     创建 SciPlot 样式的图表（内部辅助函数）
 
-    处理样式应用、图表创建、刻度设置等公共逻辑，减少各绘图函数的样板代码。
+    处理样式应用与图表创建等公共逻辑；刻度/轴脊等出版级基础规范由样式层统一保证。
 
     参数:
         venue: 期刊样式，如 "nature", "ieee", "thesis" 等
@@ -313,7 +312,6 @@ def create_sciplot_figure(
         >>> result = create_plot_result(fig, ax, venue="nature", palette="pastel")
     """
     effective_venue, fig, ax = _apply_style_and_figure(venue, palette, lang)
-    ax.tick_params(direction="in")
     return effective_venue, fig, ax
 
 

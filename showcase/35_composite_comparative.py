@@ -31,7 +31,6 @@ axes[0].set_ylim(0.6, 1.0)
 axes[0].set_xticks(x)
 axes[0].set_xticklabels(datasets, fontsize=7)
 axes[0].set_ylabel("准确率", fontsize=9)
-axes[0].tick_params(direction="in")
 axes[0].set_title("基线模型", fontsize=10, color="#4A5560")
 
 # 右：改进方法（饱和主色柱 + 增益标注）
@@ -39,7 +38,6 @@ axes[1].bar(x, acc_prop, width=0.62, color=COLOR_PROP, edgecolor="white", linewi
 axes[1].set_ylim(0.6, 1.0)
 axes[1].set_xticks(x)
 axes[1].set_xticklabels(datasets, fontsize=7)
-axes[1].tick_params(direction="in")
 axes[1].set_title("本文方法", fontsize=10, color=COLOR_PROP_DARK)
 for xi, (b, p) in enumerate(zip(acc_base, acc_prop)):
     axes[1].text(xi, p + 0.012, f"+{(p - b) * 100:.1f}%",
