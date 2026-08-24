@@ -486,8 +486,8 @@ def plot_network3d(
             [xyz[u][0], xyz[v][0]],
             [xyz[u][1], xyz[v][1]],
             [xyz[u][2], xyz[v][2]],
-            color="#B8B8B8", alpha=min(edge_alpha, 0.3),
-            linewidth=min(edge_width, 0.9), zorder=1,
+            color="#B8B8B8", alpha=min(edge_alpha, 0.22),
+            linewidth=min(edge_width, 0.7), zorder=1,
         )
 
     xs = [xyz[n][0] for n in G.nodes()]
@@ -517,6 +517,12 @@ def plot_network3d(
     scatter_kwargs.update(kwargs)
     ax.scatter(xs, ys, zs, **scatter_kwargs)
 
+    # 视角必须在屏幕空间标签布局之前固定；3D -> 2D 投影取决于 elev/azim。
+    if view is not None:
+        if len(view) != 2:
+            raise ValueError(f"view 必须是 (elev, azim) 二元组，实际值: {view!r}")
+        ax.view_init(elev=float(view[0]), azim=float(view[1]))
+
     # 标签（top-N 或全部）
     label_nodes: Optional[set] = None
     if isinstance(labels, int) and not isinstance(labels, bool):
@@ -526,23 +532,7 @@ def plot_network3d(
     elif labels is True:
         label_nodes = None
 
-    if label_nodes is not None or labels is True:
-        font_family = _get_label_font_family()
-        fontsize = plt.rcParams.get("font.size", 9) - 1
-        for n in G.nodes():
-            if label_nodes is not None and n not in label_nodes:
-                continue
-            ax.text(
-                xyz[n][0], xyz[n][1], xyz[n][2], str(n),
-                fontsize=fontsize, fontfamily=font_family,
-                ha="center", va="center", zorder=5,
-                bbox=dict(
-                    boxstyle="round,pad=0.12", facecolor="white",
-                    edgecolor="none", alpha=0.6,
-                ),
-            )
-
-    # 连续着色 colorbar / 分类图例
+    # 连续着色 colorbar / 分类图例先创建；它们是随后标签布局需要避开的真实障碍物。
     if continuous_info is not None and show_colorbar:
         cmap, norm = continuous_info
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -558,13 +548,99 @@ def plot_network3d(
             Patch(facecolor=c, label=str(v), alpha=node_alpha)
             for v, c in categorical_colors.items()
         ]
-        ax.legend(handles=handles, loc="upper right", frameon=False)
+        legend = ax.legend(handles=handles, loc="upper right", frameon=False)
+    else:
+        legend = None
+
+    # 标签不能直接压在 3D 节点中心。先用最终视角把节点投影到屏幕平面，
+    # 再用 2D Annotation + renderer bbox 逐个避让。top-N 的数量语义保持不变，
+    # 但静态科研图中标签不再因透视投影挤成一团。
+    if label_nodes is not None or labels is True:
+        from mpl_toolkits.mplot3d import proj3d
+
+        font_family = _get_label_font_family()
+        fontsize = max(6.0, float(plt.rcParams.get("font.size", 9)) - 2.0)
+        candidates = [
+            n for n in G.nodes()
+            if label_nodes is None or n in label_nodes
+        ]
+        candidates.sort(key=lambda n: (G.degree(n), str(n)), reverse=True)
+
+        fig.canvas.draw()
+        get_renderer = getattr(fig.canvas, "get_renderer", None)
+        if get_renderer is None:
+            raise RuntimeError("当前 Matplotlib canvas 不支持 renderer，无法完成 3D 标签布局")
+        renderer = get_renderer()
+        axes_bbox = ax.get_window_extent(renderer=renderer)
+        legend_bbox = (
+            legend.get_window_extent(renderer=renderer).expanded(1.03, 1.06)
+            if legend is not None else None
+        )
+        placed_bboxes: List[Any] = []
+        offsets = (
+            (6, 7), (7, -7), (-6, 7), (-7, -7),
+            (12, 0), (-12, 0), (0, 13), (0, -13),
+            (16, 9), (16, -9), (-16, 9), (-16, -9),
+        )
+
+        for n in candidates:
+            x2, y2, _ = proj3d.proj_transform(*xyz[n], ax.get_proj())
+            accepted = None
+            fallback = None
+            fallback_overlap = float("inf")
+            for dx, dy in offsets:
+                ann = ax.annotate(
+                    str(n), xy=(x2, y2), xycoords="data",
+                    xytext=(dx, dy), textcoords="offset points",
+                    fontsize=fontsize, fontfamily=font_family,
+                    ha="center", va="center", zorder=6,
+                    annotation_clip=True,
+                    bbox=dict(
+                        boxstyle="round,pad=0.10", facecolor="white",
+                        edgecolor="none", alpha=0.72,
+                    ),
+                )
+                box = ann.get_window_extent(renderer=renderer).expanded(1.04, 1.08)
+                inside = (
+                    box.x0 >= axes_bbox.x0 + 2
+                    and box.x1 <= axes_bbox.x1 - 2
+                    and box.y0 >= axes_bbox.y0 + 2
+                    and box.y1 <= axes_bbox.y1 - 2
+                )
+                collisions = [prev for prev in placed_bboxes if box.overlaps(prev)]
+                hits_legend = legend_bbox is not None and box.overlaps(legend_bbox)
+                if inside and not collisions and not hits_legend:
+                    accepted = (ann, box)
+                    break
+
+                # 保留重叠面积最小的候选作兜底，保证 labels=N 仍实际显示 N 个标签。
+                overlap = 0.0
+                for prev in collisions:
+                    overlap += max(0.0, min(box.x1, prev.x1) - max(box.x0, prev.x0)) * max(
+                        0.0, min(box.y1, prev.y1) - max(box.y0, prev.y0)
+                    )
+                if hits_legend and legend_bbox is not None:
+                    overlap += max(0.0, min(box.x1, legend_bbox.x1) - max(box.x0, legend_bbox.x0)) * max(
+                        0.0, min(box.y1, legend_bbox.y1) - max(box.y0, legend_bbox.y0)
+                    )
+                if not inside:
+                    overlap += 1e6
+                if overlap < fallback_overlap:
+                    if fallback is not None:
+                        fallback[0].remove()
+                    fallback = (ann, box)
+                    fallback_overlap = overlap
+                else:
+                    ann.remove()
+
+            if accepted is not None:
+                if fallback is not None and fallback[0] is not accepted[0]:
+                    fallback[0].remove()
+                placed_bboxes.append(accepted[1])
+            elif fallback is not None:
+                placed_bboxes.append(fallback[1])
 
     ax.set_axis_off()
-    if view is not None:
-        if len(view) != 2:
-            raise ValueError(f"view 必须是 (elev, azim) 二元组，实际值: {view!r}")
-        ax.view_init(elev=float(view[0]), azim=float(view[1]))
     if title:
         ax.set_title(title)
 

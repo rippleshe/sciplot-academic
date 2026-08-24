@@ -30,6 +30,9 @@
   并补齐 `min_font` / `max_font` 校验与 Circle kwargs 覆盖语义。
 - 修复 `plot_volcano()` 顶部自动标注只按数据坐标“错开”、却仍会与图例/相邻文字/轴框重叠的问题；
   现在按真实渲染后的 bounding box 逐个试放，并避免 `kwargs` 中 `c` / `alpha` 与火山图语义参数冲突。
+- 修复 `plot_network3d()` 将标签直接贴在 3D 节点中心导致透视投影后集中重叠的问题；
+  现在先固定最终视角，再将 top-N 节点投影到屏幕平面并按 renderer bbox 避让，同时降低边线默认视觉权重，
+  使节点、标签和社区层级在静态科研图中更清楚。
 
 ### Changed
 
@@ -43,8 +46,8 @@
 ### Tests
 
 - 新增辅助 Axes 审计、UpSet 元数据、Alluvial 闭合路径、出版样式基线、多类图表 palette 隔离，
-  Treemap 边框/字号、Sunburst 层级拓扑/环方向，以及 Packed Bubble / Volcano 像素级文字布局回归测试。
-- 最新全量验证：`1567 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
+  Treemap 边框/字号、Sunburst 层级拓扑/环方向，以及 Packed Bubble / Volcano / Network3D 像素级文字布局回归测试。
+- 最新全量验证：`1569 passed`；Ruff 全绿；Mypy 对 33 个源码文件无错误；47 个 showcase 脚本全部重跑并目视检查 50 张输出图。
 
 ---
 

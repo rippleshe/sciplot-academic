@@ -81,6 +81,41 @@ def test_network3d_top_n_labels(karate, cleanup_figures):
     assert len(texts) == 3
 
 
+def test_network3d_top_labels_avoid_screen_overlap(cleanup_figures):
+    """top-N 标签应按最终 3D 视角投影到屏幕后避让，而不是堆在节点中心。"""
+    graph = nx.barabasi_albert_graph(40, 2, seed=42)
+    nx.set_node_attributes(
+        graph, {n: f"g{n % 4}" for n in graph.nodes()}, "grp"
+    )
+    result = sp.plot_network3d(
+        graph,
+        node_color_by="grp",
+        labels=10,
+        view=(22, 50),
+        show_legend=True,
+    )
+    result.fig.canvas.draw()
+    get_renderer = getattr(result.fig.canvas, "get_renderer")
+    renderer = get_renderer()
+    texts = [t for t in result.ax.texts if t.get_text()]
+    assert len(texts) == 10
+
+    boxes = [t.get_window_extent(renderer=renderer).expanded(1.01, 1.03) for t in texts]
+    for i, box_a in enumerate(boxes):
+        for box_b in boxes[i + 1:]:
+            assert not box_a.overlaps(box_b), "Network3D top-N 标签发生屏幕空间重叠"
+
+    legend = result.ax.get_legend()
+    assert legend is not None
+    legend_box = legend.get_window_extent(renderer=renderer)
+    assert all(not box.overlaps(legend_box) for box in boxes)
+
+
+def test_network3d_view_validation(karate, cleanup_figures):
+    with pytest.raises(ValueError, match="view"):
+        sp.plot_network3d(karate, view=(20,))
+
+
 def test_network3d_no_labels(karate, cleanup_figures):
     result = sp.plot_network3d(karate, labels=False)
     assert len(result.ax.texts) == 0

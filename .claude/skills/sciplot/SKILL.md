@@ -5,7 +5,7 @@ description: >-
   统计图、多面板图、期刊投稿图，或需要优化现有 matplotlib 科研图时触发；也适用于
   “这些数据怎么可视化”“把图做得像顶刊”“提升论文图质量”等未指定图型的任务。
   优先使用项目内 sciplot API 完成静态科研可视化；明确要求交互式网页图、地图或动画时不触发。
-version: 2.0.1
+version: 2.0.2
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
@@ -164,7 +164,7 @@ fig, axes = sp.figure_panels(2, 2, venue="nature", panel_labels=True)
 - **雷达**：只用于少量同尺度维度；多组填充 alpha 要低，轮廓承担主要比较。
 - **Sankey/Alluvial**：流带宽度是真实量；颜色应跟随源/类别语义，流多时先过滤视觉噪音。
 - **Treemap/Sunburst**：面积/角度承担数值，颜色用于层级或分组，不再额外编码无关变量。
-- **网络图**：先减少边噪音和标签密度，再谈配色；社区结构应该一眼可辨。
+- **网络图**：先减少边噪音和标签密度，再谈配色；3D 标签要在最终视角投影后检查屏幕空间重叠，社区结构应该一眼可辨。
 - **3D**：只有数据本身存在第三空间维度或曲面结构时使用，普通分类比较不要 3D。
 
 ## 6. Showcase 与包开发时的额外要求
