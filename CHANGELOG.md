@@ -11,6 +11,19 @@
 
 ---
 
+## [1.15.1] - 2026-11-15
+
+### Fixed
+
+- 修复 `profile_data()` 处理列式纯数值 `dict` 时过早归入 `grouped_samples` 的优先级缺陷：现在优先识别时序键（`time_ordered`）、双变量关系（`bivariate`，含坐标命名/相关性/大样本反过饱和检测）与多特征结构（`multivariate`），避免与独立多组对照样本混淆。
+- 修复 `recommend_charts()` 在时序模式下将时间索引列计入曲线数量的问题。
+
+### Changed
+
+- 同步升级 `.github/copilot-instructions.md`，接入 `recommend_charts()` 先画像后选图、高对比 `vivid` 配色及 `audit_figure(fig, check_visual_guards=True)` 规范。
+
+---
+
 ## [1.15.0] - 2026-11-15
 
 ### Added

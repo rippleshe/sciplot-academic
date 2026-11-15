@@ -436,18 +436,42 @@ def profile_data(
         warnings_list.append(f"强偏态变量 ({', '.join(heavy_skew)})，勿只用均值±柱状图掩盖长尾")
 
     # 判定全局数据形态
+    max_abs_r = corr_summary.get("max_abs_r", 0.0)
+    bivar_names = {"x", "y", "dose", "response", "input", "output", "pred", "actual", "obs", "sim"}
+    feat_prefixes = ("feat", "feature", "dim", "pc", "var", "factor", "metric")
+    is_tabular_dict = False
+    if input_kind == "dict" and all(c.kind.startswith("numeric") for c in col_profiles) and not datetime_cols:
+        col_l = [c.name.lower() for c in col_profiles]
+        if len(numeric_cols) == 2 and (
+            all(n in bivar_names or n.startswith(("x", "y")) for n in col_l)
+            or max_abs_r >= 0.35
+            or n_rows >= 300
+        ):
+            is_tabular_dict = True
+        elif len(numeric_cols) >= 4 and (
+            any(n.startswith(feat_prefixes) for n in col_l) or max_abs_r >= 0.35
+        ):
+            is_tabular_dict = True
+
     if "symmetric_matrix" in special_hints or "correlation_matrix" in special_hints:
         shape_pattern = "square_corr"
     elif any(h in special_hints for h in ("omics_volcano", "effect_with_ci", "flow_links", "binary_probabilities", "paired_before_after")):
         shape_pattern = "domain_specific"
-    elif input_kind == "groups" or (input_kind == "dict" and "grouped_variable_lengths" in special_hints) or (
-        input_kind == "dict" and all(c.kind.startswith("numeric") for c in col_profiles) and n_rows >= 8 and n_cols <= 12 and not datetime_cols
-    ):
+    elif input_kind == "groups" or (input_kind == "dict" and "grouped_variable_lengths" in special_hints):
         shape_pattern = "grouped_samples"
-    elif input_kind == "series":
-        shape_pattern = "univariate"
     elif "time_ordered" in special_hints and numeric_cols:
         shape_pattern = "timeseries"
+    elif input_kind == "series":
+        shape_pattern = "univariate"
+    elif (
+        input_kind == "dict"
+        and not is_tabular_dict
+        and all(c.kind.startswith("numeric") for c in col_profiles)
+        and n_rows >= 8
+        and n_cols <= 12
+        and not datetime_cols
+    ):
+        shape_pattern = "grouped_samples"
     elif len(categorical_cols) == 1 and len(numeric_cols) == 1 and n_rows <= 30 and not group_col:
         # 检查类别是否重复（原始多样本 vs 聚合标量）
         cat_prof = next(c for c in col_profiles if c.name == categorical_cols[0])
@@ -909,7 +933,11 @@ def recommend_charts(
 
     # ── 分支 6：时间序列 / 有序过程 ──
     if prof.shape_pattern == "timeseries" or goal == "trend":
-        n_series = len(num_profiles)
+        time_like_keys = {"time", "date", "year", "month", "epoch", "step", "week", "day"}
+        if time_col:
+            time_like_keys.add(time_col.lower())
+        y_series = [c for c in num_profiles if c.name.lower() not in time_like_keys]
+        n_series = len(y_series) if y_series else len(num_profiles)
         if n_series >= 5:
             recs.append(ChartRecommendation(
                 chart_type="分面小图 / 河流面积图 / 排名凹凸图",

@@ -113,3 +113,36 @@ class TestDataProfilingAndRecommendation:
 
         with pytest.raises(ValueError, match="goal"):
             sp.recommend_charts(skewed, goal="unknown_goal")
+
+    def test_dict_input_disambiguates_bivariate_timeseries_multivariate_vs_grouped(self):
+        rng = np.random.default_rng(11)
+        x = rng.normal(size=1000)
+        bivar_dict = {"x": x, "y": 0.7 * x + rng.normal(0, 0.5, 1000)}
+        rep_bivar = sp.recommend_charts(bivar_dict)
+        assert rep_bivar.profile.shape_pattern == "bivariate"
+        assert rep_bivar.recommendations[0].sciplot_func == "plot_hexbin"
+
+        t = np.arange(30)
+        ts_dict = {
+            "time": t,
+            "Sensor_A": np.sin(t * 0.2),
+            "Sensor_B": np.cos(t * 0.2),
+            "Sensor_C": 0.1 * t,
+        }
+        rep_ts = sp.recommend_charts(ts_dict)
+        assert rep_ts.profile.shape_pattern == "timeseries"
+        assert rep_ts.recommendations[0].sciplot_func == "plot_multi_timeseries"
+
+        multi_dict = {f"Feature_{i}": rng.normal(size=40) for i in range(4)}
+        rep_multi = sp.recommend_charts(multi_dict)
+        assert rep_multi.profile.shape_pattern == "multivariate"
+        assert rep_multi.recommendations[0].sciplot_func == "plot_scatter_matrix"
+
+        grouped_dict = {
+            "Control": rng.normal(5.0, 0.8, 30),
+            "Treatment_A": rng.normal(6.5, 0.9, 30),
+            "Treatment_B": rng.normal(7.2, 0.7, 30),
+        }
+        rep_grp = sp.recommend_charts(grouped_dict)
+        assert rep_grp.profile.shape_pattern == "grouped_samples"
+        assert rep_grp.recommendations[0].sciplot_func == "plot_raincloud"

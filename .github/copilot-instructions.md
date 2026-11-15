@@ -132,31 +132,37 @@ import numpy as np
 import pandas as pd
 ```
 
-### 默认配置
+### 默认配置与选型原则（v1.15.0+）
+在直接选图前，先通过 `sp.recommend_charts(data)` 完成数据形态画像，避免千篇一律使用普通柱状图、单折线或裸箱线图：
 ```python
-# 中文论文
-sp.setup_style("thesis", "pastel", lang="zh")
+report = sp.recommend_charts(data, goal="auto", top_k=4)
+print(report.summary())
+
+# 中文论文（推荐 vivid 高对比色板，如 "coral-teal" / "blue-sky" / "olive-apricot"）
+sp.setup_style("thesis", "coral-teal", lang="zh")
 
 # 英文期刊
-sp.setup_style("nature", "pastel", lang="en")
+sp.setup_style("nature", "olive-apricot", lang="en")
 ```
 
-### 图表类型选择
+### 高信息密度图表选型（禁止单调默认）
 
 | 场景 | 推荐函数 |
 |------|----------|
-| 单组数据趋势 | `sp.plot()` |
-| 多组数据对比 | `sp.plot_multi()` |
-| 类别对比 | `sp.plot_grouped_bar()` |
-| 分布展示 | `sp.plot_box()` / `sp.plot_violin()` |
-| 相关性 | `sp.plot_heatmap()` |
-| 时间序列 | `sp.plot_timeseries()` |
-| 多维度 | `sp.plot_parallel()` / `sp.plot_radar()` |
-| 误差展示 | `sp.plot_errorbar()` / `sp.plot_confidence()` |
-| 组合图 | `sp.plot_combo()` |
+| 多组原始分布对比 | `sp.plot_raincloud()` / `sp.plot_violin(..., show_box=True, show_points=True)` / `sp.plot_ridgeline()` |
+| 前后配对干预变化 | `sp.plot_paired()` / `sp.plot_dumbbell()` |
+| 根因排序 / 归因排名 | `sp.plot_pareto()` / `sp.plot_lollipop(sort=True)` / `sp.plot_diverging_bar()` |
+| 双变量相关性 | `sp.plot_marginal()` / `sp.plot_scatter(..., fit_line=True, show_stats=True)` / `sp.plot_hexbin()` (大样本) |
+| 相关矩阵 | `sp.plot_heatmap(..., triangle="lower", cmap="RdBu_r", vmin=-1, vmax=1, p_values=...)` |
+| 时间序列 / 预测不确定性 | `sp.plot_multi_timeseries()` / `sp.plot_fan()` / `sp.paper_subplots()` (多系列) |
+| 模型分类与概率评估 | `sp.plot_roc()` / `sp.plot_calibration()` / `sp.plot_confusion_matrix()` |
+| 多维结构探索 | `sp.plot_scatter_matrix(upper="corr", diag="kde")` / `sp.plot_pca(show_ellipse=True)` / `sp.plot_parallel()` |
+| 组合主次叙事 | `sp.hero_layout()` / `sp.figure_panels()` |
 
-### 输出规范
+### 输出与质量守卫规范
 ```python
+sp.audit_figure(fig, check_visual_guards=True)
+
 # Word 论文
 sp.save(fig, "figure_name", formats=("png",), dpi=1200)
 
@@ -232,39 +238,40 @@ sp.save(fig, "grouped_bar", formats=("png",), dpi=1200)
 print("✓ 分组柱状图已保存")
 ```
 
-### 箱线图模板
+### 高信息密度 distribution / multi-panel 示例（取代普通箱线图）
 ```python
 """
-箱线图比较分布
+云雨图比较分布（半小提琴 + IQR 箱体 + 原始数据点）
 """
 import numpy as np
 import sciplot as sp
 
+rng = np.random.default_rng(42)
 data = [
-    np.random.normal(0, 1, 100),
-    np.random.normal(2, 1.5, 100),
-    np.random.normal(-1, 0.8, 100)
+    rng.normal(0, 1, 60),
+    rng.normal(2, 1.3, 60),
+    rng.normal(-1, 0.8, 60),
 ]
 labels = ["Group A", "Group B", "Group C"]
 
-sp.setup_style("nature", "pastel-3", lang="en")
-fig, ax = sp.plot_box(data, labels=labels, ylabel="Value")
-sp.save(fig, "boxplot", formats=("pdf", "png"))
+sp.setup_style("nature", "coral-teal", lang="en")
+res = sp.plot_raincloud(data, labels=labels, ylabel="Value", show_stats=True)
+sp.audit_figure(res.fig, check_visual_guards=True)
+sp.save(res.fig, "raincloud", formats=("pdf", "png"))
 
-print("✓ 箱线图已保存")
+print("✓ 云雨图已保存")
 ```
 
 ---
 
 ## 注意事项
 
-1. **不要**使用 `plt.show()`，使用 `sp.save()` 保存
-2. **不要**手动设置中文字体，使用 `lang="zh"`
-3. **不要**手动调整 figsize，使用 venue 参数
-4. **必须**生成独立可运行的 Python 脚本
-5. **不要询问**是否使用 SciPlot，直接使用
-6. **优先**使用简洁 API 和语法糖
-7. **自动**选择合适的图表类型和配色方案
+1. **先画像后选图**：先运行 `sp.recommend_charts(data)` 查看数据结构特征，再确定高信息密度图表
+2. **不要**使用 `plt.show()`，使用 `sp.save()` 保存
+3. **不要**手动设置中文字体，使用 `lang="zh"`
+4. **不要**手动调整 figsize，使用 venue 参数
+5. **必须**生成独立可运行的 Python 脚本并执行 `sp.audit_figure(fig, check_visual_guards=True)` 审校
+6. **优先**使用 `vivid` 高对比配色（`olive-apricot`、`coral-teal`、`blue-sky`、`ocean-breeze` 等）
 
 ---
 
@@ -277,10 +284,9 @@ print("✓ 箱线图已保存")
 - `presentation` — 16:9 演示文稿（13.3×7.5 英寸）
 
 ### 常用配色
-- `pastel` — 柔和粉彩（默认，6 色）
-- `ocean` — 海洋蓝绿（6 色）
-- `forest` — 森林渐变（6 色）
-- `sunset` — 日落暖色（5 色）
+- `coral-teal` / `olive-apricot` / `blue-sky` / `ocean-breeze` — Vivid 高对比学术配色
+- `pastel` / `ocean` / `forest` / `sunset` — 经典内置配色
+- `rdbu` / `coolwarm` — 发散配色（相关矩阵/正负对照）
 
 ### DPI 设置
 - Word 论文：1200 DPI (PNG)
