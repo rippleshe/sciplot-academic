@@ -14,6 +14,7 @@ from sciplot._core.palette import DEFAULT_PALETTE, RESIDENT_PALETTES
 from sciplot._core.layout import new_figure
 from sciplot._core.utils import create_sciplot_figure, create_plot_result, cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data
 from sciplot._core.result import PlotResult
+from sciplot.utils.guards import layered_fill_between, pick_best_corner, polish_axis, smart_marker_style
 from sciplot.utils.smart import _series_line_kwargs, smart_legend
 
 
@@ -80,12 +81,13 @@ def plot_line(
 
     effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
     ax.plot(x, y, label=label, **kwargs)
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label:
-        ax.legend()
+        smart_legend(ax)
     return create_plot_result(fig, ax, venue, palette, lang)
 
 
@@ -215,6 +217,7 @@ def plot_multi_line(
         )
         ax.plot(xi, y, label=lbl, **line_kwargs)
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -259,18 +262,25 @@ def plot_scatter(
         ...                           label="样本", fit_line=True)
         >>> sp.save(fig, "scatter")
     """
-    from sciplot.utils.guards import pick_best_corner, polish_axis
-
     _validate_xy_lengths(x, y)
     x_arr = np.asarray(x, dtype=float).ravel()
     y_arr = np.asarray(y, dtype=float).ravel()
 
     effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
+    adaptive = smart_marker_style(x_arr.size, base_size=float(s), base_alpha=float(alpha))
     scatter_kwargs = dict(kwargs)
     scatter_kwargs.setdefault("edgecolors", "white")
-    scatter_kwargs.setdefault("linewidths", 0.45)
+    scatter_kwargs.setdefault("linewidths", adaptive["linewidths"])
+    if x_arr.size > 500:
+        scatter_kwargs.setdefault("rasterized", adaptive["rasterized"])
 
-    ax.scatter(x_arr, y_arr, s=s, alpha=alpha, label=label, **scatter_kwargs)
+    ax.scatter(
+        x_arr, y_arr,
+        s=s if "s" in kwargs or s != 24 else adaptive["s"],
+        alpha=alpha if alpha != 0.78 else adaptive["alpha"],
+        label=label,
+        **scatter_kwargs,
+    )
 
     if fit_line:
         valid = np.isfinite(x_arr) & np.isfinite(y_arr)
@@ -395,12 +405,13 @@ def plot_step(
 
     fig, ax = new_styled_figure(venue, palette, lang)
     ax.step(x, y, where=where, label=label, **kwargs)  # type: ignore
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label:
-        ax.legend()
+        smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -413,6 +424,7 @@ def plot_area(
     label: str = "",
     alpha: float = 0.3,
     fill: bool = True,
+    layered: bool = False,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -422,9 +434,10 @@ def plot_area(
     绘制面积图（折线下方填充）
 
     参数:
-        alpha: 填充区域透明度，默认 0.3；fill=False 时忽略
-        fill : 是否填充面积，默认 True；False 则只画线
-        lang : 语言设置
+        alpha  : 填充区域透明度，默认 0.3；fill=False 时忽略
+        fill   : 是否填充面积，默认 True；False 则只画线
+        layered: 是否启用多层渐淡填充，默认 False（保持精确单层 ``alpha``）
+        lang   : 语言设置
 
     示例:
         >>> # 简单面积图
@@ -446,14 +459,18 @@ def plot_area(
 
     if fill:
         color = line.get_color()
-        ax.fill_between(x, y, alpha=alpha, color=color)
+        if layered:
+            layered_fill_between(ax, x, y, 0.0, color=str(color), base_alpha=alpha, layers=3, zorder=2)
+        else:
+            ax.fill_between(x, y, color=color, alpha=alpha, linewidth=0, zorder=2)
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label:
-        ax.legend()
+        smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -547,6 +564,7 @@ def plot_multi_area(
             fill_kwargs.setdefault("color", line.get_color())
             ax.fill_between(x, y, label=lbl, **fill_kwargs)
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:

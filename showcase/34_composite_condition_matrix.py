@@ -46,21 +46,30 @@ for ax, (i, j) in zip(axes.flat, [(r, c) for r in range(2) for c in range(3)]):
     drug = drugs[i]
     dose = doses[j]
     data = effects[(drug, dose)]
-    # 蜂群式抖动散点 + 均值线（面板内 matplotlib 原生）
+    # 蜂群式抖动散点 + IQR 竖线 + 均值标记
     x_jitter = rng.normal(0, 0.02, len(data))
+    q1, med, q3 = np.percentile(data, [25, 50, 75])
     ax.scatter(np.full(len(data), 0) + x_jitter, data,
-               s=14, alpha=0.65, color=color_by_key[(drug, dose)],
-               edgecolors="white", linewidths=0.4)
-    ax.axhline(float(np.mean(data)), color=mean_colors[(drug, dose)],
-               linestyle="--", linewidth=1.0)
+               s=16, alpha=0.68, color=color_by_key[(drug, dose)],
+               edgecolors="white", linewidths=0.45, zorder=3)
+    ax.vlines(0.0, q1, q3, color=mean_colors[(drug, dose)], linewidth=2.2, alpha=0.75, zorder=4)
+    ax.axhline(med, color=mean_colors[(drug, dose)],
+               linestyle="--", linewidth=1.0, zorder=2)
+    ax.scatter([0.0], [med], s=26, color="white", edgecolors=mean_colors[(drug, dose)],
+               linewidths=1.2, zorder=5)
     ax.set_ylim(0.0, 1.05)
+    ax.set_xlim(-0.12, 0.12)
     ax.set_xticks([])
-    ax.set_title(dose, fontsize=9)
+    if i == 0:
+        ax.set_title(dose, fontsize=9, fontweight="bold")
+    if j > 0:
+        ax.tick_params(labelleft=False)
+    sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
 
 # 行标签（左侧）与 y 轴标签
 axes[0, 0].set_ylabel("药物 A\n响应值", fontsize=9)
 axes[1, 0].set_ylabel("药物 B\n响应值", fontsize=9)
-axes[1, 0].set_xlabel("剂量组", fontsize=9)
+axes[1, 1].set_xlabel("剂量分组", fontsize=9)
 
 # ── 保存 ──────────────────────────────────────────────────────
 sp.save(fig, "showcase/34_composite_condition_matrix", formats=("png",), dpi=300)

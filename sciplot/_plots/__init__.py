@@ -22,6 +22,8 @@ from sciplot._plots.distribution import (
     plot_lollipop,
     plot_box,
     plot_violin,
+    plot_grouped_violin,
+    plot_back_to_back_bar,
     plot_histogram,
     plot_combo,
     annotate_significance,
@@ -30,6 +32,7 @@ from sciplot._plots.advanced import (
     plot_errorbar,
     plot_confidence,
     plot_heatmap,
+    plot_method_heatmap,
 )
 from sciplot._plots.polar import (
     plot_radar,
@@ -45,10 +48,12 @@ from sciplot._plots.multivariate import (
 )
 from sciplot._plots.statistical import (
     plot_residuals,
+    plot_residual_diagnostics,
     plot_qq,
     plot_bland_altman,
     plot_density,
     plot_multi_density,
+    plot_tornado,
 )
 
 __all__ = [
@@ -69,6 +74,8 @@ __all__ = [
     "plot_lollipop",
     "plot_box",
     "plot_violin",
+    "plot_grouped_violin",
+    "plot_back_to_back_bar",
     "plot_histogram",
     "plot_combo",
     "annotate_significance",
@@ -76,6 +83,7 @@ __all__ = [
     "plot_errorbar",
     "plot_confidence",
     "plot_heatmap",
+    "plot_method_heatmap",
     # 极坐标
     "plot_radar",
     # 时序
@@ -87,10 +95,12 @@ __all__ = [
     "plot_scatter_matrix",
     # 统计
     "plot_residuals",
+    "plot_residual_diagnostics",
     "plot_qq",
     "plot_bland_altman",
     "plot_density",
     "plot_multi_density",
+    "plot_tornado",
     # 常量
     "LINE_STYLES",
     "MARKERS",

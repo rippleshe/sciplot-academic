@@ -3,6 +3,14 @@
 
 完整的变更记录见仓库根目录 ``CHANGELOG.md``。
 
+v1.16.0 (2026-11-15)
+--------------------
+
+- **5 个高表现力科研与竞赛图表**：分组小提琴图 ``plot_grouped_violin``、双向镜像柱状图 ``plot_back_to_back_bar``（``mirror_bar``）、多方法归一化基准热力图 ``plot_method_heatmap``、敏感性龙卷风图 ``plot_tornado`` 与四合一回归残差诊断 ``plot_residual_diagnostics``
+- **Start-from-Grey 与视觉守卫增强**：新增 ``make_highlight_palette()``、``layered_fill_between()``、``smart_marker_style()`` 与 ``repel_panel_labels()``；``polish_axis()`` 默认清除连续轴多余次刻度并柔化主轴脊
+- **数据画像与决策树选型升级**：新增双因素、基准矩阵、实际/预测值、敏感性边界与正指标镜像检测，输出 ``decision_path`` 与 ``anti_patterns`` 预警；修复长表 ``> 30`` 行误归类
+- **Companion Skill v4.0.0**：引入可视化评审红线与 ``干0–干9`` 决策路径，并重制多张 ``showcase`` 展示图与 ``56–60`` 新示例
+
 v1.15.1 (2026-11-15)
 --------------------
 

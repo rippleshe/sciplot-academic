@@ -49,39 +49,44 @@ def polish_axis(
     categorical_axis: Optional[str] = None,
     clean_spines: bool = True,
     grid: Union[bool, str, None] = None,
-    grid_alpha: float = 0.24,
+    grid_alpha: float = 0.22,
     max_num_ticks: Optional[int] = None,
     spine_color: Optional[str] = None,
+    minor_ticks: Optional[bool] = None,
 ) -> Axes:
     """净化并润色坐标轴刻度、边框与背景参考网格。
 
     重要设计：仅调整当前 ``ax`` 实例，不改动全局 ``plt.rcParams``，
-    既能彻底消除分类柱状图/箱线图/小提琴图上的锯齿状次刻度与冗余边框，
-    又能保持投稿场景的全局样式契约稳定。
+    既能彻底消除分类柱状图/箱线图/小提琴图及普通统计图上的锯齿状次刻度与
+    生硬死黑四边框，又能保持投稿场景的全局样式契约稳定。
 
     参数:
         ax              : 目标 matplotlib Axes
         categorical_axis: 需清除次刻度的分类轴，``'x'`` | ``'y'`` | ``'both'`` | ``None``
         clean_spines    : True 时隐藏顶部和右侧边框及对应刻度（L 形开放框）
         grid            : 启用背景虚线辅助网格，``'x'`` | ``'y'`` | ``'both'`` | ``True`` | ``False`` | ``None``
-        grid_alpha      : 网格透明度，默认 0.24
+        grid_alpha      : 网格透明度，默认 0.22
         max_num_ticks   : 数值轴最大主刻度数量（防止刻度挤成黑块）
         spine_color     : 可选自定义边框线颜色；None 时依深/浅背景自适应
+        minor_ticks     : 是否保留次刻度线；None 时在 ``clean_spines=True`` 下自动关闭
+                          多余锯齿次刻度，显式传 ``True`` 可强制保留
     """
     is_dark = _is_dark_axes(ax)
-    resolved_spine = spine_color or ("#AEB6BF" if is_dark else "#2F3542")
-    resolved_grid = "#FFFFFF" if is_dark else "#B8C0CC"
+    resolved_spine = spine_color or ("#AEB6BF" if is_dark else "#5A6270")
+    resolved_label = "#E2E8F0" if is_dark else "#2D3748"
+    resolved_grid = "#FFFFFF" if is_dark else "#CBD5E1"
     resolved_grid_alpha = min(grid_alpha, 0.16) if is_dark else grid_alpha
+    suppress_minor = (not minor_ticks) if minor_ticks is not None else clean_spines
 
-    # 1. 清除分类轴上的次刻度（消除柱间锯齿线）及对侧多余刻度
-    if categorical_axis in {"x", "both"}:
+    # 1. 清除分类轴（及干净开放框模式下的数值轴）冗余次刻度，消除锯齿黑边
+    if categorical_axis in {"x", "both"} or suppress_minor:
         ax.xaxis.set_minor_locator(NullLocator())
         ax.tick_params(axis="x", which="both", top=False)
-    if categorical_axis in {"y", "both"}:
+    if categorical_axis in {"y", "both"} or suppress_minor:
         ax.yaxis.set_minor_locator(NullLocator())
         ax.tick_params(axis="y", which="both", right=False)
 
-    # 2. L 形开放框：隐藏 top/right 脊线并同步关闭对侧刻度
+    # 2. L 形开放框：隐藏 top/right 脊线并柔化保留脊线/刻度颜色
     if clean_spines:
         for hidden in ("top", "right"):
             if hidden in ax.spines:
@@ -92,6 +97,9 @@ def polish_axis(
     for visible in ("left", "bottom", "top", "right"):
         if visible in ax.spines and ax.spines[visible].get_visible():
             ax.spines[visible].set_edgecolor(resolved_spine)
+            ax.spines[visible].set_linewidth(0.75)
+
+    ax.tick_params(axis="both", which="major", color=resolved_spine, labelcolor=resolved_label)
 
     # 3. 限制过密数值主刻度（保留分类轴 FixedLocator 不动）
     if max_num_ticks is not None and max_num_ticks >= 3:
@@ -145,6 +153,160 @@ def style_patch_edges(
             patch.set_edgecolor(edge)
         if hasattr(patch, "set_linewidth"):
             patch.set_linewidth(linewidth)
+
+
+def layered_fill_between(
+    ax: Axes,
+    x: Sequence[float],
+    y1: Sequence[float],
+    y2: Union[float, Sequence[float]] = 0.0,
+    *,
+    color: str,
+    base_alpha: float = 0.16,
+    layers: int = 3,
+    zorder: int = 2,
+    **kwargs: Any,
+) -> None:
+    """绘制多层渐淡透明阴影填充带（vivid-illustration 质感原语）。
+
+    通过从基准线或中间区间逐层收缩/淡出透明度，避免单层 ``fill_between``
+    的扁平胶带感。
+
+    参数:
+        ax        : 目标 matplotlib Axes
+        x         : X 轴坐标序列
+        y1, y2    : 填充上下边界；默认 ``y2=0.0``
+        color     : 主填充颜色
+        base_alpha: 最深内层累积透明度上限，默认 0.16
+        layers    : 叠加层数（1~5），默认 3
+        zorder    : 绘制层级，默认 2
+    """
+    x_arr = np.asarray(x, dtype=float)
+    y1_arr = np.asarray(y1, dtype=float)
+    y2_arr = np.full_like(y1_arr, float(y2)) if np.isscalar(y2) else np.asarray(y2, dtype=float)
+    n_layers = max(1, min(5, int(layers)))
+    layer_alpha = float(base_alpha) / max(1.0, n_layers * 0.72)
+
+    for step in range(n_layers):
+        frac = 1.0 - step / (n_layers + 0.5)
+        upper = y2_arr + (y1_arr - y2_arr) * frac
+        ax.fill_between(
+            x_arr,
+            y2_arr,
+            upper,
+            color=color,
+            alpha=layer_alpha,
+            linewidth=0,
+            zorder=zorder,
+            **kwargs,
+        )
+
+
+def smart_marker_style(
+    n_points: int,
+    *,
+    base_size: float = 28.0,
+    base_alpha: float = 0.80,
+) -> Dict[str, Any]:
+    """根据样本点数自适应计算散点尺寸、透明度与光栅化开关。
+
+    大样本（> 500 点）自动开启 ``rasterized=True``，大幅缩小导出矢量 PDF
+    体积并防止密点黑团。
+    """
+    if n_points <= 40:
+        return {"s": base_size, "alpha": base_alpha, "linewidths": 0.55, "rasterized": False}
+    if n_points <= 200:
+        return {
+            "s": max(14.0, base_size * 0.78),
+            "alpha": max(0.58, base_alpha - 0.10),
+            "linewidths": 0.40,
+            "rasterized": False,
+        }
+    if n_points <= 500:
+        return {
+            "s": max(9.0, base_size * 0.50),
+            "alpha": 0.52,
+            "linewidths": 0.28,
+            "rasterized": False,
+        }
+    return {
+        "s": max(4.5, base_size * 0.28),
+        "alpha": 0.38,
+        "linewidths": 0.18,
+        "rasterized": True,
+    }
+
+
+def repel_panel_labels(fig: Figure, *, min_gap_px: float = 4.0) -> int:
+    """检测并自动避让与 Y 轴刻度或轴标题重叠的多面板标签（如 (a) (b)）。
+
+    参数:
+        fig       : matplotlib Figure
+        min_gap_px: 与 Y 轴文本之间的最小安全像素间距
+
+    返回:
+        发生位置调整的标签数量
+    """
+    renderer = _ensure_drawn_renderer(fig)
+    if renderer is None:
+        return 0
+
+    adjusted = 0
+    for ax in fig.axes:
+        if not ax.get_visible():
+            continue
+        panel_texts = [
+            t for t in ax.texts
+            if getattr(t, "_sciplot_panel_label", False) and t.get_visible()
+        ]
+        if not panel_texts:
+            continue
+
+        obs_boxes: List[Bbox] = []
+        for tick_lbl in ax.get_yticklabels():
+            if tick_lbl.get_visible() and tick_lbl.get_text().strip():
+                try:
+                    obs_boxes.append(tick_lbl.get_window_extent(renderer))
+                except Exception:
+                    pass
+        ylbl = ax.yaxis.label
+        if ylbl.get_visible() and ylbl.get_text().strip():
+            try:
+                obs_boxes.append(ylbl.get_window_extent(renderer))
+            except Exception:
+                pass
+
+        if not obs_boxes:
+            continue
+
+        ax_bbox = ax.get_window_extent(renderer)
+        ax_w = max(ax_bbox.width, 1.0)
+
+        for ptxt in panel_texts:
+            try:
+                pbox = ptxt.get_window_extent(renderer)
+            except Exception:
+                continue
+            collided = [ob for ob in obs_boxes if pbox.padded(min_gap_px).overlaps(ob)]
+            if not collided:
+                continue
+            tx, ty = ptxt.get_position()
+            # 只有水平左扩仍不足以避开或越过阈限时才上移
+            leftmost = min(ob.x0 for ob in collided)
+            needed_shift_px = max(0.0, pbox.x1 - (leftmost - min_gap_px))
+            shift_axes_x = needed_shift_px / ax_w
+            new_x = tx - shift_axes_x
+            if new_x >= -0.45 and shift_axes_x > 0:
+                ptxt.set_position((new_x, ty))
+            else:
+                # 若左移过远，改为稳妥地微调上移到 Y 轴之上
+                topmost = max(ob.y1 for ob in collided)
+                shift_axes_y = max(0.04, (topmost + min_gap_px - pbox.y0) / max(ax_bbox.height, 1.0))
+                ptxt.set_position((tx, ty + shift_axes_y))
+            adjusted += 1
+
+    return adjusted
+
 
 
 def truncate_tick_labels(
@@ -387,12 +549,86 @@ def inspect_figure_guards(fig: Figure) -> List[str]:
         except Exception:
             pass
 
+        # 检查 3: 超过 25% 的数据点被当前 xlim/ylim 裁剪出视野
+        try:
+            if ax.get_xscale() == "linear" and ax.get_yscale() == "linear" and not hasattr(ax, "get_zlabel"):
+                x0, x1 = sorted(ax.get_xlim())
+                y0, y1 = sorted(ax.get_ylim())
+                eps_x = max(abs(x1 - x0) * 1e-6, 1e-12)
+                eps_y = max(abs(y1 - y0) * 1e-6, 1e-12)
+                xs_all: List[np.ndarray] = []
+                ys_all: List[np.ndarray] = []
+                for ln in ax.lines:
+                    xd = np.asarray(ln.get_xdata(), dtype=float).ravel()
+                    yd = np.asarray(ln.get_ydata(), dtype=float).ravel()
+                    if xd.size == yd.size and xd.size > 0:
+                        xs_all.append(xd)
+                        ys_all.append(yd)
+                for col in ax.collections:
+                    if hasattr(col, "get_offsets"):
+                        off = np.asarray(col.get_offsets(), dtype=float)
+                        if off.ndim == 2 and off.shape[1] >= 2 and off.shape[0] > 0:
+                            xs_all.append(off[:, 0])
+                            ys_all.append(off[:, 1])
+                if xs_all and ys_all:
+                    x_cat = np.concatenate(xs_all)
+                    y_cat = np.concatenate(ys_all)
+                    fin = np.isfinite(x_cat) & np.isfinite(y_cat)
+                    xf, yf = x_cat[fin], y_cat[fin]
+                    if xf.size >= 10:
+                        out_mask = (
+                            (xf < x0 - eps_x) | (xf > x1 + eps_x)
+                            | (yf < y0 - eps_y) | (yf > y1 + eps_y)
+                        )
+                        out_ratio = float(np.mean(out_mask))
+                        if out_ratio > 0.25:
+                            issues.append(
+                                f"子图 #{idx} 有 {out_ratio * 100:.0f}% 的数据点超出当前坐标轴范围（视野被裁剪）"
+                            )
+                    # 检查 4: 纵向极大留白（无 patches 基准柱时生效，避免误报从 0 起算的柱图）
+                    if yf.size >= 4 and not ax.patches and np.ptp(yf) > 0:
+                        y_span = y1 - y0
+                        data_y_span = float(np.max(yf) - np.min(yf))
+                        is_prob_axis = abs(y0) < 0.08 and abs(y1 - 1.0) < 0.15
+                        if not is_prob_axis and y_span > 6.5 * data_y_span:
+                            issues.append(
+                                f"子图 #{idx} 纵轴留白过大（数据仅占视野 {data_y_span / y_span * 100:.0f}%），建议收紧 ylim"
+                            )
+        except Exception:
+            pass
+
+        # 检查 5: 同轴数据标注文本相互碰撞
+        try:
+            data_texts = [
+                t for t in ax.texts
+                if t.get_visible()
+                and t.get_text().strip()
+                and not getattr(t, "_sciplot_panel_label", False)
+                and t.get_transform() == ax.transData
+            ]
+            if 2 <= len(data_texts) <= 40:
+                tboxes = [t.get_window_extent(renderer) for t in data_texts]
+                collisions = 0
+                for a_i in range(len(tboxes)):
+                    for b_i in range(a_i + 1, len(tboxes)):
+                        if tboxes[a_i].overlaps(tboxes[b_i]):
+                            collisions += 1
+                if collisions > 0:
+                    issues.append(
+                        f"子图 #{idx} 内存在 {collisions} 对相互重叠的文本标注，建议使用 sp.smart_labels() 避让"
+                    )
+        except Exception:
+            pass
+
     return issues
 
 
 __all__ = [
     "polish_axis",
     "style_patch_edges",
+    "layered_fill_between",
+    "smart_marker_style",
+    "repel_panel_labels",
     "truncate_tick_labels",
     "pick_best_corner",
     "smart_labels",

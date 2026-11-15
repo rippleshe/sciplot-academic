@@ -203,22 +203,22 @@ with sp.style_context("ieee", palette="forest"):
 
 ---
 
-## 图表选择指南
+## 图表选择指南（优先先跑 `sp.recommend_charts(data)` 画像防千篇一律）
 
 | 需求 | 函数 |
 |------|------|
-| 单线/多线对比 | `sp.plot_multi()` |
-| 分组柱状图（论文最常用） | `sp.plot_grouped_bar()` |
-| 堆叠柱状图 | `sp.plot_stacked_bar()` |
-| 水平柱状图 | `sp.plot_horizontal_bar()` |
-| 箱线图/小提琴图 | `sp.plot_box()` / `sp.plot_violin()` |
-| 热力图 | `sp.plot_heatmap()` |
-| 时间序列 | `sp.plot_timeseries()` |
+| 单因素 / 双因素分布对比 | `sp.plot_raincloud()` / `sp.plot_grouped_violin()` / `sp.plot_violin()` / `sp.plot_ridgeline()` |
+| 多方法跨量纲评测矩阵 | `sp.plot_method_heatmap()` |
+| 两组对称多指标对比 | `sp.plot_back_to_back_bar()` (`mirror_bar`) / `sp.plot_dumbbell()` |
+| 回归残差全诊断 (2×2) | `sp.plot_residual_diagnostics()` / `sp.plot_bland_altman()` |
+| 敏感性扰动分析 | `sp.plot_tornado()` / `sp.plot_forest()` |
+| 单线/多线与时序预测 | `sp.plot_multi()` / `sp.plot_timeseries()` / `sp.plot_fan()` |
+| 分组 / 堆叠 / 水平柱图 | `sp.plot_grouped_bar()` / `sp.plot_stacked_bar()` / `sp.plot_horizontal_bar()` / `sp.plot_pareto()` |
+| 相关热力图与散点矩阵 | `sp.plot_heatmap(triangle="lower")` / `sp.plot_scatter_matrix(upper="corr", diag="kde")` |
 | 组合图（柱状 + 折线） | `sp.plot_combo()` |
-| 误差条/置信区间 | `sp.plot_errorbar()` / `sp.plot_confidence()` |
-| 显著性标注 | `sp.annotate_significance()` |
-| 面板标签 (a)(b)(c) | `sp.add_panel_labels()` |
-| PCA/混淆矩阵/特征重要性 | `plot_pca()` / `plot_confusion_matrix()` / `plot_feature_importance()` |
+| 显著性与焦点叙事 | `sp.annotate_significance()` / `sp.make_highlight_palette()` / `sp.repel_panel_labels()` |
+| 面板标签与质量守卫 | `sp.add_panel_labels()` / `sp.audit_figure(fig, check_visual_guards=True)` |
+| PCA/混淆矩阵/ROC/校准 | `plot_pca()` / `plot_confusion_matrix()` / `plot_roc()` / `plot_calibration()` |
 
 ---
 

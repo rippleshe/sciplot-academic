@@ -155,6 +155,9 @@ from sciplot.utils.smart import (
 from sciplot.utils.guards import (
     polish_axis,
     style_patch_edges,
+    layered_fill_between,
+    smart_marker_style,
+    repel_panel_labels,
     truncate_tick_labels,
     pick_best_corner,
     smart_labels,
@@ -178,6 +181,9 @@ __all__ = [
     # 视觉下限守卫
     "polish_axis",
     "style_patch_edges",
+    "layered_fill_between",
+    "smart_marker_style",
+    "repel_panel_labels",
     "truncate_tick_labels",
     "pick_best_corner",
     "smart_labels",

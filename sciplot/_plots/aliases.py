@@ -30,6 +30,8 @@ from sciplot._plots.distribution import (
     plot_lollipop,
     plot_box,
     plot_violin,
+    plot_grouped_violin,
+    plot_back_to_back_bar,
     plot_histogram,
     plot_combo,
     plot_beeswarm,
@@ -42,6 +44,7 @@ from sciplot._plots.advanced import (
     plot_errorbar,
     plot_confidence,
     plot_heatmap,
+    plot_method_heatmap,
     plot_bubble_heatmap,
     plot_bubble,
     plot_hexbin,
@@ -75,6 +78,7 @@ from sciplot._plots.statistical import (
     plot_density,
     plot_multi_density,
     plot_residuals,
+    plot_residual_diagnostics,
     plot_qq,
     plot_bland_altman,
     plot_ridgeline,
@@ -83,6 +87,7 @@ from sciplot._plots.statistical import (
     plot_forest,
     plot_funnel,
     plot_paired,
+    plot_tornado,
 )
 from sciplot._ext.plot3d import (
     plot_waterfall3d,
@@ -148,6 +153,9 @@ hbar = _make_alias(plot_horizontal_bar)
 hist = _make_alias(plot_histogram)
 box = _make_alias(plot_box)
 violin = _make_alias(plot_violin)
+grouped_violin = _make_alias(plot_grouped_violin)
+back_to_back_bar = _make_alias(plot_back_to_back_bar)
+mirror_bar = _make_alias(plot_back_to_back_bar)
 beeswarm = _make_alias(plot_beeswarm)
 dumbbell = _make_alias(plot_dumbbell)
 diverging_bar = _make_alias(plot_diverging_bar)
@@ -161,6 +169,7 @@ pareto = _make_alias(plot_pareto)
 errorbar = _make_alias(plot_errorbar)
 confidence = _make_alias(plot_confidence)
 heatmap = _make_alias(plot_heatmap)
+method_heatmap = _make_alias(plot_method_heatmap)
 bubble_heatmap = _make_alias(plot_bubble_heatmap)
 bubble = _make_alias(plot_bubble)
 hexbin = _make_alias(plot_hexbin)
@@ -203,6 +212,7 @@ calendar_heatmap = _make_alias(plot_calendar_heatmap)
 density = _make_alias(plot_density)
 multi_density = _make_alias(plot_multi_density)
 residuals = _make_alias(plot_residuals)
+residual_diagnostics = _make_alias(plot_residual_diagnostics)
 qq = _make_alias(plot_qq)
 bland_altman = _make_alias(plot_bland_altman)
 ridgeline = _make_alias(plot_ridgeline)
@@ -211,6 +221,7 @@ volcano = _make_alias(plot_volcano)
 forest = _make_alias(plot_forest)
 funnel = _make_alias(plot_funnel)
 paired = _make_alias(plot_paired)
+tornado = _make_alias(plot_tornado)
 fan = _make_alias(plot_fan)
 roc = _make_alias(plot_roc)
 calibration = _make_alias(plot_calibration)
@@ -221,12 +232,12 @@ __all__ = [
     "line", "scatter", "step", "area",
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop", "pareto",
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
+    "hist", "box", "violin", "grouped_violin", "back_to_back_bar", "mirror_bar", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop", "pareto",
+    "errorbar", "confidence", "heatmap", "method_heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
     "radar", "taylor", "circular_barplot", "ternary", "timeseries", "multi_timeseries", "fan", "gantt", "calendar_heatmap",
     "parallel", "pca", "slope", "surface", "contour",
     "confusion", "learning_curve", "feature_importance", "roc", "calibration",
     "venn2", "venn3", "network",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "forest", "funnel", "paired", "waterfall3d",
+    "residuals", "residual_diagnostics", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "forest", "funnel", "paired", "tornado", "waterfall3d",
 ]

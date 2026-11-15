@@ -120,6 +120,7 @@ from sciplot._core.palette import (
     list_resident_palettes,
     list_vivid_palettes,
     make_palette_cmap,
+    make_highlight_palette,
     list_pastel_subsets,
     list_earth_subsets,
     list_ocean_subsets,
@@ -277,6 +278,8 @@ from sciplot._plots.distribution import (
     plot_lollipop,
     plot_box,
     plot_violin,
+    plot_grouped_violin,
+    plot_back_to_back_bar,
     plot_histogram,
     plot_beeswarm,
     plot_dumbbell,
@@ -290,6 +293,7 @@ from sciplot._plots.advanced import (
     plot_errorbar,
     plot_confidence,
     plot_heatmap,
+    plot_method_heatmap,
     plot_bubble_heatmap,
     plot_bubble,
     plot_hexbin,
@@ -321,6 +325,7 @@ from sciplot._plots.multivariate import (
 )
 from sciplot._plots.statistical import (
     plot_residuals,
+    plot_residual_diagnostics,
     plot_qq,
     plot_bland_altman,
     plot_density,
@@ -331,6 +336,7 @@ from sciplot._plots.statistical import (
     plot_forest,
     plot_funnel,
     plot_paired,
+    plot_tornado,
 )
 
 # ── 扩展模块 (Extensions) ──────────────────────────────────────
@@ -369,6 +375,9 @@ from sciplot._plots.aliases import (
     hist,
     box,
     violin,
+    grouped_violin,
+    back_to_back_bar,
+    mirror_bar,
     beeswarm,
     dumbbell,
     diverging_bar,
@@ -378,6 +387,7 @@ from sciplot._plots.aliases import (
     errorbar,
     confidence,
     heatmap,
+    method_heatmap,
     bubble_heatmap,
     bubble,
     hexbin,
@@ -406,6 +416,7 @@ from sciplot._plots.aliases import (
     density,
     multi_density,
     residuals,
+    residual_diagnostics,
     qq,
     bland_altman,
     lollipop,
@@ -417,6 +428,7 @@ from sciplot._plots.aliases import (
     forest,
     funnel,
     paired,
+    tornado,
     parallel,
     pca,
     slope,
@@ -450,6 +462,9 @@ from sciplot.utils import (
     # 视觉下限守卫
     polish_axis,
     style_patch_edges,
+    layered_fill_between,
+    smart_marker_style,
+    repel_panel_labels,
     truncate_tick_labels,
     pick_best_corner,
     smart_labels,
@@ -658,7 +673,7 @@ __all__ = [
     "set_custom_palette", "register_color_scheme",
     "get_palette", "get_color_scheme",
     "list_palettes", "list_all_palettes", "list_resident_palettes",
-    "list_vivid_palettes", "make_palette_cmap",
+    "list_vivid_palettes", "make_palette_cmap", "make_highlight_palette",
     "list_pastel_subsets", "list_earth_subsets", "list_ocean_subsets", "dual_encode_colors",
     "list_forest_subsets", "list_sunset_subsets", "list_rmb_palettes",
     "list_diverging_palettes", "list_color_schemes",
@@ -711,27 +726,27 @@ __all__ = [
 
     # ── 分布 / 统计（完整名称）──
     "plot_bar", "plot_grouped_bar", "plot_stacked_bar", "plot_horizontal_bar", "plot_lollipop",
-    "plot_box", "plot_violin", "plot_histogram", "plot_beeswarm",
+    "plot_box", "plot_violin", "plot_grouped_violin", "plot_back_to_back_bar", "plot_histogram", "plot_beeswarm",
     "plot_dumbbell", "plot_diverging_bar", "plot_waffle", "plot_pareto",
     "plot_combo", "annotate_significance",
 
     # ── 分布 / 统计（简洁别名）──
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "pareto",
+    "hist", "box", "violin", "grouped_violin", "back_to_back_bar", "mirror_bar", "beeswarm", "dumbbell", "diverging_bar", "waffle", "pareto",
     "combo", "lollipop",
 
     # ── 极坐标 / 时序 / 统计（简洁别名）──
     "radar", "timeseries", "multi_timeseries", "fan", "gantt", "calendar_heatmap", "taylor", "circular_barplot",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline",
-    "ternary", "raincloud", "volcano", "forest", "funnel", "paired",
+    "residuals", "residual_diagnostics", "qq", "bland_altman", "waterfall3d", "ridgeline",
+    "ternary", "raincloud", "volcano", "forest", "funnel", "paired", "tornado",
     "roc", "calibration",
 
     # ── 高级（完整名称）──
-    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph", "plot_waterfall", "plot_alluvial", "plot_bump", "plot_sunburst", "plot_upset",
+    "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_method_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph", "plot_waterfall", "plot_alluvial", "plot_bump", "plot_sunburst", "plot_upset",
 
     # ── 高级（简洁别名）──
-    "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
+    "errorbar", "confidence", "heatmap", "method_heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
 
     # ── 极坐标图表 ──
     "plot_radar", "plot_taylor", "plot_circular_barplot",
@@ -743,7 +758,7 @@ __all__ = [
     "plot_parallel", "plot_scatter_matrix", "plot_ternary",
 
     # ── 统计图表 ──
-    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano", "plot_forest", "plot_funnel", "plot_paired",
+    "plot_residuals", "plot_residual_diagnostics", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano", "plot_forest", "plot_funnel", "plot_paired", "plot_tornado",
 
     # ── 机器学习扩展 ──
     "plot_pca", "plot_confusion_matrix",
@@ -763,6 +778,7 @@ __all__ = [
 
     # ── 视觉下限守卫 ──
     "polish_axis", "style_patch_edges",
+    "layered_fill_between", "smart_marker_style", "repel_panel_labels",
     "truncate_tick_labels", "pick_best_corner",
     "smart_labels", "inspect_figure_guards",
 

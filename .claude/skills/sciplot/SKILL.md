@@ -1,119 +1,87 @@
 ---
 name: sciplot
 description: >-
-  SciPlot Academic 科研绘图与数据驱动选型工作流。用户要求画科研图、论文插图、
-  实验对比图、多面板论文图，提供 CSV/Excel/DataFrame 数据问“该画什么图”，
-  或需要提升图表发表品质、排查视觉缺陷时触发。先完成数据画像与反单调图型选型，
-  再使用 sciplot 高频视觉增强 API 生成可投稿图像。明确要求交互式网页图或地图时除外。
-version: 3.0.0
-author: rippleshe
-user-invocable: true
-allowed-tools: "Read Write Edit Bash Glob Grep"
+  科研与竞赛级学术可视化技能（v4.0.0）。基于数据画像自动匹配最优图表形态，拒绝千篇一律的基础柱状图/箱线图/折线图。
+  凡涉及画图、出图、科研配图、学术图表、数据可视化、探索性分析、模型评估、论文排版（Nature/IEEE/APS/Springer/学位论文）或美化 matplotlib/seaborn 图表时立即使用。
 ---
 
-# SciPlot Academic — Data-Driven Publication Figure Workflow
+# SciPlot Academic — 数据驱动的高下限科研绘图规范 (v4.0.0)
 
-本 Skill 的核心原则：**先体检数据、再按感知精度与信息融合度决策选型、然后调用内置视觉守卫的 `sciplot` API 出图，绝不允许把任何数据都千篇一律拍成最简柱状图、空白箱线图或杂乱多折线。**
+> **核心铁律**：严禁不看数据结构就盲目画简单柱状图、裸箱线图或乱线折线图！  
+> **首要动作**：拿到任何数据（DataFrame / dict / CSV / ndarray）或可视化需求，**先画像、走决策树、防误导，再选高信息密度图表并应用视觉守卫。**
 
 ---
 
-## Step 0 — 强制先做数据画像体检（Data Profiling Gate）
+## 0. 环境与执行约定
 
-在写任何绘图代码前，必须先观察用户数据的真实形态与结构（变量数、样本量 `n`、偏度、异常值、正负方向、对称矩阵/配对/时序/二分类信号等）：
-
-```python
-import sciplot as sp
-
-# 1. 支持 DataFrame / dict / ndarray / group list / CSV / Excel / JSON 路径
-report = sp.recommend_charts(data, goal="auto", top_k=4)
-print(report.summary())
-```
-
-或直接在命令行运行辅助脚本快速诊断数据文件：
-
-```bash
-uv run python .claude/skills/sciplot/scripts/profile_and_recommend.py data.csv --goal auto --top-k 4
-```
-
-如未直接拿到数据文件、仅凭任务描述设计图表，先列出假设的样本量、分组数和字段类型，再进入 Step 1。
+- **Python 环境**：优先使用 `uv run python ...` 运行脚本或检查数据。
+- **即刻画像脚本**（强烈建议拿到数据文件时第一时间调用）：
+  ```bash
+  uv run python .claude/skills/sciplot/scripts/profile_and_recommend.py <data.csv> --goal auto
+  ```
+  或在 Python 中调用：
+  ```python
+  import sciplot as sp
+  report = sp.recommend_charts(data, goal="auto")
+  print(report.summary())
+  ```
 
 ---
 
-## Step 1 — 反单调选型与候选比较（Chart Selection Gate）
+## 一、强制四步工作流（拒绝千篇一律）
 
-拿到画像后，查阅 `references/chart-selection.md`，严格按 **“数据形态 → 主任务 → 感知通道精度 → 单轴多层融合”** 比较 **≥ 2 个候选图型**，禁止无理由直接退化到最简图：
+### Step 1：数据画像与前置检验（Mandatory Profiling，对应 DT-01）
+在动笔写任何绘图代码前，必须检查：
+1. **变量结构**：连续列 / 离散分类列 / 时间列 / 二元列 / 组别嵌套列 (`grouped_samples` vs `two_factor_samples` vs `category_scalar` vs `method_metric_matrix`)。
+2. **分布特征**：样本量 $n$（每组是否 $\ge 15$？是否 $\ge 300$ 需防过绘制？）、偏度（$|\text{skew}| \ge 1.5$ 禁用裸均值±柱状图）、是否跨 $\ge 2$ 个数量级（需显式对数坐标）。
+3. **领域信号**：是否有 `actual`/`y_true` + `pred`/`y_pred`（回归全诊断）、`low`/`high` + `baseline`（敏感性分析）、`log2FC` + `pvalue`（火山图）、`ci_low`/`ci_high`（森林图）、`before`/`after`（配对）、`y_true` + 概率（ROC/校准）。
+4. **Anscombe 检验 (DT-01)**：永远先画真实分布或散点，不凭汇总均值/相关系数下结论。
 
-| 常见平庸退化图（禁止默认） | 触发升级条件 | 推荐高信息密度图型与 SciPlot API |
+### Step 2：走 `干0–干9` 决策树 & 感知阶梯 (`VR-B1`) 选型
+按照人眼感知精度从高到低匹配编码通道：**统一位置 > 长度 > 方向/斜率/角度 > 面积 > 体积 > 明度/饱和度 > 色相**。  
+根据 [references/chart-selection.md](references/chart-selection.md) 与 `sp.recommend_charts()` 优先挑选高信息密度图表：
+
+| 数据场景 | 禁止使用的低效默认图 | 首选高表现图表（SciPlot 函数） |
 |---|---|---|
-| 普通单组/分组柱状图 | 仅是原始多次观测分布均值，未证明正态无双峰 | **`sp.plot_raincloud()`** 或 **`sp.plot_violin(..., show_box=True, show_points=True)`** |
-| 独立两组并排柱状图 | 同批被试干预前 vs 干预后配对数据 | **`sp.plot_paired(before, after)`** 或 `sp.plot_dumbbell()` |
-| 空白箱线图 `boxplot` | `n <= 40`/组或需看清多峰与异常样本密度 | **`sp.plot_raincloud()`** / `sp.plot_box(..., show_points=True, show_means=True)` |
-| 裸散点图 | 检查线性趋势或大样本过饱和重叠 | 中小样本用 **`sp.plot_marginal()`** / `sp.plot_scatter(..., fit_line=True, show_stats=True)`；大样本 (`n>=800`) 用 **`sp.plot_hexbin()`** |
-| 无序竖柱图 | 类别 >=5、正负增减并存、或非负归因排序 | 正负项→**`sp.plot_diverging_bar()`**；核心少数归因→**`sp.plot_pareto()`**；排名→`sp.plot_lollipop(sort=True)` |
-| 全阵单色相关性热图 | 对称相关矩阵 | **`sp.plot_heatmap(..., triangle="lower", cmap="RdBu_r", vmin=-1, vmax=1, p_values=...)`** |
-| 多条线拧成“意面图” | 时序系列 `>= 5` 条 | **`sp.paper_subplots(nrows, ncols, sharex=True, sharey=True)`** 分面 / `sp.plot_bump()` / `sp.plot_streamgraph()` |
-| 多面板均分网格 | 存在 1 个核心主结论 + 2 个支撑维度 | **`sp.hero_layout("hero_left")` / `hero_layout("hero_right")`** |
-| 模型准确率单一柱图 | 含二分类概率预测或回归残差 | **`sp.plot_roc()` + `sp.plot_calibration()`**（多模型同时比AUC、ECE与Brier） |
-| 单一折线未来展望 | 含多条预测轨迹或分位数不确定区间 | **`sp.plot_fan(..., samples=..., history_x=..., history_y=...)`** |
+| 单因素多组分布 ($n \ge 15$/组) | 均值±误差柱、裸箱线图 | `plot_raincloud`（半提琴+箱线+点） / `plot_violin(..., show_box=True, show_points=True)` |
+| **双因素交互分布（组×阶段/亚组）** | 仅看均值的分组柱状图 | **`plot_grouped_violin`**（并排双因素小提琴+IQR 胶囊+白点中位数） |
+| 小样本分组分布 ($n < 15$/组) | 强行 KDE 小提琴 | `plot_beeswarm`（真实点分布+中位线） / `plot_paired`（若前后配对） |
+| $\ge 5$ 组分布横向扫描 | 并排超宽箱线/柱图 | `plot_ridgeline`（山脊重叠 KDE） |
+| **两组在多项非负指标上的对称对比** | 拥挤并排细柱图 | **`plot_back_to_back_bar` (`mirror_bar`)**（中心零轴镜像条 + $\Delta$ 徽章）/ `plot_dumbbell` |
+| **多方法 × 多指标跨量纲对比表** | 强拼同一 Y 轴的分组柱图 | **`plot_method_heatmap`**（独立方向列归一化 + 真实值 + `#1` 冠军金框 + `Overall`） |
+| **模型预测 vs 真实值回归评价** | 单一 $R^2$/RMSE 柱状图 | **`plot_residual_diagnostics`**（2×2 四象限：残差齐性 + Normal Q-Q 95% CI + 残差分布 + ACF） |
+| **参数敏感性 / 扰动幅度分析** | 无基准对称的普通条图 | **`plot_tornado`**（基准零线双向摆幅排序 + 斑马底纹） |
+| 多项净变化对比 (正/负双向) | 单向柱图混合正负 | `plot_diverging_bar` / `plot_waterfall`（分解增减瀑布） |
+| 关键少数贡献 / 类别排名 ($k \ge 5$) | 无序竖柱图（标签斜挤） | `plot_pareto`（80% 累积线） / `plot_lollipop(..., orientation="h")` |
+| 双变量连续关系 ($n \ge 300$) | 纯实心默认点（严重 Overplotting） | `plot_hexbin(bins="log")` / `plot_marginal(..., marginal="kde")` / `plot_scatter(..., fit_line=True)` |
+| 高维表格 ($\ge 4$ 连续列) | 挑 1-2 对分散散点 | `plot_scatter_matrix(upper="corr", diag="kde")` / `plot_pca` / `plot_parallel` / `plot_heatmap(..., triangle="lower")` |
+| 多序列时序 ($\ge 5$ 条) | 纠缠“意面式多线图” | `paper_subplots(..., sharex=True, sharey=True)` 分面 / `plot_bump(..., highlight=...)` / `plot_streamgraph` |
 
-> **选型产出自检**：向用户输出脚本前，先简要写明：**① 数据关键画像特征 → ② 为什么选主方案 → ③ 至少 1 个为什么不画普通柱/线/裸箱的淘汰理由。**
+### Step 3：美学增强与聚焦叙事 (`VR-B4 Start-from-Grey`)
+1. **高对比配色**：优先使用 `vivid` 系列高对比配色（`coral-teal`, `blue-sky`, `olive-apricot`, `ocean-breeze`, `okabe-ito`）。顺序值选用单调递增顺序色（如 `YlGnBu`, `viridis`），正负偏差选用以白为界的发散色（`RdBu_r`）。
+2. **Start-from-Grey（焦点唯一突出，VR-B4）**：多方法或多系列对比中，使用：
+   ```python
+   cols = sp.make_highlight_palette(n_series=4, highlight_idx=3, palette="coral-teal")
+   ```
+   将对照组退居微梯度浅灰、仅赋予目标/Ours 组饱和主色，大幅增强前注意视觉聚焦。
+3. **自动下限守卫**：SciPlot 绘图函数已内置 `polish_axis`（去顶部/右侧脊线、柔和 `#5A6270` 脊线与 `#CBD5E1` 浅虚线网格、默认清理连续轴噪声次刻度）、`style_patch_edges`（半透明填色+微深轮廓边）、`smart_marker_style`（随样本量缩点降透+白边+自动栅格化）、`layered_fill_between`（分层渐透填充）与 `repel_panel_labels`（复合子图编号防遮挡）。
 
----
-
-## Step 2 — 确定配色语义与期刊版式
-
-详细色值与搭配表按需阅读 `references/color-style.md`；函数细节与完整参数速查 `references/full-api.md`；典型组合模板参考 `references/recipes.md`。
-
-1. **期刊样式与字号基线**（绝对不在业务脚本中手搓 matplotlib 全局 `rcParams`）：
-   - 英文投稿：`sp.setup_style("nature", palette=..., lang="en")` 或 `"ieee"`（导出 PDF + PNG 600 dpi）。
-   - 中文学位/期刊论文：`sp.setup_style("thesis", palette=..., lang="zh")`（导出 PNG 1200 dpi 或 SVG）。
-   - 幻灯/汇报：`sp.setup_style("presentation", palette=..., lang="zh")`（可按需搭配 `theme="dark"`）。
-2. **配色首选原则**：
-   - 离散对比优先使用 **vivid-illustration 精选高分离配色**：`blue-sky`（清晰商务/通用对比）、`coral-teal`（强对立双组/正负干预）、`olive-apricot`（自然学术 7 色）、`soft-forest`（生态生信）、`ocean-breeze`（时序演化）、`blue-pink`、`pastel-girl`，或者经典内置 `pastel` / `earth` / `ocean` / `forest` / `sunset`。
-   - 有零点中心的矩阵/差异量必须用发散色图（`cmap="RdBu_r"`、`cmap="rdbu"` 或 `sp.make_palette_cmap("coral-teal", kind="diverging")`），绝不把顺序渐变直接画负相关。
-   - 多系列线/散点超过 3 组时开启冗余编码（`use_linestyles=True` 或结合白色描边 + 不同 marker）。
-   - 色盲安全关键发表图运行 `sp.check_colorblind_safe()` / `sp.audit_palette()`。
-
----
-
-## Step 3 — 构建高质量图表与局部精细护卫
-
-1. **优先利用 SciPlot 内置多层视觉增强参数**，不再于外部手画混乱补丁：
-   - 散点分析自带回归线 + 95% 置信带 + 稀疏角统计卡：`sp.plot_scatter(x, y, fit_line=True, ci=True, show_stats=True)`
-   - 分组柱自动配深轮廓、误差棒与柱顶标值：`sp.plot_grouped_bar(groups, data, errors=errs, show_values=True)`
-   - 小提琴内嵌深色 IQR 胶囊与散点：`sp.plot_violin(groups, show_box=True, show_points=True)`
-   - 直方图融合平滑核密度与中位线：`sp.plot_histogram(vals, show_kde=True, show_median=True)`
-   - 火山图统计计数图例与防重叠引导线：`sp.plot_volcano(fc, p, labels=genes, show_counts=True)`
-   - 相关矩阵去重下三角与显著性星号：`sp.plot_heatmap(corr, triangle="lower", p_values=pmat, cmap="RdBu_r", vmin=-1, vmax=1, show_values=True)`
-   - PCA 降维自带 95% 置信椭圆：`sp.plot_pca(X, labels=groups, show_ellipse=True)`
-2. **自定义 Matplotlib Axes 子图时的视觉护卫工具**（当使用 `sp.paper_subplots` / `sp.hero_layout` 手动在某个 `ax` 绘制多层细节时）：
-   - `sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")`: 清除分类轴锯齿次刻度、启用出版级 L 形极简边框与轻量化网格（绝不修改全局 `rcParams`）。
-   - `sp.style_patch_edges(patches, colors)`: 为自定义柱条/多边形赋予“柔和填充 + 同色系加深边框”。
-   - `sp.smart_labels(ax, texts, anchor_xy=pts, add_connectors=True)`: 基于像素 bbox 自动推开密集重叠文本并绘制微细引导线。
-   - `sp.truncate_tick_labels(ax, axis="y", max_len=24)` 与 `sp.auto_rotate_labels(ax)`：防止长类别标签挤压或互撞。
-
----
-
-## Step 4 — 投稿质量审计 + 必须真正看图交付
-
+### Step 4：9 维审稿质检 (`VR-A ~ VR-I`) 与出图验证
+保存图像前执行质量审计与自查：
 ```python
-report = sp.audit_figure(fig, check_visual_guards=True, verbose=True)
-paths = sp.save(fig, "figures/fig1", formats=("pdf", "png"), dpi=600)
+report = sp.audit_figure(fig, check_visual_guards=True)
+sp.save(fig, "figure_out", formats=("png", "pdf"), dpi=600)
 ```
-
-保存后**必须真实打开生成的 PNG（如通过图片读取工具查看）进行逐项核对**——pytest 通过不等于图好看：
-
-- **信息清晰度**：主结论是否在第一视觉焦点？是否被过粗网格、阴影、无意义背景框遮盖？
-- **文本与碰撞**：轴标签和单位是否完整？长标签、数字标记、图例、火山/散点标签或色条之间是否有任何穿插压盖？
-- **坐标规范**：柱条是否从 0 基线开始？分类 X/Y 轴是否已被净化为无锯齿小次刻度？多面板是否有清晰一致的 `(a)(b)(c)` 标签？
-- **发现缺陷根因修复**：若在开发包功能时发现某默认视图丑陋或布局失效，优先排查 `sciplot` 函数通用逻辑，而非只改数据掩饰。
+完成后务必检查生成图：
+- **VR-A/B**：任务与编码通道是否精准？有无低精度渠道（角度/面积）充当精确数值比较而缺少直标？
+- **VR-C 常见坑 (`CM-01 ~ CM-11`)**：是否柱状图误截断 Y 轴、强偏态只画均值柱、双 Y 轴混淆不同量纲、金字塔/镜像左轴未转正、使用 3D 装饰或斑马阴影？
+- **VR-D/F/G**：多面板图是否调用 `add_panel_labels()` + `repel_panel_labels(fig)` 防遮挡？长分类名是否水平置放并截断/旋转清晰？图例是否避开数据密集区？
 
 ---
 
-## 参考资料导航（按需读取，勿一次性全读）
+## 二、参考资料按需加载指南
 
-- `references/chart-selection.md` — 科研数据形态决策表、感知精度排序、反单调升级矩阵、单轴/Hero 融合策略
-- `references/color-style.md` — vivid-illustration 精选配色、内置/人民币/发散配色、`make_palette_cmap`、视觉护卫工具及配置优先序
-- `references/recipes.md` — 论文级即用场景配方（单图、云雨/提琴、帕累托、配对轨迹、ROC/校准、预测扇形、下三角相关矩阵、Hero 复合版式）
-- `references/full-api.md` — 全量函数最新签名与参数细节（冲突时以运行时 `inspect.signature(sp.<fn>)` 为准）
-- `scripts/profile_and_recommend.py` — 对 CSV/Excel/JSON/Parquet 或演示形态运行一键数据画像与图型推荐
+- **先查怎么选图与反模式避坑**：阅读 [references/chart-selection.md](references/chart-selection.md)
+- **查配色、vivid/Start-from-Grey、期刊版面尺寸、视觉守卫**：阅读 [references/color-style.md](references/color-style.md)
+- **查 55+ 图表完整函数签名与别名**：阅读 [references/full-api.md](references/full-api.md)
+- **直接复用多场景完整科研代码模板**：阅读 [references/recipes.md](references/recipes.md)

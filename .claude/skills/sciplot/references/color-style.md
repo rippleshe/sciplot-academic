@@ -121,6 +121,7 @@ sp.get_color_scheme("mytheme")     # → {"single": [...], "double": [...], ...}
 sp.list_palettes()                 # 所有可用配色名
 sp.list_vivid_palettes()           # 查看 7 套 vivid 高对比配色
 sp.make_palette_cmap("blue-sky")   # 基于离散色板生成连续/发散 colormap
+sp.make_highlight_palette(4, highlight_idx=3, palette="coral-teal")  # Start-from-Grey 焦点配色（背景灰、焦点高饱和）
 sp.auto_select_palette("mytheme", 3)  # 自动选择 3 色
 sp.list_color_schemes()            # 已注册的配色方案
 ```
@@ -130,8 +131,11 @@ sp.list_color_schemes()            # 已注册的配色方案
 当手写复合子图或需要显式加固排版时，可直接使用以下守卫函数（`audit_figure` 亦支持一键检查）：
 
 ```python
-sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid=None)
-sp.style_patch_edges(ax, edgecolor="#1E293B", linewidth=0.7)
+sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid=None, minor_ticks=False)
+sp.style_patch_edges(patches, colors, fill_alpha=0.84, darken_amount=0.25, linewidth=0.75)
+sp.layered_fill_between(ax, x, y, 0.0, color="#2563EB", base_alpha=0.16, layers=3)
+sp.smart_marker_style(n_points, base_size=24.0, base_alpha=0.78)  # 自动缩点、降透与大样本栅格化
+sp.repel_panel_labels(fig)                   # 自动检测子图编号 (a)(b) 与刻度重叠并微调外推
 sp.truncate_tick_labels(ax, axis="x", max_len=14)
 loc = sp.pick_best_corner(ax)                # 避开数据点自动选择稀疏角落 (用于图例/统计框)
 sp.smart_labels(ax, texts, adjust=True)      # 多标签避让

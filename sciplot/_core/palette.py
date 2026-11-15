@@ -723,3 +723,64 @@ def make_palette_cmap(
         stops = list(reversed(stops))
     cmap_name = f"sciplot_{palette or 'active'}_{kind}"
     return LinearSegmentedColormap.from_list(cmap_name, stops, N=n_lut)
+
+
+def make_highlight_palette(
+    n_series: int,
+    *,
+    highlight_idx: int = 0,
+    highlight_color: Optional[str] = None,
+    palette: Optional[str] = None,
+    neutral_color: str = "#CBD5E1",
+    neutral_step: float = 0.08,
+) -> List[str]:
+    """构建“灰阶背景 + 焦点高亮”的叙事配色列表（Start-from-Grey 策略）。
+
+    非焦点系列采用微渐变中性灰退居背景，仅将目标焦点系列（如“本文方法”
+    或关键实验组）赋予高对比主色，显著强化论文图表的视觉重心与叙事效率。
+
+    参数:
+        n_series       : 总系列数（必须 >= 1）
+        highlight_idx  : 需高亮的系列索引（支持负索引如 ``-1`` 表示最后一组）
+        highlight_color: 显式指定焦点色；None 时取指定或当前配色首色
+        palette        : 配色方案名；None 时读取当前色循环
+        neutral_color  : 基础中性灰颜色，默认 ``"#CBD5E1"``
+        neutral_step   : 非焦点组间的灰度微梯度幅度，避免多条灰线完全混淆
+
+    返回:
+        长度为 ``n_series`` 的 HEX 颜色列表
+    """
+    import matplotlib.colors as mcolors
+    from sciplot.utils import darken_color
+
+    if n_series <= 0:
+        raise ValueError(f"n_series 必须为正整数，实际值: {n_series!r}")
+
+    resolved_idx = highlight_idx if highlight_idx >= 0 else n_series + highlight_idx
+    if not (0 <= resolved_idx < n_series):
+        raise IndexError(
+            f"highlight_idx={highlight_idx} 超出 [0, {n_series - 1}] 范围"
+        )
+
+    if highlight_color is not None:
+        focus = mcolors.to_hex(highlight_color)
+    elif palette is not None:
+        focus = get_palette(palette)[0]
+    else:
+        cycle = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
+        focus = cycle[0] if cycle else VIVID_PALETTES["coral-teal"][0]
+
+    neutral_hex = mcolors.to_hex(neutral_color)
+    bg_count = max(1, n_series - 1)
+    bg_cursor = 0
+    result: List[str] = []
+    for idx in range(n_series):
+        if idx == resolved_idx:
+            result.append(focus)
+        else:
+            frac = bg_cursor / max(1, bg_count - 1) if bg_count > 1 else 0.0
+            amount = min(0.45, max(0.0, frac * neutral_step * max(1, bg_count - 1)))
+            result.append(darken_color(neutral_hex, amount=amount) if amount > 0 else neutral_hex)
+            bg_cursor += 1
+    return result
+

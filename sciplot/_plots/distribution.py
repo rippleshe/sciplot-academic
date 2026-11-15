@@ -24,6 +24,7 @@ from sciplot._core.utils import (
     new_styled_figure,
 )
 from sciplot._core.result import PlotResult, ComboPlotResult
+from sciplot.utils.guards import polish_axis, style_patch_edges, truncate_tick_labels
 from sciplot.utils.smart import auto_rotate_labels, smart_legend
 
 
@@ -407,6 +408,35 @@ def plot_box(
 # 小提琴图
 # ============================================================================
 
+def _draw_violin_quartiles(
+    ax: plt.Axes,
+    pos: float,
+    vals: np.ndarray,
+    *,
+    showmedians: bool = True,
+    showmeans: bool = False,
+    capsule_width: float = 4.2,
+    mean_color: str = "#E76F51",
+) -> None:
+    """在小提琴轮廓内部绘制须线、IQR 胶囊与中位数/均值标记。"""
+    q25, med, q75 = np.percentile(vals, [25, 50, 75])
+    iqr = q75 - q25
+    lo_w = max(float(vals.min()), q25 - 1.5 * iqr)
+    hi_w = min(float(vals.max()), q75 + 1.5 * iqr)
+    ax.vlines(pos, lo_w, hi_w, color="#2D3436", linewidth=0.95, zorder=3)
+    ax.vlines(pos, q25, q75, color="#2D3436", linewidth=capsule_width, zorder=4)
+    if showmedians:
+        ax.scatter(
+            [pos], [med], color="white", edgecolors="#2D3436",
+            s=18, linewidths=0.8, zorder=5,
+        )
+    if showmeans:
+        ax.scatter(
+            [pos], [float(np.mean(vals))], marker="D",
+            color=mean_color, edgecolors="white", s=20, linewidths=0.5, zorder=6,
+        )
+
+
 def plot_violin(
     data: Union[np.ndarray, List[np.ndarray]],
     labels: Optional[List[str]] = None,
@@ -502,19 +532,14 @@ def plot_violin(
 
     if show_box:
         for i, vals in enumerate(groups_seq):
-            pos = float(i + 1)
-            q25, med, q75 = np.percentile(vals, [25, 50, 75])
-            iqr = q75 - q25
-            lo_w = max(float(vals.min()), q25 - 1.5 * iqr)
-            hi_w = min(float(vals.max()), q75 + 1.5 * iqr)
-            ax.vlines(pos, lo_w, hi_w, color="#2D3436", linewidth=0.95, zorder=3)
-            ax.vlines(pos, q25, q75, color="#2D3436", linewidth=4.2, zorder=4)
-            if showmedians:
-                ax.scatter([pos], [med], color="white", edgecolors="#2D3436",
-                           s=18, linewidths=0.8, zorder=5)
-            if showmeans:
-                ax.scatter([pos], [float(np.mean(vals))], marker="D",
-                           color="#E76F51", edgecolors="white", s=20, linewidths=0.5, zorder=6)
+            _draw_violin_quartiles(
+                ax,
+                float(i + 1),
+                vals,
+                showmedians=showmedians,
+                showmeans=showmeans,
+                capsule_width=4.2,
+            )
 
     if show_points:
         rng = np.random.default_rng(42)
@@ -785,8 +810,12 @@ def plot_horizontal_bar(
 
     y = np.arange(len(categories))
     bar_colors = [cycle_color(colors, i) for i in range(len(categories))]
+    has_edge_override = "edgecolor" in kwargs or "ec" in kwargs
+    has_alpha_override = "alpha" in kwargs
 
     bars = ax.barh(y, values_arr, height=height, color=bar_colors, **kwargs)
+    if not has_edge_override and not has_alpha_override:
+        style_patch_edges(bars, bar_colors, fill_alpha=0.86, darken_amount=0.26, linewidth=0.7)
 
     if show_values:
         value_offset = max(float(np.max(np.abs(values_arr))) * 0.01, 1e-9)
@@ -798,11 +827,13 @@ def plot_horizontal_bar(
                 bar.get_y() + bar.get_height() / 2,
                 f"{v:{value_fmt}}",
                 ha=text_ha, va="center",
-                fontsize=plt.rcParams.get("font.size", 9) - 1,
+                fontsize=max(6, plt.rcParams.get("font.size", 9) - 1),
             )
 
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
     ax.set_yticks(y)
     ax.set_yticklabels(categories)
+    truncate_tick_labels(ax, axis="y", max_len=24)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -856,10 +887,14 @@ def plot_lollipop(
     main_color = colors[0]
 
     x = np.arange(len(categories))
-    ax.hlines(y=baseline, xmin=-0.5, xmax=len(categories) - 0.5, color="#BFBFBF", linewidth=1)
-    ax.vlines(x, baseline, values_arr, color=main_color, linewidth=stem_width, alpha=0.9)
-    ax.scatter(x, values_arr, s=marker_size**2, color=main_color, zorder=3, **kwargs)
+    ax.hlines(y=baseline, xmin=-0.5, xmax=len(categories) - 0.5, color="#B8C0CC", linewidth=0.95, zorder=1)
+    ax.vlines(x, baseline, values_arr, color=main_color, linewidth=stem_width, alpha=0.88, zorder=2)
+    scatter_kw = dict(kwargs)
+    scatter_kw.setdefault("edgecolors", "white")
+    scatter_kw.setdefault("linewidths", 0.9)
+    ax.scatter(x, values_arr, s=marker_size**2, color=main_color, zorder=3, **scatter_kw)
 
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
     ax.set_xticks(x)
     ax.set_xticklabels(categories)
     auto_rotate_labels(ax, axis="x")
@@ -1370,6 +1405,7 @@ def plot_dumbbell(
                 ha="left", va="center", fontsize=fontsize, color="#444444",
             )
 
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
     ax.set_yticks(y)
     ax.set_yticklabels(cats)
     ax.set_xlabel(xlabel)
@@ -1448,8 +1484,12 @@ def plot_diverging_bar(
 
     y = np.arange(len(cats))
     bar_colors = [pos_color if v >= threshold else neg_color for v in vals]
-    ax.barh(y, vals - threshold, left=threshold, color=bar_colors, **kwargs)
-    ax.axvline(x=threshold, color="#888888", linestyle="--", linewidth=1.0)
+    has_edge_override = "edgecolor" in kwargs or "ec" in kwargs
+    has_alpha_override = "alpha" in kwargs
+    bars = ax.barh(y, vals - threshold, left=threshold, color=bar_colors, **kwargs)
+    if not has_edge_override and not has_alpha_override:
+        style_patch_edges(bars, bar_colors, fill_alpha=0.86, darken_amount=0.26, linewidth=0.7)
+    ax.axvline(x=threshold, color="#64748B", linestyle="--", linewidth=1.0, zorder=2)
 
     if show_values:
         fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
@@ -1461,6 +1501,7 @@ def plot_diverging_bar(
                 ax.text(v - abs(v) * 0.02 - 0.01, yi, f"{v:{fmt}}",
                         ha="right", va="center", fontsize=fontsize)
 
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
     ax.set_yticks(y)
     ax.set_yticklabels(cats)
     ax.set_xlabel(xlabel)
@@ -1722,6 +1763,316 @@ def plot_pareto(
     if title:
         ax.set_title(title)
     auto_rotate_labels(ax, axis="x")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 分组小提琴图（Grouped Violin）
+# ============================================================================
+
+def plot_grouped_violin(
+    categories: Sequence[str],
+    series: Dict[str, Sequence[Sequence[float]]],
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    show_box: bool = True,
+    show_mean: bool = False,
+    show_points: bool = False,
+    width: float = 0.74,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制双因素分组小提琴图（外层分组 × 内部条件分布对比）。
+
+    每个大类内并排绘制多个条件的小提琴分布，统一叠加密度轮廓、深色边界、
+    内嵌 IQR 四分位胶囊与白点中位数，并支持原始散点抖动叠加与极淡分组分隔线。
+
+    参数:
+        categories : 主分组名称序列（X 轴刻度标签）
+        series     : 字典 ``{条件名: [每个主分组的样本序列, ...]}``
+        xlabel     : X 轴标签
+        ylabel     : Y 轴标签
+        title      : 图标题
+        show_box   : 是否在琴身内部绘制 IQR 四分位胶囊与白点中位数，默认 True
+        show_mean  : 是否绘制均值菱形标记，默认 False
+        show_points: 是否叠加半透明抖动原始样本点，默认 False
+        width      : 单个大类占用的总水平宽度（默认 0.74）
+        venue      : 期刊样式预设
+        palette    : 配色方案名称
+        lang       : 语言设置
+
+    返回:
+        PlotResult 对象，支持 ``fig, ax = sp.plot_grouped_violin(...)`` 解包。
+
+    示例:
+        >>> fig, ax = sp.plot_grouped_violin(
+        ...     ["Stage I", "Stage II", "Stage III"],
+        ...     {"Control": [c1, c2, c3], "Treatment": [t1, t2, t3]},
+        ...     ylabel="Biomarker Level",
+        ... )
+    """
+    from matplotlib.colors import to_hex
+    from matplotlib.patches import Patch
+    from sciplot.utils import darken_color
+    from sciplot.utils.guards import polish_axis
+    from sciplot.utils.smart import smart_legend
+
+    cat_list = [str(c) for c in categories]
+    if not cat_list:
+        raise ValueError("参数 'categories' 不能为空")
+    validate_dict_not_empty(series, "series")
+    if not (0.1 <= width <= 0.98):
+        raise ValueError(f"width 必须在 [0.1, 0.98] 范围内，实际值: {width!r}")
+
+    n_cats = len(cat_list)
+    series_names = list(series.keys())
+    n_series = len(series_names)
+
+    parsed_series: Dict[str, List[np.ndarray]] = {}
+    for name, groups in series.items():
+        if len(groups) != n_cats:
+            raise ValueError(
+                f"系列 '{name}' 的分组数量 ({len(groups)}) 与 categories 长度 ({n_cats}) 不一致"
+            )
+        arr_list: List[np.ndarray] = []
+        for idx, g in enumerate(groups):
+            arr = np.asarray(g, dtype=float).ravel()
+            if arr.size == 0:
+                raise ValueError(f"系列 '{name}' 第 {idx} 组样本不能为空")
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"系列 '{name}' 第 {idx} 组不能包含 NaN 或 Inf")
+            arr_list.append(arr)
+        parsed_series[str(name)] = arr_list
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = _get_cycle_colors()
+
+    slot_w = width / n_series
+    v_w = slot_w * 0.84
+    rng = np.random.default_rng(42)
+
+    if n_cats >= 2:
+        for sep_idx in range(n_cats - 1):
+            ax.axvline(sep_idx + 0.5, color="#CBD5E1", linestyle=":", linewidth=0.8, alpha=0.65, zorder=0)
+
+    legend_handles: List[Patch] = []
+    for j, name in enumerate(series_names):
+        c = cycle_color(colors, j)
+        try:
+            edge_c = darken_color(to_hex(c), amount=0.28)
+        except Exception:
+            edge_c = "#2D3436"
+        offset = (j - (n_series - 1) / 2.0) * slot_w
+
+        for i, vals in enumerate(parsed_series[name]):
+            pos = float(i) + offset
+            violin_input = vals if vals.size >= 2 else np.array([vals[0], vals[0]])
+            parts = ax.violinplot(
+                [violin_input],
+                positions=[pos],
+                widths=v_w,
+                showmeans=False,
+                showmedians=False,
+                showextrema=False,
+                **kwargs,
+            )
+            for pc in parts["bodies"]:  # type: ignore[attr-defined]
+                pc.set_facecolor(c)
+                pc.set_alpha(0.55)
+                pc.set_edgecolor(edge_c)
+                pc.set_linewidth(0.95)
+                pc.set_zorder(2)
+
+            if show_box:
+                _draw_violin_quartiles(
+                    ax,
+                    pos,
+                    vals,
+                    showmedians=True,
+                    showmeans=show_mean,
+                    capsule_width=max(2.4, min(3.8, v_w * 12.0)),
+                )
+
+            if show_points:
+                jit = rng.uniform(-v_w * 0.16, v_w * 0.16, size=vals.size)
+                ax.scatter(
+                    pos + jit,
+                    vals,
+                    s=9,
+                    alpha=0.38,
+                    color=c,
+                    edgecolors="white",
+                    linewidths=0.3,
+                    zorder=2,
+                )
+
+        legend_handles.append(
+            Patch(facecolor=c, edgecolor=edge_c, alpha=0.65, linewidth=0.85, label=name)
+        )
+
+    ax.set_xticks(np.arange(n_cats))
+    ax.set_xticklabels(cat_list)
+    ax.set_xlim(-0.55, n_cats - 0.45)
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
+    auto_rotate_labels(ax, axis="x")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    if n_series > 1:
+        ax.legend(handles=legend_handles, frameon=False)
+        smart_legend(ax)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 镜像双向水平柱状图（Back-to-Back Bar / Mirror Bar）
+# ============================================================================
+
+def plot_back_to_back_bar(
+    categories: Sequence[str],
+    left_values: Sequence[float],
+    right_values: Sequence[float],
+    left_label: str = "Group A",
+    right_label: str = "Group B",
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    show_values: bool = True,
+    show_diff: bool = True,
+    fmt: str = ".1f",
+    sort_by: Optional[str] = None,
+    bar_height: float = 0.62,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制镜像双向水平柱状图，用于两组在多个指标上的直观对称对比。
+
+    左侧水平条以中心 0 轴向左延伸、右侧向右延伸，自动提供正值对称刻度、
+    柱端数值标签与右侧净差异（``Δ = R - L``）摘要列，避免拥挤感。
+
+    参数:
+        categories  : 类别或指标名称列表
+        left_values : 左侧组非负数值序列（与 categories 等长）
+        right_values: 右侧组非负数值序列（与 categories 等长）
+        left_label  : 左侧组名称，默认 "Group A"
+        right_label : 右侧组名称，默认 "Group B"
+        xlabel      : X 轴标签
+        ylabel      : Y 轴标签
+        title       : 图标题
+        show_values : 是否在两侧柱体末端标注数值，默认 True
+        show_diff   : 是否在右侧附加差异列 ``Δ = R - L``，默认 True
+        fmt         : 数值格式化字符串，默认 ".1f"
+        sort_by     : 可选排序方式：None / "left" / "right" / "diff"（降序置顶）
+        bar_height  : 柱体高度，默认 0.62
+        venue       : 期刊样式预设
+        palette     : 配色方案名称
+        lang        : 语言设置
+
+    返回:
+        PlotResult 对象。
+
+    示例:
+        >>> fig, ax = sp.plot_back_to_back_bar(
+        ...     ["Accuracy", "Recall", "Precision", "F1"],
+        ...     [82.4, 79.1, 84.0, 81.5],
+        ...     [88.6, 85.4, 86.2, 85.8],
+        ...     left_label="Baseline", right_label="Ours",
+        ... )
+    """
+    from matplotlib.ticker import FuncFormatter
+    from sciplot._core.utils import relative_fontsize
+    from sciplot.utils.guards import polish_axis, style_patch_edges, truncate_tick_labels
+    from sciplot.utils.smart import smart_legend
+
+    cat_list = [str(c) for c in categories]
+    if not cat_list:
+        raise ValueError("参数 'categories' 不能为空")
+
+    l_arr = np.asarray(left_values, dtype=float).ravel()
+    r_arr = np.asarray(right_values, dtype=float).ravel()
+    if l_arr.size != len(cat_list) or r_arr.size != len(cat_list):
+        raise ValueError(
+            f"left_values ({l_arr.size}) 与 right_values ({r_arr.size}) 长度必须与 categories ({len(cat_list)}) 一致"
+        )
+    if not np.all(np.isfinite(l_arr)) or not np.all(np.isfinite(r_arr)):
+        raise ValueError("left_values 和 right_values 不能包含 NaN 或 Inf")
+    if np.any(l_arr < 0) or np.any(r_arr < 0):
+        raise ValueError("plot_back_to_back_bar 要求非负数值；含正负值的对比请使用 plot_diverging_bar")
+    if sort_by not in {None, "left", "right", "diff"}:
+        raise ValueError(f"sort_by 仅支持 None / 'left' / 'right' / 'diff'，实际值: {sort_by!r}")
+
+    if sort_by is not None:
+        key_arr = l_arr if sort_by == "left" else (r_arr if sort_by == "right" else np.abs(r_arr - l_arr))
+        order = np.argsort(-key_arr, kind="stable")
+        cat_list = [cat_list[i] for i in order]
+        l_arr = l_arr[order]
+        r_arr = r_arr[order]
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = _get_cycle_colors()
+    c_left = colors[0]
+    c_right = colors[1] if len(colors) > 1 else "#E76F51"
+
+    y = np.arange(len(cat_list), dtype=float)
+    bar_kw = dict(kwargs)
+    has_edge = "edgecolor" in bar_kw or "ec" in bar_kw
+    has_alpha = "alpha" in bar_kw
+
+    bars_l = ax.barh(y, -l_arr, height=bar_height, color=c_left, label=left_label, zorder=3, **bar_kw)
+    bars_r = ax.barh(y, r_arr, height=bar_height, color=c_right, label=right_label, zorder=3, **bar_kw)
+    if not has_edge and not has_alpha:
+        style_patch_edges(bars_l, [c_left] * len(cat_list), fill_alpha=0.86, darken_amount=0.25, linewidth=0.75)
+        style_patch_edges(bars_r, [c_right] * len(cat_list), fill_alpha=0.86, darken_amount=0.25, linewidth=0.75)
+
+    ax.axvline(0.0, color="#334155", linewidth=1.05, zorder=4)
+
+    max_extent = float(max(np.max(l_arr), np.max(r_arr), 1e-6))
+    pad = max_extent * 0.025
+    fs = relative_fontsize(-1, floor=6)
+
+    if show_values:
+        for yi, lv, rv in zip(y, l_arr, r_arr):
+            ax.text(
+                -lv - pad, yi, format(lv, fmt),
+                ha="right", va="center", fontsize=fs, color="#334155", zorder=5,
+            )
+            ax.text(
+                rv + pad, yi, format(rv, fmt),
+                ha="left", va="center", fontsize=fs, color="#334155", zorder=5,
+            )
+
+    if show_diff:
+        diff_fs = relative_fontsize(-1, floor=6)
+        for yi, lv, rv in zip(y, l_arr, r_arr):
+            delta = rv - lv
+            d_color = c_right if delta > 1e-12 else (c_left if delta < -1e-12 else "#64748B")
+            ax.text(
+                1.02, yi, f"Δ{delta:+{fmt}}",
+                transform=ax.get_yaxis_transform(),
+                ha="left", va="center", fontsize=diff_fs,
+                fontweight="bold", color=d_color, clip_on=False,
+            )
+
+    xlim_scale = 1.24 if show_values else 1.10
+    ax.set_xlim(-max_extent * xlim_scale, max_extent * xlim_scale)
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _pos: f"{abs(x):g}"))
+    ax.set_yticks(y)
+    ax.set_yticklabels(cat_list)
+    ax.invert_yaxis()
+    truncate_tick_labels(ax, axis="y", max_len=24)
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 

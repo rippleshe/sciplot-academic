@@ -316,7 +316,7 @@ COMPOSITE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "description": "临床三联画：上行时序、中行森林图、下行汇总柱（Nature 高频页面）",
         "nrows": 3, "ncols": 2,
         "widths": [1, 1], "heights": [1.0, 0.9, 0.7],
-        "hspace": 0.50, "wspace": 0.30,
+        "hspace": 0.52, "wspace": 0.38,
         "sharex": False, "sharey": False,
         "label_size": 8,
     },
@@ -765,10 +765,11 @@ def add_panel_labels(
             kw["fontsize"] = fontsize
         if hasattr(ax, "get_zlabel"):
             # 3D 子图：Axes3D.text() 签名不同，使用 text2D 以 axes 坐标定位
-            ax.text2D(x, y, lbl, transform=ax.transAxes, **kw)
+            txt = ax.text2D(x, y, lbl, transform=ax.transAxes, **kw)
         else:
             kw["transform"] = ax.transAxes
-            ax.text(x, y, lbl, **kw)
+            txt = ax.text(x, y, lbl, **kw)
+        setattr(txt, "_sciplot_panel_label", True)
 
 
 # ============================================================================
@@ -855,6 +856,15 @@ def save(
     if audit is None:
         cfg_audit = get_config("audit")
         audit = bool(cfg_audit) if isinstance(cfg_audit, bool) else True
+
+    # 保存前自动执行多面板标签防碰撞微调（非破坏性，仅在检测到撞轴时避让）
+    try:
+        from sciplot.utils.guards import repel_panel_labels
+
+        repel_panel_labels(fig)
+    except Exception:
+        pass
+
     if audit:
         try:
             from sciplot._core.audit import audit_figure

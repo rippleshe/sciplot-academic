@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta
 from sciplot._core.layout import add_colorbar
 from sciplot._core.utils import cycle_color, get_cycle_colors, new_styled_figure, validate_labels_match_data, relative_fontsize
 from sciplot._core.result import PlotResult
+from sciplot.utils.guards import polish_axis
 from sciplot.utils.smart import _series_line_kwargs, smart_legend
 
 
@@ -269,12 +270,13 @@ def plot_timeseries(
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if has_legend_item:
-        ax.legend()
+        smart_legend(ax)
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -377,6 +379,7 @@ def plot_multi_timeseries(
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -425,9 +428,14 @@ def plot_slope(
     x_positions = np.array([0.0, 1.0])
     left_x, right_x = x_positions
 
+    slope_kw = dict(kwargs)
+    slope_kw.setdefault("markeredgecolor", "white")
+    slope_kw.setdefault("markeredgewidth", 0.75)
+    slope_kw.setdefault("linewidth", 1.8)
+
     for i, (name, b_val, a_val) in enumerate(zip(labels, before_arr, after_arr)):
         color = cycle_color(colors, i)
-        ax.plot(x_positions, [b_val, a_val], marker="o", color=color, alpha=0.85, **kwargs)
+        ax.plot(x_positions, [b_val, a_val], marker="o", color=color, alpha=0.85, **slope_kw)
 
         ax.text(left_x - 0.03, b_val, f"{name}", ha="right", va="center")
         if show_diff:
@@ -446,8 +454,13 @@ def plot_slope(
     ax.set_xticklabels([left_label, right_label])
     if title:
         ax.set_title(title)
-    if show_grid:
-        ax.grid(axis="y", linestyle="--", alpha=0.4)
+    polish_axis(
+        ax,
+        categorical_axis="x",
+        clean_spines=True,
+        grid="y" if show_grid else False,
+        grid_alpha=0.22,
+    )
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -1066,6 +1079,7 @@ def plot_bump(
     ax.set_yticks(np.arange(1, n_items + 1))
     ax.invert_yaxis()  # 排名 1 在顶部
     ax.set_xlim(-0.4, n_time - 0.6 + (1.1 if show_end_labels else 0.0))
+    polish_axis(ax, categorical_axis="both", clean_spines=True, grid="y", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:

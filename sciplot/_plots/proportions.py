@@ -324,7 +324,7 @@ def plot_donut(
     # 数值放环内中部（扇区角度过小时跳过，避免文字溢出扇区）
     if show_values:
         fs = max(7, plt.rcParams.get("font.size", 9) - 1)
-        for w, v in zip(wedges, val_arr):
+        for idx, (w, v) in enumerate(zip(wedges, val_arr)):
             arc_deg = abs(w.theta2 - w.theta1)
             if arc_deg < 22.0:
                 continue  # 过窄扇区不写数值，避免溢出
@@ -332,7 +332,8 @@ def plot_donut(
             r = 1.0 - hole_ratio / 2
             ax.text(r * np.cos(ang), r * np.sin(ang), f"{v:{fmt}}",
                     ha="center", va="center", fontsize=fs,
-                    color="white", fontweight="bold", zorder=5)
+                    color=contrast_text_color(color_list[idx]),
+                    fontweight="bold", zorder=5)
 
     # 外圈标签：类别名 + 可选百分比（避免与环内数值重叠）
     fs_label = max(7, plt.rcParams.get("font.size", 9) - 1)

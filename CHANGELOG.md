@@ -11,6 +11,38 @@
 
 ---
 
+## [1.16.0] - 2026-11-15
+
+### Added
+
+- **5 个高表现力科研与竞赛图表**（含简洁别名）：
+  - `plot_grouped_violin()` / `grouped_violin()`：双因素分组小提琴图（类别 × 系列），支持内嵌箱线、均值菱形、抖动散点与单点样本安全退化。
+  - `plot_back_to_back_bar()` / `back_to_back_bar()` / `mirror_bar()`：双向镜像对比柱状图，双侧坐标轴强制非负刻度（CM-09），支持按差值排序与自动标注净差值 `Δ`。
+  - `plot_method_heatmap()` / `method_heatmap()`：多方法 × 多指标归一化基准矩阵热力图，统一混合方向指标（越大越好/越小越好）并保留格子内真实量纲数值、每列最优外框高亮与综合评分排序。
+  - `plot_tornado()` / `tornado()`：单因素敏感性龙卷风图，围绕基准值绘制双向弹性条带，默认按波动幅度降序排列并标注端值。
+  - `plot_residual_diagnostics()` / `residual_diagnostics()`：四合一回归残差诊断面板，整合 (a) Residuals vs Fitted + Lowess、(b) Normal Q-Q + 95% Beta CI、(c) 残差密度直方图与 SW 检验、(d) 滞后自相关图 (ACF)。
+- **Start-from-Grey 焦点高亮与视觉下限守卫增强**：
+  - 新增 `make_highlight_palette()`：将次要系列退隐为冷灰阶梯、仅高亮核心焦点系列。
+  - 升级 `polish_axis(..., minor_ticks=None)`：开启 `clean_spines=True` 时默认抑制连续轴多余密集次刻度，同时将主轴脊柔和至 `#5A6270`。
+  - 新增 `layered_fill_between()`（多层渐淡填充带）、`smart_marker_style()`（按样本量自适应点大小、透明度与栅格化阈值）及 `repel_panel_labels()`（多面板标签碰撞自动避让），并在 `save()` 中自动执行标签防撞。
+- **数据画像与智能选图决策树升级 (`recommend_charts`)**：
+  - `ChartRecommendation` 与 `ChartRecommendationReport` 新增 `decision_path`（对齐 `干0–干9` 决策路径）、`anti_patterns`（反模式预警）与 `upgrade_tips` 升级建议及 `format_text()` 可读报告。
+  - 新增 `two_factor_samples`（→ `plot_grouped_violin`）、`method_metric_matrix`（→ `plot_method_heatmap`）、`actual_pred`（→ `plot_residual_diagnostics`）、`sensitivity_bounds`（→ `plot_tornado`）与 `two_series_positive_metrics`（→ `plot_back_to_back_bar`）识别。
+  - 新增规模量级 (`spans_orders`)、强偏态 (`heavy_skew`) 与大样本过饱和 (`large_sample >= 300`) 自动诊断。
+- **Companion Skill v4.0.0**：深度融合 `dataviz-course-skill` 课程选型决策树与评审红线 (`VR-B1` / `CM-01~CM-11` / `VR-A~VR-I`)，重塑 `.claude/skills/sciplot/`、`scripts/profile_and_recommend.py` 与 `.github/copilot-instructions.md`（及 `/zh.md`）。
+
+### Changed
+
+- 全面应用视觉下限抛光至基础统计、分布、残差、时序、混淆矩阵/特征重要性/学习曲线等既有绘图函数与 `showcase/` 示范脚本；重制 `showcase/48_composite_triptych.png`（消除 (c)/(d) 森林图重复与面板标签碰撞）与 `showcase/34_composite_condition_matrix.png`，并新增 `showcase/56_grouped_violin.png` ~ `showcase/60_residual_diagnostics.png`。
+- 放宽 `figure_panels(template="triptych")` 默认间距以留出充足的多面板标签空间。
+
+### Fixed
+
+- 修复 `profile_data()` 处理“1 个类别列 + 1 个数值列、行数 > 30”的长表时被误归为双变量关系的缺陷。
+- 修正 `plot_area()` 默认保留单层精确 `alpha`（兼容 Round 6 契约），同时支持通过 `layered=True` 显式启用多层渐淡填充。
+
+---
+
 ## [1.15.1] - 2026-11-15
 
 ### Fixed

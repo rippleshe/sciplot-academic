@@ -22,7 +22,8 @@ from sciplot._core.utils import (
     new_styled_figure,
 )
 from sciplot._core.result import PlotResult
-from sciplot.utils.smart import auto_rotate_labels
+from sciplot.utils.guards import polish_axis
+from sciplot.utils.smart import auto_rotate_labels, smart_legend
 
 
 def _resolve_norm(
@@ -87,12 +88,13 @@ def plot_errorbar(
         capsize=capsize, markersize=markersize,
         label=label, **kwargs
     )
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label:
-        ax.legend()
+        smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -173,12 +175,13 @@ def plot_confidence(
         y_mean + n_std * y_std,
         **effective_fill_kwargs,
     )
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label_mean or (label_std is not None and label_std):
-        ax.legend()
+        smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -346,6 +349,7 @@ def plot_heatmap(
     if title:
         ax.set_title(title)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
 
 
 def plot_bubble_heatmap(
@@ -524,6 +528,7 @@ def plot_bubble_heatmap(
     if title:
         ax.set_title(title)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
 
 
 def _pack_bubbles(
@@ -1280,6 +1285,7 @@ def plot_hexbin(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+
 def plot_bubble(
     x: np.ndarray,
     y: np.ndarray,
@@ -1445,6 +1451,211 @@ def plot_bubble(
                 ha="center", va="center", fontsize=fontsize,
                 color=text_color, zorder=4,
             )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 多方法评测矩阵热力图（Method Comparison Heatmap）
+# ============================================================================
+
+def plot_method_heatmap(
+    scores: Union[np.ndarray, Sequence[Sequence[float]]],
+    methods: Sequence[str],
+    metrics: Sequence[str],
+    higher_is_better: Optional[Union[Sequence[bool], Dict[str, bool]]] = None,
+    show_overall: bool = True,
+    overall_label: str = "Overall",
+    highlight_best: bool = True,
+    show_rank: bool = True,
+    cluster_rows: bool = False,
+    sort_by_overall: bool = False,
+    fmt: str = ".2f",
+    cmap: str = "YlGnBu",
+    colorbar_label: str = "Normalized Score",
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制多方法×多指标归一化评测矩阵热力图。
+
+    针对各列指标的物理意义（越大越好或越小越好）独立归一化到 ``[0, 1]``
+    （``1.0`` 恒代表该项最优，``0.0`` 代表最差），在格内保留真实原始度量值，
+    支持每列冠军高亮边框、前三名角标（``#1/#2/#3``）、行层次聚类排序及综合平均分列。
+
+    参数:
+        scores          : 二维评分矩阵，形状 ``(n_methods, n_metrics)``
+        methods         : 方法/模型名称序列，长度 ``n_methods``
+        metrics         : 指标名称序列，长度 ``n_metrics``
+        higher_is_better: 指定每项指标是否“越高越好”；可为布尔序列或 ``{指标名: bool}``，
+                          None 时默认所有指标均越高越好
+        show_overall    : 是否在右侧追加综合归一化得分列（默认 True）
+        overall_label   : 综合列标题，默认 "Overall"
+        highlight_best  : 是否用琥珀色框线标出每列冠军（默认 True）
+        show_rank       : 是否为每列前 3 名标注角标 ``#1/#2/#3``（默认 True）
+        cluster_rows    : 是否按归一化得分向量对方法行做层次聚类重排（默认 False）
+        sort_by_overall : 未聚类时是否按综合平均分降序排列方法（默认 False）
+        fmt             : 原始指标单元格格式化串，默认 ".2f"
+        cmap            : 热力色图名称，默认 "YlGnBu"
+        colorbar_label  : 颜色条标签
+        xlabel/ylabel   : 坐标轴标签
+        title           : 图标题
+        venue           : 期刊样式预设
+        palette         : 配色方案名称
+        lang            : 语言设置
+
+    返回:
+        PlotResult 对象。
+
+    示例:
+        >>> scores = [[0.91, 12.4, 0.88], [0.85, 8.2, 0.84], [0.93, 18.5, 0.90]]
+        >>> fig, ax = sp.plot_method_heatmap(
+        ...     scores,
+        ...     methods=["Model A", "Model B", "Ours"],
+        ...     metrics=["AUC", "Latency(ms)", "F1"],
+        ...     higher_is_better={"Latency(ms)": False},
+        ...     title="Benchmark Matrix",
+        ... )
+    """
+    from matplotlib.patches import Rectangle
+    from sciplot._core.utils import relative_fontsize
+
+    mat = np.asarray(scores, dtype=float)
+    if mat.ndim != 2 or mat.shape[0] < 1 or mat.shape[1] < 1:
+        raise ValueError(f"scores 必须为非空二维数组，当前形状: {mat.shape}")
+    if not np.all(np.isfinite(mat)):
+        raise ValueError("scores 不能包含 NaN 或 Inf")
+
+    n_methods, n_metrics = mat.shape
+    method_list = [str(m) for m in methods]
+    metric_list = [str(k) for k in metrics]
+    if len(method_list) != n_methods:
+        raise ValueError(f"methods 长度 ({len(method_list)}) 与行数 ({n_methods}) 不一致")
+    if len(metric_list) != n_metrics:
+        raise ValueError(f"metrics 长度 ({len(metric_list)}) 与列数 ({n_metrics}) 不一致")
+
+    if higher_is_better is None:
+        hib = [True] * n_metrics
+    elif isinstance(higher_is_better, dict):
+        hib = [bool(higher_is_better.get(name, True)) for name in metric_list]
+    else:
+        hib_seq = list(higher_is_better)
+        if len(hib_seq) != n_metrics:
+            raise ValueError(
+                f"higher_is_better 长度 ({len(hib_seq)}) 与 metrics 长度 ({n_metrics}) 不一致"
+            )
+        hib = [bool(v) for v in hib_seq]
+
+    # 按列物理方向独立归一化至 [0, 1]（1.0 = 该列最优）
+    norm_mat = np.full_like(mat, 0.5, dtype=float)
+    for j in range(n_metrics):
+        col = mat[:, j]
+        cmin = float(col.min())
+        cmax = float(col.max())
+        span = cmax - cmin
+        if span > 1e-12:
+            norm_mat[:, j] = (col - cmin) / span if hib[j] else (cmax - col) / span
+
+    overall_scores = norm_mat.mean(axis=1)
+
+    # 行重排：聚类优先，其次按综合分降序
+    row_order: np.ndarray = np.arange(n_methods)
+    if cluster_rows and n_methods >= 3:
+        try:
+            from scipy.cluster.hierarchy import leaves_list, linkage  # type: ignore[import-untyped]
+
+            row_order = np.asarray(leaves_list(linkage(norm_mat, method="average")), dtype=int)
+        except Exception:
+            row_order = np.argsort(-overall_scores, kind="stable")
+    elif sort_by_overall and n_methods >= 2:
+        row_order = np.argsort(-overall_scores, kind="stable")
+
+    mat = mat[row_order]
+    norm_mat = norm_mat[row_order]
+    overall_scores = overall_scores[row_order]
+    method_list = [method_list[i] for i in row_order]
+
+    if show_overall:
+        display_norm = np.column_stack([norm_mat, overall_scores])
+        display_raw = np.column_stack([mat, overall_scores])
+        col_labels = metric_list + [overall_label]
+        col_hib = hib + [True]
+    else:
+        display_norm = norm_mat
+        display_raw = mat
+        col_labels = metric_list
+        col_hib = hib
+
+    n_cols_total = display_norm.shape[1]
+
+    # 每列独立名次（1 = 最优）
+    ranks = np.zeros((n_methods, n_cols_total), dtype=int)
+    for j in range(n_cols_total):
+        key = -display_raw[:, j] if col_hib[j] else display_raw[:, j]
+        order_j = np.argsort(key, kind="stable")
+        ranks[order_j, j] = np.arange(1, n_methods + 1)
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    cmap_obj = get_cmap_safe(cmap)
+    im = ax.imshow(display_norm, cmap=cmap_obj, vmin=0.0, vmax=1.0, aspect="auto", **kwargs)
+    cbar = add_colorbar(fig, im, ax=ax)
+    cbar.ax.tick_params(which="minor", length=0)
+    if colorbar_label:
+        cbar.set_label(colorbar_label)
+
+    ax.set_xticks(np.arange(n_cols_total))
+    ax.set_xticklabels(col_labels)
+    ax.set_yticks(np.arange(n_methods))
+    ax.set_yticklabels(method_list)
+    auto_rotate_labels(ax, axis="x")
+
+    polish_axis(ax, categorical_axis="both", clean_spines=False, grid=False)
+    ax.set_xticks(np.arange(-0.5, n_cols_total, 1.0), minor=True)
+    ax.set_yticks(np.arange(-0.5, n_methods, 1.0), minor=True)
+    ax.grid(which="minor", color="white", linestyle="-", linewidth=1.6)
+    ax.tick_params(which="minor", bottom=False, left=False, top=False, right=False)
+
+    if show_overall:
+        ax.axvline(n_metrics - 0.5, color="#1E293B", linewidth=1.6, zorder=5)
+
+    fs = relative_fontsize(-1, floor=6)
+    rank_fs = relative_fontsize(-3, floor=5)
+    for i in range(n_methods):
+        for j in range(n_cols_total):
+            cell_val = float(display_raw[i, j])
+            cell_norm = float(display_norm[i, j])
+            txt_color = contrast_text_color(im.cmap(im.norm(cell_norm)))
+            val_fmt = ".2f" if (show_overall and j == n_metrics) else fmt
+            rank_ij = int(ranks[i, j])
+            is_best = rank_ij == 1
+            ax.text(
+                j, i, format(cell_val, val_fmt),
+                ha="center", va="center", fontsize=fs,
+                fontweight="bold" if is_best else "normal",
+                color=txt_color, zorder=6,
+            )
+            if show_rank and n_methods >= 3 and rank_ij <= 3:
+                ax.text(
+                    j + 0.43, i - 0.39, f"#{rank_ij}",
+                    ha="right", va="top", fontsize=rank_fs,
+                    fontweight="bold" if is_best else "normal",
+                    color=txt_color, alpha=0.88, zorder=6,
+                )
+            if highlight_best and is_best and n_methods >= 2:
+                ax.add_patch(
+                    Rectangle(
+                        (j - 0.47, i - 0.47), 0.94, 0.94,
+                        fill=False, edgecolor="#F59E0B", linewidth=1.7, zorder=4,
+                    )
+                )
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

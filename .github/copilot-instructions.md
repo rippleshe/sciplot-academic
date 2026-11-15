@@ -132,8 +132,8 @@ import numpy as np
 import pandas as pd
 ```
 
-### 默认配置与选型原则（v1.15.0+）
-在直接选图前，先通过 `sp.recommend_charts(data)` 完成数据形态画像，避免千篇一律使用普通柱状图、单折线或裸箱线图：
+### 默认配置与选型原则（v1.16.0+）
+在直接选图前，先通过 `sp.recommend_charts(data)` 完成数据形态画像（`干0-干9` 决策树），避免千篇一律使用普通柱状图、单折线或裸箱线图：
 ```python
 report = sp.recommend_charts(data, goal="auto", top_k=4)
 print(report.summary())
@@ -149,15 +149,19 @@ sp.setup_style("nature", "olive-apricot", lang="en")
 
 | 场景 | 推荐函数 |
 |------|----------|
-| 多组原始分布对比 | `sp.plot_raincloud()` / `sp.plot_violin(..., show_box=True, show_points=True)` / `sp.plot_ridgeline()` |
-| 前后配对干预变化 | `sp.plot_paired()` / `sp.plot_dumbbell()` |
+| 单因素 / 双因素多组分布 | `sp.plot_raincloud()` / `sp.plot_grouped_violin()` / `sp.plot_violin(..., show_box=True)` / `sp.plot_ridgeline()` |
+| 多方法跨量纲评测矩阵 | `sp.plot_method_heatmap(..., higher_is_better=...)` |
+| 两组对称多指标对比 | `sp.plot_back_to_back_bar()` (`mirror_bar`) / `sp.plot_dumbbell()` |
+| 前后配对干预变化 | `sp.plot_paired()` / `sp.plot_slope()` |
+| 回归残差与模型诊断 | `sp.plot_residual_diagnostics()` (2×2 四象限) / `sp.plot_bland_altman()` |
+| 参数敏感性分析 | `sp.plot_tornado()` / `sp.plot_forest()` |
 | 根因排序 / 归因排名 | `sp.plot_pareto()` / `sp.plot_lollipop(sort=True)` / `sp.plot_diverging_bar()` |
 | 双变量相关性 | `sp.plot_marginal()` / `sp.plot_scatter(..., fit_line=True, show_stats=True)` / `sp.plot_hexbin()` (大样本) |
 | 相关矩阵 | `sp.plot_heatmap(..., triangle="lower", cmap="RdBu_r", vmin=-1, vmax=1, p_values=...)` |
-| 时间序列 / 预测不确定性 | `sp.plot_multi_timeseries()` / `sp.plot_fan()` / `sp.paper_subplots()` (多系列) |
+| 时间序列 / 预测不确定性 | `sp.plot_multi_timeseries()` / `sp.plot_fan()` / `sp.paper_subplots()` (多系列分面) |
 | 模型分类与概率评估 | `sp.plot_roc()` / `sp.plot_calibration()` / `sp.plot_confusion_matrix()` |
 | 多维结构探索 | `sp.plot_scatter_matrix(upper="corr", diag="kde")` / `sp.plot_pca(show_ellipse=True)` / `sp.plot_parallel()` |
-| 组合主次叙事 | `sp.hero_layout()` / `sp.figure_panels()` |
+| 焦点配色与组合防碰撞 | `sp.make_highlight_palette()` / `sp.hero_layout()` / `sp.repel_panel_labels()` / `sp.audit_figure(fig, check_visual_guards=True)` |
 
 ### 输出与质量守卫规范
 ```python

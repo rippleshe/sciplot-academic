@@ -41,6 +41,17 @@ API 参考
    :members:
    :undoc-members:
 
+智能选型与视觉守卫
+~~~~~~~~~~~~~~~~~~
+
+.. automodule:: sciplot._core.recommend
+   :members:
+   :undoc-members:
+
+.. automodule:: sciplot.utils.guards
+   :members:
+   :undoc-members:
+
 绘图模块
 --------
 

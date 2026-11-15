@@ -106,6 +106,13 @@ class ChartRecommendation:
     avoids_monotony: str
     code_snippet: str
     composite_suggestion: Optional[str] = None
+    anti_patterns: str = ""
+    upgrade_tips: str = ""
+    palette_suggestion: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.palette_suggestion:
+            self.palette_suggestion = f"{self.recommended_palette} ({self.palette_type})"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -119,10 +126,14 @@ class ChartRecommendationReport:
     goal: str
     recommendations: List[ChartRecommendation] = field(default_factory=list)
     composite_plan: Optional[str] = None
+    decision_path: str = ""
+    anti_patterns: List[str] = field(default_factory=list)
 
     def summary(self) -> str:
         """输出结构化 Markdown 推荐报告。"""
         lines = [self.profile.summary(), "", f"### 图表智能推荐（目标: `{self.goal}`）"]
+        if self.decision_path:
+            lines.append(f"- 决策树路径: {self.decision_path}")
         for rank, rec in enumerate(self.recommendations, start=1):
             lines.append(
                 f"{rank}. **{rec.chart_type}** — `sp.{rec.sciplot_func}(...)` "
@@ -131,15 +142,30 @@ class ChartRecommendationReport:
             lines.append(f"   - 适配原因: {rec.why_fit}")
             lines.append(f"   - 视觉通道与配色: {rec.visual_channels} | 推荐配色 `{rec.recommended_palette}` ({rec.palette_type})")
             lines.append(f"   - 避免单调/误导: {rec.avoids_monotony}")
+            if rec.anti_patterns:
+                lines.append(f"   - 反模式警示: {rec.anti_patterns}")
+            if rec.upgrade_tips:
+                lines.append(f"   - 进阶打磨建议: {rec.upgrade_tips}")
             lines.append(f"   - 示例调用: `{rec.code_snippet}`")
+        if self.anti_patterns:
+            lines.append("")
+            lines.append("### 核心避坑提醒 (Anti-Patterns)")
+            for item in self.anti_patterns:
+                lines.append(f"- {item}")
         if self.composite_plan:
             lines.extend(["", f"### 复合/多面板叙事建议\n- {self.composite_plan}"])
         return "\n".join(lines)
+
+    def format_text(self) -> str:
+        """与 ``summary()`` 等价的格式化报告接口。"""
+        return self.summary()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "profile": self.profile.to_dict(),
             "goal": self.goal,
+            "decision_path": self.decision_path,
+            "anti_patterns": list(self.anti_patterns),
             "recommendations": [r.to_dict() for r in self.recommendations],
             "composite_plan": self.composite_plan,
         }
@@ -380,6 +406,7 @@ def profile_data(
 
     # 领域字段名识别
     lower_names = {c.name.lower(): c.name for c in col_profiles}
+    prof_by_name = {c.name: c for c in col_profiles}
     if any(k in lower_names for k in ("log2fc", "logfc", "fold_change")) and any(
         k in lower_names for k in ("p", "pvalue", "p_value", "pval", "padj", "fdr")
     ):
@@ -398,6 +425,35 @@ def profile_data(
         special_hints.append("paired_before_after")
     if binary_cols and any(c.is_probability_like and c.kind == "numeric_continuous" for c in col_profiles):
         special_hints.append("binary_probabilities")
+    if input_kind in {"dataframe", "dict"} and (
+        (
+            "binary_probabilities" not in special_hints
+            and any(k in lower_names for k in ("actual", "y_true", "obs", "observed", "truth"))
+            and any(k in lower_names for k in ("pred", "y_pred", "predicted", "fitted", "forecast"))
+        )
+        or any(k in lower_names for k in ("residual", "residuals"))
+    ):
+        actual_key = next((k for k in ("actual", "y_true", "obs", "observed", "truth") if k in lower_names), None)
+        if actual_key is None or prof_by_name[lower_names[actual_key]].kind != "binary":
+            special_hints.append("actual_pred")
+    if (
+        input_kind in {"dataframe", "dict"}
+        and "effect_with_ci" not in special_hints
+        and "control" not in lower_names
+        and "ctrl" not in lower_names
+        and (
+            (
+                any(k in lower_names for k in ("low_value", "low_values", "pessimistic", "min_outcome"))
+                and any(k in lower_names for k in ("high_value", "high_values", "optimistic", "max_outcome"))
+            )
+            or (
+                (len(categorical_cols) >= 1 or "baseline" in lower_names)
+                and "low" in lower_names
+                and "high" in lower_names
+            )
+        )
+    ):
+        special_hints.append("sensitivity_bounds")
     if time_col or datetime_cols or any(k in lower_names for k in ("time", "date", "year", "month", "epoch", "step", "week", "day")):
         special_hints.append("time_ordered")
 
@@ -424,7 +480,7 @@ def profile_data(
         except Exception:
             pass
 
-    # 缺失值与极端偏态警告
+    # 缺失值、极端偏态与跨数量级警告
     high_missing = [c.name for c in col_profiles if c.missing_ratio > 0.1]
     if high_missing:
         warnings_list.append(f"以下列缺失率超过 10%，可视化前请先清洗/说明: {', '.join(high_missing)}")
@@ -433,7 +489,14 @@ def profile_data(
         if c.skewness is not None and abs(c.skewness) >= 1.5
     ]
     if heavy_skew:
+        special_hints.append("heavy_skew")
         warnings_list.append(f"强偏态变量 ({', '.join(heavy_skew)})，勿只用均值±柱状图掩盖长尾")
+    wide_orders = [c.name for c in col_profiles if c.spans_orders]
+    if wide_orders:
+        special_hints.append("spans_orders")
+        warnings_list.append(f"变量 ({', '.join(wide_orders)}) 跨越 ≥2 个数量级，建议使用对数坐标轴或 log 分箱")
+    if n_rows >= 300 and len(numeric_cols) >= 2:
+        special_hints.append("large_sample")
 
     # 判定全局数据形态
     max_abs_r = corr_summary.get("max_abs_r", 0.0)
@@ -455,7 +518,18 @@ def profile_data(
 
     if "symmetric_matrix" in special_hints or "correlation_matrix" in special_hints:
         shape_pattern = "square_corr"
-    elif any(h in special_hints for h in ("omics_volcano", "effect_with_ci", "flow_links", "binary_probabilities", "paired_before_after")):
+    elif any(
+        h in special_hints
+        for h in (
+            "omics_volcano",
+            "effect_with_ci",
+            "flow_links",
+            "binary_probabilities",
+            "paired_before_after",
+            "actual_pred",
+            "sensitivity_bounds",
+        )
+    ):
         shape_pattern = "domain_specific"
     elif input_kind == "groups" or (input_kind == "dict" and "grouped_variable_lengths" in special_hints):
         shape_pattern = "grouped_samples"
@@ -472,16 +546,36 @@ def profile_data(
         and not datetime_cols
     ):
         shape_pattern = "grouped_samples"
-    elif len(categorical_cols) == 1 and len(numeric_cols) == 1 and n_rows <= 30 and not group_col:
-        # 检查类别是否重复（原始多样本 vs 聚合标量）
-        cat_prof = next(c for c in col_profiles if c.name == categorical_cols[0])
-        shape_pattern = "category_scalar" if cat_prof.n_unique == n_rows else "grouped_samples"
+    elif len(categorical_cols) == 1 and len(numeric_cols) == 1:
+        # 无论样本总行数是否 > 30，只要存在重复类别（每类拥有多个原始样本）即归类为 grouped_samples
+        cat_prof = prof_by_name[categorical_cols[0]]
+        if group_col or cat_prof.n_unique < n_rows:
+            shape_pattern = "grouped_samples"
+        else:
+            shape_pattern = "category_scalar"
+    elif len(categorical_cols) >= 2 and len(numeric_cols) == 1:
+        c1_prof = prof_by_name[categorical_cols[0]]
+        c2_prof = prof_by_name[categorical_cols[1]]
+        expected_cells = max(1, c1_prof.n_unique * c2_prof.n_unique)
+        if n_rows >= expected_cells * 2 and c1_prof.n_unique >= 2 and c2_prof.n_unique >= 2:
+            special_hints.append("two_factor_samples")
+            shape_pattern = "grouped_samples"
+        else:
+            shape_pattern = "category_scalar"
     elif len(numeric_cols) == 2 and not categorical_cols:
         shape_pattern = "bivariate"
-    elif len(numeric_cols) >= 4:
+    elif len(numeric_cols) >= 4 and not categorical_cols:
         shape_pattern = "multivariate"
-    elif len(numeric_cols) == 1 and len(categorical_cols) >= 2:
-        shape_pattern = "category_scalar"
+    elif len(categorical_cols) == 1 and len(numeric_cols) >= 2:
+        cat_prof = prof_by_name[categorical_cols[0]]
+        if cat_prof.n_unique == n_rows and n_rows >= 2:
+            if len(numeric_cols) >= 3:
+                special_hints.append("method_metric_matrix")
+            elif len(numeric_cols) == 2 and all(prof_by_name[nc].is_positive_only for nc in numeric_cols):
+                special_hints.append("two_series_positive_metrics")
+            shape_pattern = "category_scalar"
+        else:
+            shape_pattern = "multivariate" if len(numeric_cols) >= 4 else "category_scalar"
     else:
         shape_pattern = "multivariate" if len(numeric_cols) >= 2 else "category_scalar"
 
@@ -615,7 +709,57 @@ def recommend_charts(
             palette_type="categorical",
             recommended_palette="coral-teal",
             avoids_monotony="严禁用独立组均值柱状图画配对样本（会完全掩盖个体反向响应！）",
+            anti_patterns="禁止将配对设计强行画成非配对分组柱状图或独立箱线图（丢失个体内在关联与双向迁移）",
+            upgrade_tips="已自动附带 Δ 与配对 t 检验 p 值徽章，可开启 show_box=True 显示两侧边缘分布",
             code_snippet='sp.plot_paired(before, after, labels=("处理前", "处理后"), ylabel=ylabel)',
+        ))
+    if "actual_pred" in hints:
+        recs.extend([
+            ChartRecommendation(
+                chart_type="四象限残差诊断面板 (Residual Diagnostics 2x2)",
+                sciplot_func="plot_residual_diagnostics",
+                score=97,
+                why_fit="检测到真实值与模型预测值列，一次性同步诊断残差齐性、正态性 Q-Q、直方分布与滞后自相关（ACF）",
+                visual_channels="四象限联动布局 + 标准化残差±2σ带 + 95% Beta Q-Q 包络 + ACF 白噪声限",
+                palette_type="categorical",
+                recommended_palette="blue-sky",
+                avoids_monotony="避免仅汇报单一 R²/RMSE 柱图而掩盖异方差、非线性偏误或序列自相关漏洞",
+                anti_patterns="禁止仅凭单一拟合线或 R² 标量断言模型收敛，必须检视残差齐性与自相关（Anscombe 检验）",
+                upgrade_tips="可自动圈出 |std_resid|>2.5 的潜在高杠杆异常样本，并计算 Shapiro-Wilk p 值",
+                code_snippet='sp.plot_residual_diagnostics(y_true, y_pred, title="模型残差全诊断", palette="blue-sky")',
+            ),
+            ChartRecommendation(
+                chart_type="Bland-Altman 一致性评估图",
+                sciplot_func="plot_bland_altman",
+                score=89,
+                why_fit="量化预测方法与金标准观测之间是否存在系统偏差（Mean Bias）与随量级扩展的比例误差",
+                visual_channels="差值散点 + 均值偏差线 + 95% LoA 上下置信阴影",
+                palette_type="categorical",
+                recommended_palette="coral-teal",
+                avoids_monotony="相关系数高不代表两种测量完全一致，Bland-Altman 直击系统性高低估",
+                anti_patterns="禁止用 Pearson r 替代测量一致性检验（线性缩放偏差无法被 r 识别）",
+                upgrade_tips="可叠加 95% LoA 区间置信带判断工程/临床可接受误差",
+                code_snippet='sp.plot_bland_altman(y_true, y_pred, show_ci=True, palette="coral-teal")',
+            ),
+        ])
+        if composite_plan is None:
+            composite_plan = (
+                "建议直接以 `sp.plot_residual_diagnostics(y_true, y_pred)` 作为模型验证主体面板，"
+                "配合散点回归拟合（`plot_scatter(..., fit_line=True)`）形成预测与诊断互补。"
+            )
+    if "sensitivity_bounds" in hints:
+        recs.append(ChartRecommendation(
+            chart_type="敏感性分析龙卷风图 (Tornado Sensitivity Chart)",
+            sciplot_func="plot_tornado",
+            score=96,
+            why_fit="存在各参数低/高扰动边界及基准情景，龙卷风图按影响摆幅由高到低排序，迅速锁定制约系统波动的关键驱动因子",
+            visual_channels="基准线双向对称条 + 摆幅降序排列 + 隔行斑马纹导视",
+            palette_type="diverging",
+            recommended_palette="coral-teal",
+            avoids_monotony="常规柱状图无法把“正向增益/负向敏感”与基准参照同时压缩在单一参数行内",
+            anti_patterns="禁止用无基准对齐的普通分组柱状图展示单因素敏感性分析结果",
+            upgrade_tips="保持 sort_by_swing=True 并标出基准线与两端扰动数值",
+            code_snippet='sp.plot_tornado(params, low_vals, high_vals, baseline=base_val, palette="coral-teal")',
         ))
 
     # ── 分支 2：相关矩阵 / 方阵 ──
@@ -700,6 +844,21 @@ def recommend_charts(
             k_groups = max(cat_c.n_unique, 2)
         per_group_n = prof.n_rows // max(k_groups if prof.categorical_cols else 1, 1)
 
+        if "two_factor_samples" in hints:
+            recs.append(ChartRecommendation(
+                chart_type="双因素分组小提琴图 (Grouped Violin Plot)",
+                sciplot_func="plot_grouped_violin",
+                score=98,
+                why_fit="检测到两个分组维度与重复连续观测（如组别 × 阶段/亚组），并排双因素小提琴同时展现交互主效应与内部概率分布形态",
+                visual_channels="外层大类分隔 + 内部子组小提琴核密度 + IQR 四分位胶囊 + 白点中位数",
+                palette_type="categorical",
+                recommended_palette="coral-teal",
+                avoids_monotony="大幅超越“动态误差柱/双因素均值柱”（后者彻底隐瞒双峰、重尾及子组样本离群态）",
+                anti_patterns="双因素实验样本严禁只画均值±SE 分组柱状图，审稿人无法评估分布正态性与异常点",
+                upgrade_tips="样本量适中时开启 show_points=True 叠加以白边淡点保留样本真实量",
+                code_snippet='sp.plot_grouped_violin(categories, {"Ctrl": ctrl_groups, "Trt": trt_groups}, show_box=True, palette="coral-teal")',
+            ))
+
         if k_groups <= 5 and per_group_n >= 15:
             recs.append(ChartRecommendation(
                 chart_type="云雨图 (Raincloud Plot — 半提琴+箱线+原始点)",
@@ -710,6 +869,8 @@ def recommend_charts(
                 palette_type="categorical",
                 recommended_palette="coral-teal",
                 avoids_monotony="坚决摒弃普通柱状图/单箱线图（相同均值与 IQR 可对应截然不同的双峰或偏态分布）",
+                anti_patterns="禁用裸柱+误差棒掩盖组内多峰或强偏态" + ("；检测到强偏态，均值不具代表性！" if "heavy_skew" in hints else ""),
+                upgrade_tips="高对比高亮关键实验组可结合 sp.make_highlight_palette()；若跨数量级建议配对数纵轴",
                 code_snippet='sp.plot_raincloud(groups, labels=group_names, palette="coral-teal")',
             ))
         if 5 <= k_groups <= 16:
@@ -722,6 +883,8 @@ def recommend_charts(
                 palette_type="sequential",
                 recommended_palette="ocean-breeze",
                 avoids_monotony="避免画十余个并排柱/箱导致的横向压缩与标签重叠",
+                anti_patterns="分组 > 6 时避免在窄画布强塞多列垂直箱线图",
+                upgrade_tips="按中位数或实验序列（剂量/时间梯度）预排序能倍增层次美感",
                 code_snippet='sp.plot_ridgeline(groups, labels=group_names, show_median=True, palette="ocean-breeze")',
             ))
         recs.append(ChartRecommendation(
@@ -733,6 +896,8 @@ def recommend_charts(
             palette_type="categorical",
             recommended_palette="olive-apricot",
             avoids_monotony="升级传统单薄箱线图，避免隐藏双峰或长尾特征",
+            anti_patterns="避免使用全黑边框默认小提琴或关闭四分位中位数标注",
+            upgrade_tips="开启 show_box=True 和 show_points=True 融合非参数摘要与个体数据点",
             code_snippet='sp.plot_violin(groups, labels=group_names, show_box=True, show_points=True, palette="olive-apricot")',
         ))
         if per_group_n <= 40:
@@ -745,9 +910,11 @@ def recommend_charts(
                 palette_type="categorical",
                 recommended_palette="blue-sky",
                 avoids_monotony="让审稿人直接看到真实样本量，避免误差棒柱图隐藏样本稀疏与偏离",
+                anti_patterns="n < 15 小样本禁用纯粹小提琴 KDE（平滑核假象大于真实采样点）",
+                upgrade_tips="同时配中位线 show_median=True 与显著性括号 annotate_significance",
                 code_snippet='sp.plot_beeswarm(groups, labels=group_names, show_median=True, palette="blue-sky")',
             ))
-        if k_groups == 2:
+        if k_groups == 2 and "two_factor_samples" not in hints:
             recs.append(ChartRecommendation(
                 chart_type="配对/前后对照图 (Paired Plot)",
                 sciplot_func="plot_paired",
@@ -757,6 +924,7 @@ def recommend_charts(
                 palette_type="categorical",
                 recommended_palette="coral-teal",
                 avoids_monotony="揭露整体均值平稳背后可能隐藏的个体剧烈分化",
+                anti_patterns="若确定为独立两组且无需连线，请优先采用云雨图",
                 code_snippet="sp.plot_paired(groups[0], groups[1], labels=tuple(group_names[:2]))",
             ))
 
@@ -842,29 +1010,73 @@ def recommend_charts(
             ))
         else:
             # 多方法 × 多指标
-            if n_metrics == 2:
+            if n_metrics >= 3 or "method_metric_matrix" in hints:
                 recs.append(ChartRecommendation(
-                    chart_type="哑铃前后对比图 (Dumbbell Plot)",
-                    sciplot_func="plot_dumbbell",
-                    score=95,
-                    why_fit=f"恰好 2 列对照数值跨 {n_cats} 个项目对比，哑铃图直接用线段长度和涨跌色编码净改变量",
-                    visual_channels="空心起点 + 实心终点双编码 + 净增量直标",
-                    palette_type="categorical",
-                    recommended_palette="coral-teal",
-                    avoids_monotony="比两色并排分组柱状图更容易一眼读出“每个项目谁增谁降、差多少”",
-                    code_snippet='sp.plot_dumbbell(categories, before_vals, after_vals, show_values=True, palette="coral-teal")',
+                    chart_type="多方法评测归一化矩阵热力图 (Method Heatmap)",
+                    sciplot_func="plot_method_heatmap",
+                    score=97 if "method_metric_matrix" in hints else 92,
+                    why_fit=f"{n_cats} 个方法/对象 × {n_metrics} 个跨量纲评测指标，独立按“高优/低优”列归一化着色同时在格内保留真实原始数值、列冠军金框与综合平均分",
+                    visual_channels="归一化色阶 + 真实数值 + 列冠军外框 + Top-3角标(#1/#2/#3) + Overall 综合列",
+                    palette_type="sequential",
+                    recommended_palette="YlGnBu",
+                    avoids_monotony="彻底解决“不同量纲指标（如 AUC vs 耗时 ms）放同一分组柱图导致小数值柱子塌陷”的老难题",
+                    anti_patterns="CM-07/量纲冲突：禁止将不同量纲（百分比与毫秒/参数量）的指标硬画在同一个 Y 轴分组柱状图上",
+                    upgrade_tips="为耗时、误差等反向指标传入 higher_is_better={'Latency': False}，可自动按整体性能或层次聚类重排行",
+                    code_snippet='sp.plot_method_heatmap(scores, methods=methods, metrics=metrics, higher_is_better=hib_map, show_overall=True)',
                 ))
+            if n_metrics == 2:
+                if "two_series_positive_metrics" in hints or all(c.is_positive_only for c in num_profiles):
+                    recs.append(ChartRecommendation(
+                        chart_type="镜像双向水平柱状图 (Back-to-Back Mirror Bar)",
+                        sciplot_func="plot_back_to_back_bar",
+                        score=94,
+                        why_fit=f"两组非负数据在 {n_cats} 个指标上的对称水平对比，中心 0 轴分居两侧并附加净增益 Δ 列，视觉重心平衡且易比差",
+                        visual_channels="双向长度 + 共享水平指标刻度 + 右侧净差 Δ 徽章",
+                        palette_type="categorical",
+                        recommended_palette="coral-teal",
+                        avoids_monotony="克服并排窄柱图柱体拥挤问题，每项指标的胜负方与绝对差额一目了然",
+                        anti_patterns="禁止用堆积柱状图做两组横向基准对比（非零基线导致右侧难以直读长度）",
+                        upgrade_tips="开启 sort_by='diff' 将差距最显著的指标置顶呈现",
+                        code_snippet='sp.plot_back_to_back_bar(categories, left_vals, right_vals, left_label="Baseline", right_label="Ours", sort_by="diff")',
+                    ))
+                recs.extend([
+                    ChartRecommendation(
+                        chart_type="哑铃前后对比图 (Dumbbell Plot)",
+                        sciplot_func="plot_dumbbell",
+                        score=95,
+                        why_fit=f"恰好 2 列对照数值跨 {n_cats} 个项目对比，哑铃图直接用线段长度和涨跌色编码净改变量",
+                        visual_channels="空心起点 + 实心终点双编码 + 净增量直标",
+                        palette_type="categorical",
+                        recommended_palette="coral-teal",
+                        avoids_monotony="比两色并排分组柱状图更容易一眼读出“每个项目谁增谁降、差多少”",
+                        anti_patterns="避免 2 组对照强画大量重叠双柱，浪费空间且掩盖差异幅度",
+                        upgrade_tips="保持升序/降序排列并开启 show_values=True",
+                        code_snippet='sp.plot_dumbbell(categories, before_vals, after_vals, show_values=True, palette="coral-teal")',
+                    ),
+                    ChartRecommendation(
+                        chart_type="斜率对比图 (Slope Chart)",
+                        sciplot_func="plot_slope",
+                        score=86,
+                        why_fit="突出多项目从基准条件跃迁至目标条件的斜率强弱与交叉排名反转",
+                        visual_channels="连线斜率倾角 + 两端直标 + 净增减幅度",
+                        palette_type="categorical",
+                        recommended_palette="blue-sky",
+                        avoids_monotony="聚焦变化斜率（而非柱顶高差），快速识别逆转黑马项",
+                        code_snippet='sp.plot_slope(categories, before_vals, after_vals, show_diff=True)',
+                    ),
+                ])
             if 3 <= n_metrics <= 7 and n_cats <= 5:
                 recs.extend([
                     ChartRecommendation(
                         chart_type="多维能力雷达图 (Radar Chart)",
                         sciplot_func="plot_radar",
-                        score=89,
+                        score=88,
                         why_fit=f"{n_cats} 个对象在 {n_metrics} 个指标上的综合性能画像，能快速判别全面领先型与偏科型方法",
                         visual_channels="多边形包络轮廓 + 柔和半透明填充",
                         palette_type="categorical",
                         recommended_palette="blue-sky",
-                        avoids_monotony="突破二维柱状图的平坦排布，突出综合均衡性（需同步配合柱图或表格给精确数值）",
+                        avoids_monotony="突破二维柱状图的平坦排布，突出综合均衡性（建议配合多方法热图或表格给精确数值）",
+                        anti_patterns="CM-3：方法数 > 5 或指标有异量纲未归一化时严禁强画雷达图，多边形重叠极难分辨",
                         code_snippet='sp.plot_radar(metrics, methods_dict, palette="blue-sky")',
                     ),
                     ChartRecommendation(
@@ -876,18 +1088,20 @@ def recommend_charts(
                         palette_type="categorical",
                         recommended_palette="blue-sky",
                         avoids_monotony="多指标尺度不一时，排名演化比原始数值柱状图更具跨基准可比性",
-                        code_snippet='sp.plot_bump(ranks_matrix, time_points=metrics, labels=categories)',
+                        upgrade_tips="传入 highlight='Ours' 启动灰底焦点叙事突出自身模型轨迹",
+                        code_snippet='sp.plot_bump(ranks_matrix, time_points=metrics, labels=categories, highlight=best_name)',
                     ),
                 ])
             recs.append(ChartRecommendation(
-                chart_type="气泡/数值热力矩阵 (Heatmap / Grouped Bar)",
+                chart_type="分组柱状图 (Grouped Bar + 精确值标注)",
                 sciplot_func="plot_grouped_bar" if n_cats <= 5 and n_metrics <= 5 else "plot_heatmap",
-                score=85,
-                why_fit="多组×多指标需要直接读取精确值对比时的高精度选择",
-                visual_channels="共享坐标长度 / 颜色矩阵 + 格内直标",
+                score=83,
+                why_fit="少量同量纲指标下需要共享零基线做最严格数值长度对齐时的备选方案",
+                visual_channels="共享零基线长度 + 格内/柱顶直标",
                 palette_type="categorical" if n_cats <= 5 else "sequential",
                 recommended_palette="olive-apricot",
-                avoids_monotony="开启柔和深轮廓与去杂次刻度提升基础柱图的发表下限",
+                avoids_monotony="开启柔和深轮廓、隐藏杂乱次刻度并建议以 Start-from-Grey 突出焦点组",
+                anti_patterns="量纲与尺度必须统一：若指标单位或量级不一致请改用 plot_method_heatmap",
                 code_snippet='sp.plot_grouped_bar(groups, data_dict, show_values=True, palette="olive-apricot")',
             ))
 
@@ -905,8 +1119,37 @@ def recommend_charts(
                 palette_type="sequential",
                 recommended_palette="viridis",
                 avoids_monotony="彻底避免大样本散点图重叠掩盖核心密度梯度的常见错误",
+                anti_patterns="过绘制警示：大样本 (>500点) 切忌不经降透/缩点/分箱直接铺纯黑实心散点",
+                upgrade_tips="如出现多个聚簇中心，设 bins='log' 增强低密度尾区可见性",
                 code_snippet='sp.plot_hexbin(x, y, bins="log", colorbar_label="样本密度")',
             ))
+        elif n >= 300:
+            recs.extend([
+                ChartRecommendation(
+                    chart_type="散点 + 边际联合分布图 (Marginal Scatter + Hist/KDE)",
+                    sciplot_func="plot_marginal",
+                    score=94,
+                    why_fit=f"中等规模双变量样本（n={n}，|r|={max_r:.2f}），联合呈现相关结构与单变量边际密度",
+                    visual_channels="自适应透明度白边散点 + 顶部/右侧 KDE + 相关摘要",
+                    palette_type="categorical",
+                    recommended_palette="blue-sky",
+                    avoids_monotony="同时把边缘分布偏度与主关系拉入视野",
+                    anti_patterns="n>=300 时若不使用透明空心/栅格降密散点会造成过绘制模糊",
+                    upgrade_tips="点密度进一步升高时切换 sp.plot_hexbin()",
+                    code_snippet='sp.plot_marginal(x, y, marginal="kde", show_corr=True, palette="blue-sky")',
+                ),
+                ChartRecommendation(
+                    chart_type="六边形二维密度分箱图 (Hexbin)",
+                    sciplot_func="plot_hexbin",
+                    score=93,
+                    why_fit=f"样本量达到 n={n}（>=300），二维六边形聚合彻底避免局部过绘制掩盖热点峰密度",
+                    visual_channels="位置 + 连续顺序色阶统计密度",
+                    palette_type="sequential",
+                    recommended_palette="viridis",
+                    avoids_monotony="在高密度区域提供比离散散点更客观的密度梯度",
+                    code_snippet='sp.plot_hexbin(x, y, bins="log", colorbar_label="Count")',
+                ),
+            ])
         else:
             recs.append(ChartRecommendation(
                 chart_type="散点 + 边际联合分布图 (Marginal Scatter + Hist/KDE)",
@@ -917,6 +1160,7 @@ def recommend_charts(
                 palette_type="categorical",
                 recommended_palette="blue-sky",
                 avoids_monotony="满足“先看单变量分布再看变量间关系”的双重可视化准则",
+                anti_patterns="DT-01：禁止不检视散点分布就直接汇报线性相关 r（防范 Anscombe 虚假相关）",
                 code_snippet='sp.plot_marginal(x, y, marginal="kde", show_corr=True, palette="blue-sky")',
             ))
         recs.append(ChartRecommendation(
@@ -924,10 +1168,11 @@ def recommend_charts(
             sciplot_func="plot_scatter",
             score=91,
             why_fit="直观检验线性趋势、异常离群点与残差分布齐性（Anscombe 检验）",
-            visual_channels="带白边散点 + OLS 拟合线 + 95% 置信带 + 自动避让角标 (r, R², p, n)",
+            visual_channels="自适应白边散点 + OLS 拟合线 + 95% 置信带 + 自动避让角标 (r, R², p, n)",
             palette_type="categorical",
             recommended_palette="coral-teal",
             avoids_monotony="相比纯裸散点增加不确定度置信带与量化统计摘要卡片",
+            upgrade_tips="plot_scatter 已自动接入 smart_marker_style，大样本时自动缩点降透",
             code_snippet='sp.plot_scatter(x, y, fit_line=True, ci=True, show_stats=True, palette="coral-teal")',
         ))
 
@@ -1036,14 +1281,14 @@ def recommend_charts(
 
     # 目标偏好二次加权 & 按函数去重截断
     goal_boost: Dict[str, Tuple[str, ...]] = {
-        "distribution": ("plot_raincloud", "plot_ridgeline", "plot_violin", "plot_histogram", "plot_beeswarm", "plot_qq"),
+        "distribution": ("plot_grouped_violin", "plot_raincloud", "plot_ridgeline", "plot_violin", "plot_histogram", "plot_beeswarm", "plot_qq"),
         "relationship": ("plot_marginal", "plot_hexbin", "plot_scatter", "plot_scatter_matrix", "plot_heatmap"),
-        "comparison": ("plot_raincloud", "plot_dumbbell", "plot_paired", "plot_diverging_bar", "plot_grouped_bar", "plot_radar"),
+        "comparison": ("plot_grouped_violin", "plot_raincloud", "plot_back_to_back_bar", "plot_method_heatmap", "plot_dumbbell", "plot_paired", "plot_diverging_bar", "plot_tornado", "plot_grouped_bar", "plot_radar"),
         "composition": ("plot_waffle", "plot_pareto", "plot_treemap", "plot_donut", "plot_stacked_bar", "plot_sankey"),
-        "ranking": ("plot_pareto", "plot_lollipop", "plot_bump", "plot_horizontal_bar"),
-        "trend": ("plot_fan", "plot_multi_timeseries", "plot_timeseries", "plot_streamgraph", "plot_bump"),
-        "multivariate": ("plot_scatter_matrix", "plot_pca", "plot_parallel", "plot_heatmap", "plot_radar"),
-        "evaluation": ("plot_roc", "plot_calibration", "plot_confusion_matrix", "plot_residuals"),
+        "ranking": ("plot_tornado", "plot_pareto", "plot_lollipop", "plot_bump", "plot_horizontal_bar", "plot_method_heatmap"),
+        "trend": ("plot_fan", "plot_multi_timeseries", "plot_timeseries", "plot_streamgraph", "plot_bump", "plot_slope"),
+        "multivariate": ("plot_method_heatmap", "plot_scatter_matrix", "plot_pca", "plot_parallel", "plot_heatmap", "plot_radar"),
+        "evaluation": ("plot_residual_diagnostics", "plot_method_heatmap", "plot_roc", "plot_calibration", "plot_confusion_matrix", "plot_residuals", "plot_bland_altman"),
     }
     preferred = goal_boost.get(goal, ())
     for r in recs:
@@ -1056,11 +1301,35 @@ def recommend_charts(
             deduped[rec.sciplot_func] = rec
 
     final_recs = list(deduped.values())[: max(1, top_k)]
+
+    path_map = {
+        "univariate": "干1·单变量分布检验",
+        "grouped_samples": "干2·双因素多组分布融合" if "two_factor_samples" in hints else "干2·分组样本完整分布对比",
+        "category_scalar": "干8·多方法跨指标评测矩阵" if "method_metric_matrix" in hints else ("干5·离散类别净变化与排名" if goal in {"ranking", "comparison"} else "干4·离散占比/排名与结构对比"),
+        "bivariate": "干6·大样本密度防重叠" if prof.n_rows >= 300 else "干6·双变量联合分布与拟合检验",
+        "timeseries": "干3·时序多序列演进（防意面图规则）",
+        "square_corr": "干7·相关矩阵去重与层次聚类",
+        "multivariate": "干7·高维特征投影与多轴协同",
+        "domain_specific": "干8·领域专型诊断（火山/森林/残差/敏感性/ROC/配对）",
+    }
+    decision_path = path_map.get(prof.shape_pattern, f"综合形态 ({prof.shape_pattern})")
+    if "spans_orders" in hints:
+        decision_path += " + 对数尺度检测"
+
+    collected_anti: List[str] = []
+    seen_anti: set = set()
+    for rec in final_recs:
+        if rec.anti_patterns and rec.anti_patterns not in seen_anti:
+            seen_anti.add(rec.anti_patterns)
+            collected_anti.append(rec.anti_patterns)
+
     return ChartRecommendationReport(
         profile=prof,
         goal=goal,
         recommendations=final_recs,
         composite_plan=composite_plan,
+        decision_path=decision_path,
+        anti_patterns=collected_anti,
     )
 
 

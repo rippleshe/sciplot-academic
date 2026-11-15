@@ -15,8 +15,9 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 from sciplot._core.layout import add_colorbar
 from sciplot._core.result import PlotResult
-from sciplot._core.utils import get_cycle_colors, new_styled_figure
-from sciplot.utils.smart import auto_rotate_labels
+from sciplot._core.utils import contrast_text_color, get_cycle_colors, new_styled_figure
+from sciplot.utils.guards import polish_axis, style_patch_edges
+from sciplot.utils.smart import auto_rotate_labels, smart_legend
 
 
 def _check_sklearn() -> Tuple[Any, Any]:
@@ -230,12 +231,19 @@ def plot_confusion_matrix(
         ax.set_yticklabels(labels)
         auto_rotate_labels(ax, axis="x")
 
+    polish_axis(ax, categorical_axis="both", clean_spines=False, grid=False)
+    ax.set_xticks(np.arange(-0.5, cm.shape[1], 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, cm.shape[0], 1), minor=True)
+    ax.grid(which="minor", color="white", linestyle="-", linewidth=1.2)
+    ax.tick_params(which="minor", bottom=False, left=False, top=False, right=False)
+
     fmt = ".2f" if normalize else "d"
-    thresh = cm.max() / 2.0
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        cell_rgba = im.cmap(im.norm(cm[i, j]))
+        txt_color = contrast_text_color(cell_rgba)
         ax.text(j, i, format(cm[i, j], fmt),
                 ha="center", va="center",
-                color="white" if cm[i, j] > thresh else "black")
+                color=txt_color)
 
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
@@ -299,9 +307,13 @@ def plot_feature_importance(
     sorted_importance = importance[indices]
 
     colors = get_cycle_colors()
-    ax.barh(range(len(indices)), sorted_importance, color=colors[0], **kwargs)
+    bar_kwargs = dict(kwargs)
+    bar_color = bar_kwargs.pop("color", colors[0])
+    bars = ax.barh(range(len(indices)), sorted_importance, color=bar_color, **bar_kwargs)
+    style_patch_edges(bars, [bar_color] * len(indices), fill_alpha=0.88, darken_amount=0.25, linewidth=0.75)
     ax.set_yticks(range(len(indices)))
     ax.set_yticklabels(sorted_features)
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
     ax.set_xlabel("Importance")
     ax.set_title(title)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
@@ -369,12 +381,18 @@ def plot_learning_curve(
                 f"train_sizes 长度 ({len(train_sizes)}) 与 scores 长度 ({len(train_scores)}) 不一致"
             )
 
-    ax.plot(train_sizes, train_scores, label=label_train, marker="o", **kwargs)
-    ax.plot(train_sizes, val_scores, label=label_val, marker="s", **kwargs)
+    lc_kwargs = dict(kwargs)
+    lc_kwargs.setdefault("markeredgecolor", "white")
+    lc_kwargs.setdefault("markeredgewidth", 0.75)
+    lc_kwargs.setdefault("linewidth", 2.0)
 
+    ax.plot(train_sizes, train_scores, label=label_train, marker="o", **lc_kwargs)
+    ax.plot(train_sizes, val_scores, label=label_val, marker="s", **lc_kwargs)
+
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.legend()
+    smart_legend(ax)
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 

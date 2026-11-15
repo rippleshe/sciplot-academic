@@ -740,6 +740,66 @@ sp.plot_fan(x, center=None, *, bands=None, samples=None, intervals=(50, 80, 95),
 
 ---
 
+## 7.7 高表达学术与竞赛专用图（v1.16.0 新增）
+
+### plot_grouped_violin / grouped_violin（双因素分组小提琴图）
+
+```python
+sp.plot_grouped_violin(categories, series, xlabel="", ylabel="", title="",
+                       show_box=True, show_mean=False, show_points=False,
+                       width=0.74, venue=None, palette=None, lang=None, **kwargs)
+```
+
+针对“主分组 × 子条件”双因素连续观测数据，在每个分类簇内并排绘制柔和透明小提琴轮廓、深色轮廓描边与内嵌 IQR 四分位胶囊 + 白点中位数，支持 `show_points=True` 叠加微抖动样本点及分组虚线分隔。别名 `sp.grouped_violin(...)`。
+
+### plot_back_to_back_bar / back_to_back_bar / mirror_bar（镜像双向对比图）
+
+```python
+sp.plot_back_to_back_bar(categories, left_values, right_values,
+                         left_label="Group A", right_label="Group B",
+                         xlabel="", ylabel="", title="",
+                         show_values=True, show_diff=True, fmt=".1f",
+                         sort_by=None, bar_height=0.62, venue=None, palette=None, lang=None, **kwargs)
+```
+
+对称横向柱状对比图，围绕中心 `0` 轴向左右延展（左侧负刻度自动格式化为正数绝对值以消除阅读误解），可选 `sort_by="diff"|"left"|"right"` 排序并在最右侧附净增减差 `Δ` 徽章列。别名 `sp.back_to_back_bar(...)`、`sp.mirror_bar(...)`。
+
+### plot_method_heatmap / method_heatmap（多方法跨指标评测矩阵图）
+
+```python
+sp.plot_method_heatmap(scores, methods, metrics, higher_is_better=None,
+                       show_overall=True, overall_label="Overall",
+                       highlight_best=True, show_rank=True,
+                       cluster_rows=False, sort_by_overall=False, fmt=".2f",
+                       cmap="YlGnBu", colorbar_label="Normalized Score",
+                       xlabel="", ylabel="", title="", venue=None, palette=None, lang=None, **kwargs)
+```
+
+针对多算法 × 多异构指标（如 AUC ↑、Latency ms ↓、Memory MB ↓）对比矩阵，自动按列物理极性归一化着色（1.0 恒为最优），同时在格内精准打印原始值、前三名角标 (`#1/#2/#3`)、每列冠军琥珀高亮边框与右侧 `Overall` 综合评分列，支持层次聚类行排序。别名 `sp.method_heatmap(...)`。
+
+### plot_tornado / tornado（敏感性分析龙卷风图）
+
+```python
+sp.plot_tornado(parameters, low_values, high_values, baseline=0.0,
+                low_label="Low (-)", high_label="High (+)",
+                xlabel="Outcome", ylabel="", title="",
+                sort_by_swing=True, show_values=True, fmt=".2f", bar_height=0.58,
+                venue=None, palette=None, lang=None, **kwargs)
+```
+
+自 `baseline` 基准线分别朝低/高扰动双向伸展双色水平条，默认按影响总摆幅降序排列并附斑马纹行导视与端值标注。别名 `sp.tornado(...)`。
+
+### plot_residual_diagnostics / residual_diagnostics（2×2 四象限残差诊断组合图）
+
+```python
+sp.plot_residual_diagnostics(y_true, y_pred, title="", panel_labels=True,
+                             venue=None, palette=None, lang=None)
+```
+
+自动绘制包含 4 个联检子图的 `PlotResult(fig, axes)`：`(a)` 标准化残差 vs 拟合值（含 $\pm 2\sigma$ 参考带与 $|z|>2.5$ 离群圈标）、`(b)` Normal Q-Q（含 95% Beta 置信包络）、`(c)` 残差直方密度叠加正态曲线与 Shapiro-Wilk p 值、`(d)` 滞后自相关 ACF 棒棒糖图与 $\pm 1.96/\sqrt{n}$ 白噪声边界，自动防碰撞放置 `(a)-(d)` 标签。别名 `sp.residual_diagnostics(...)`。
+
+---
+
 ## 8. ML 扩展（`pip install sciplot-academic[ml]`）
 
 ### plot_pca
@@ -1308,15 +1368,25 @@ result.xlabel("共同X").add_panel_labels().save("fig")
 ## 工具函数
 
 ```python
-# 颜色工具与高对比色板 (v1.15.0)
+# 颜色工具、Start-from-Grey 与高对比色板 (v1.15.0 / v1.16.0)
 sp.list_vivid_palettes()            # 查看 7 套高对比 vivid 色板
 sp.make_palette_cmap("coral-teal", kind="diverging")  # 生成连续/发散 colormap
+sp.make_highlight_palette(n_series=4, highlight_idx=-1, palette="coral-teal")  # 灰底焦点高亮叙事配色
 sp.VIVID_PALETTES                   # 高对比色板只读映射
 sp.hex_to_rgb("#FF0000")            # → (1.0, 0.0, 0.0)
 sp.rgb_to_hex(1.0, 0.0, 0.0)       # → "#ff0000"
 sp.lighten_color("#264653", 0.3)    # 变亮
 sp.darken_color("#cdb4db", 0.3)     # 变暗
 sp.generate_gradient("#000", "#FFF", 5)  # 渐变
+
+# 视觉守卫与精修
+sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid=None, minor_ticks=False)
+sp.style_patch_edges(bars, colors, fill_alpha=0.84, darken_amount=0.25, linewidth=0.75)
+sp.layered_fill_between(ax, x, y1, y2=0.0, color="#2563EB", base_alpha=0.16, layers=3)
+sp.smart_marker_style(n_points, base_size=24.0, base_alpha=0.78)
+sp.repel_panel_labels(fig)
+sp.inspect_figure_guards(fig)
+sp.audit_figure(fig, check_visual_guards=True)
 
 # 布局
 sp.new_figure(venue="nature")

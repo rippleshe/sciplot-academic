@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from statistics import NormalDist
 
 import matplotlib.pyplot as plt
@@ -23,6 +23,7 @@ from sciplot._core.utils import (
     _require_optional,
 )
 from sciplot._core.result import PlotResult
+from sciplot.utils.guards import polish_axis, smart_marker_style
 from sciplot.utils.smart import _series_line_kwargs, smart_legend
 
 
@@ -75,6 +76,122 @@ def _theoretical_quantiles_without_scipy(
     raise ValueError(f"未知分布: {distribution}")
 
 
+def _render_residuals_ax(
+    ax: plt.Axes,
+    x_fitted: np.ndarray,
+    residuals: np.ndarray,
+    primary_color: str,
+    *,
+    show_zero_line: bool = True,
+    band_k: float = 2.0,
+    scatter_kwargs: Optional[Dict[str, Any]] = None,
+) -> None:
+    """在指定坐标系绘制残差散点、零线与 ±kσ 参考带（供单图与四象限诊断共用）。"""
+    adaptive = smart_marker_style(len(residuals), base_size=26.0, base_alpha=0.72)
+    sc_kw = dict(scatter_kwargs or {})
+    sc_kw.setdefault("edgecolors", "white")
+    sc_kw.setdefault("linewidths", adaptive["linewidths"])
+    if len(residuals) > 500:
+        sc_kw.setdefault("rasterized", adaptive["rasterized"])
+
+    ax.scatter(
+        x_fitted,
+        residuals,
+        s=adaptive["s"],
+        alpha=adaptive["alpha"],
+        color=primary_color,
+        zorder=3,
+        **sc_kw,
+    )
+    if show_zero_line:
+        ax.axhline(y=0, color="#64748B", linestyle="--", linewidth=1.0, zorder=2)
+
+    if len(residuals) >= 4:
+        r_std = float(np.std(residuals, ddof=1))
+        if np.isfinite(r_std) and r_std > 0:
+            ax.axhspan(-band_k * r_std, band_k * r_std, color=primary_color, alpha=0.06, zorder=0)
+            ax.axhline(band_k * r_std, color="#94A3B8", linestyle=":", linewidth=0.8, zorder=1)
+            ax.axhline(-band_k * r_std, color="#94A3B8", linestyle=":", linewidth=0.8, zorder=1)
+
+
+def _render_qq_ax(
+    ax: plt.Axes,
+    data_arr: np.ndarray,
+    *,
+    distribution: str = "norm",
+    show_line: bool = True,
+    marker_color: str,
+    ref_color: str,
+    scatter_kwargs: Optional[Dict[str, Any]] = None,
+) -> None:
+    """在指定坐标系绘制 Q-Q 分位数散点、95% Beta 置信包络与理论参考线。"""
+    stats = _try_import_optional("scipy.stats")
+    scipy_dist_map = None
+    if stats is not None:
+        scipy_dist_map = {
+            "norm": (stats.norm, ()),
+            "expon": (stats.expon, ()),
+            "uniform": (stats.uniform, ()),
+            "t": (stats.t, (10,)),
+        }
+        dist_obj, sparams = scipy_dist_map[distribution]
+        (osm, osr), (slope, intercept, _r) = stats.probplot(
+            data_arr,
+            dist=dist_obj,
+            sparams=sparams,
+            plot=None,
+        )
+    else:
+        warnings.warn(
+            "未安装 scipy，plot_qq 使用近似分位数计算。",
+            UserWarning,
+            stacklevel=3,
+        )
+        osr = np.sort(data_arr)
+        osm = _theoretical_quantiles_without_scipy(len(osr), distribution)
+        slope, intercept = np.polyfit(osm, osr, 1)
+
+    adaptive = smart_marker_style(len(osr), base_size=26.0, base_alpha=0.76)
+    sc_kw = dict(scatter_kwargs or {})
+    sc_kw.setdefault("edgecolors", "white")
+    sc_kw.setdefault("linewidths", adaptive["linewidths"])
+    if len(osr) > 500:
+        sc_kw.setdefault("rasterized", adaptive["rasterized"])
+
+    ax.scatter(
+        osm, osr, s=adaptive["s"], alpha=adaptive["alpha"],
+        color=marker_color, zorder=3, **sc_kw,
+    )
+
+    if show_line:
+        n_pts = len(osr)
+        if stats is not None and scipy_dist_map is not None and n_pts >= 6:
+            try:
+                k_idx = np.arange(1, n_pts + 1, dtype=float)
+                dist_obj, sparams = scipy_dist_map[distribution]
+                lo_u = stats.beta.ppf(0.025, k_idx, n_pts - k_idx + 1)
+                hi_u = stats.beta.ppf(0.975, k_idx, n_pts - k_idx + 1)
+                lo_q = dist_obj.ppf(lo_u, *sparams)
+                hi_q = dist_obj.ppf(hi_u, *sparams)
+                fin_band = np.isfinite(lo_q) & np.isfinite(hi_q)
+                if np.any(fin_band):
+                    ax.fill_between(
+                        osm[fin_band],
+                        slope * lo_q[fin_band] + intercept,
+                        slope * hi_q[fin_band] + intercept,
+                        color=ref_color,
+                        alpha=0.12,
+                        linewidth=0,
+                        zorder=1,
+                        label="95% CI",
+                    )
+            except Exception:
+                pass
+        x_line = np.array([osm.min(), osm.max()])
+        y_line = slope * x_line + intercept
+        ax.plot(x_line, y_line, color=ref_color, linestyle="--", linewidth=1.7, zorder=4)
+
+
 def plot_residuals(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -119,11 +236,15 @@ def plot_residuals(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
-
-    ax.scatter(y_pred, residuals, alpha=0.6, color=colors[0], **kwargs)
-
-    if show_zero_line:
-        ax.axhline(y=0, color="gray", linestyle="--", linewidth=1)
+    _render_residuals_ax(
+        ax,
+        y_pred,
+        residuals,
+        colors[0],
+        show_zero_line=show_zero_line,
+        band_k=2.0,
+        scatter_kwargs=kwargs,
+    )
 
     if show_loess and len(y_pred) > 5:
         try:
@@ -131,8 +252,8 @@ def plot_residuals(
             sorted_idx = np.argsort(y_pred)
             smoothed = lowess(residuals[sorted_idx], y_pred[sorted_idx], frac=0.6)
             ax.plot(smoothed[:, 0], smoothed[:, 1], color=colors[1 % len(colors)],
-                   linewidth=2, label="LOESS")
-            ax.legend()
+                   linewidth=2, label="LOESS", zorder=4)
+            smart_legend(ax)
         except ImportError:
             warnings.warn(
                 "show_loess=True 需要安装 statsmodels，已跳过 LOESS 曲线。\n"
@@ -141,6 +262,7 @@ def plot_residuals(
                 stacklevel=3,
             )
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -199,38 +321,18 @@ def plot_qq(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
+    ref_color = colors[1 % len(colors)] if len(colors) > 1 else "#D95F02"
+    _render_qq_ax(
+        ax,
+        data,
+        distribution=distribution,
+        show_line=show_line,
+        marker_color=colors[0],
+        ref_color=ref_color,
+        scatter_kwargs=kwargs,
+    )
 
-    if stats is not None:
-        scipy_dist_map = {
-            "norm": (stats.norm, ()),
-            "expon": (stats.expon, ()),
-            "uniform": (stats.uniform, ()),
-            "t": (stats.t, (10,)),
-        }
-        dist_obj, sparams = scipy_dist_map[distribution]
-        (osm, osr), (slope, intercept, _r) = stats.probplot(
-            data,
-            dist=dist_obj,
-            sparams=sparams,
-            plot=None,
-        )
-    else:
-        warnings.warn(
-            "未安装 scipy，plot_qq 使用近似分位数计算。",
-            UserWarning,
-            stacklevel=2,
-        )
-        osr = np.sort(data)
-        osm = _theoretical_quantiles_without_scipy(len(osr), distribution)
-        slope, intercept = np.polyfit(osm, osr, 1)
-
-    ax.scatter(osm, osr, alpha=0.6, color=colors[0], **kwargs)
-
-    if show_line:
-        x_line = np.array([osm.min(), osm.max()])
-        y_line = slope * x_line + intercept
-        ax.plot(x_line, y_line, color=colors[1 % len(colors)], linestyle="--", linewidth=2)
-
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -297,15 +399,22 @@ def plot_bland_altman(
     fig, ax = new_styled_figure(venue, palette, lang)
 
     colors = _get_cycle_colors()
+    adaptive = smart_marker_style(len(diff_vals), base_size=26.0, base_alpha=0.76)
+    sc_kw = dict(kwargs)
+    sc_kw.setdefault("edgecolors", "white")
+    sc_kw.setdefault("linewidths", adaptive["linewidths"])
 
-    ax.scatter(mean_vals, diff_vals, alpha=0.6, color=colors[0], **kwargs)
+    ax.scatter(mean_vals, diff_vals, s=adaptive["s"], alpha=adaptive["alpha"], color=colors[0], zorder=3, **sc_kw)
 
-    ax.axhline(y=mean_diff, color=colors[1 % len(colors)], linestyle="-",
-              linewidth=2, label=f"均值差 = {mean_diff:.3f}")
-    ax.axhline(y=upper_loa, color=colors[2 % len(colors)], linestyle="--",
-              linewidth=1.5, label=f"+1.96 SD = {upper_loa:.3f}")
-    ax.axhline(y=lower_loa, color=colors[2 % len(colors)], linestyle="--",
-              linewidth=1.5, label=f"-1.96 SD = {lower_loa:.3f}")
+    mean_color = colors[1 % len(colors)] if len(colors) > 1 else "#D95F02"
+    loa_color = colors[2 % len(colors)] if len(colors) > 2 else "#64748B"
+
+    ax.axhline(y=mean_diff, color=mean_color, linestyle="-",
+              linewidth=1.8, label=f"均值差 = {mean_diff:.3f}", zorder=4)
+    ax.axhline(y=upper_loa, color=loa_color, linestyle="--",
+              linewidth=1.3, label=f"+1.96 SD = {upper_loa:.3f}", zorder=2)
+    ax.axhline(y=lower_loa, color=loa_color, linestyle="--",
+              linewidth=1.3, label=f"-1.96 SD = {lower_loa:.3f}", zorder=2)
 
     if show_ci:
         n = len(diff_vals)
@@ -320,16 +429,18 @@ def plot_bland_altman(
         mean_min, mean_max = mean_vals.min(), mean_vals.max()
         x_ci = np.array([mean_min, mean_max])
 
+        ax.fill_between(x_ci, lower_loa, upper_loa, color=loa_color, alpha=0.05, zorder=0)
         ax.fill_between(x_ci, upper_ci_lower, upper_ci_upper,
-                       color=colors[2 % len(colors)], alpha=0.1)
+                       color=loa_color, alpha=0.12, zorder=1)
         ax.fill_between(x_ci, lower_ci_lower, lower_ci_upper,
-                       color=colors[2 % len(colors)], alpha=0.1)
+                       color=loa_color, alpha=0.12, zorder=1)
 
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.legend(loc="best")
+    smart_legend(ax)
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -1327,7 +1438,8 @@ def plot_funnel(
     if title:
         ax.set_title(title)
     if show_legend:
-        ax.legend(loc="upper right", frameon=False, fontsize="small")
+        smart_legend(ax, loc="best")
+    polish_axis(ax, clean_spines=True, grid="y")
 
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
@@ -1455,6 +1567,315 @@ def plot_paired(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+# ============================================================================
+# 敏感性分析龙卷风图（Tornado Chart）
+# ============================================================================
+
+def plot_tornado(
+    parameters: Sequence[str],
+    low_values: Sequence[float],
+    high_values: Sequence[float],
+    baseline: float = 0.0,
+    low_label: str = "Low (-)",
+    high_label: str = "High (+)",
+    xlabel: str = "Outcome",
+    ylabel: str = "",
+    title: str = "",
+    sort_by_swing: bool = True,
+    show_values: bool = True,
+    fmt: str = ".2f",
+    bar_height: float = 0.58,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制敏感性分析龙卷风图，直观展现各参数扰动对结果的影响幅度与方向。
+
+    每个参数从基准线 ``baseline`` 出发分别向 ``low_values`` 与 ``high_values``
+    延伸双色水平条，默认按总敏感摆幅由大到小自顶向下排序，附带淡淡斑马纹行底衬
+    与端值标注。
+
+    参数:
+        parameters   : 参数名称序列
+        low_values   : 参数取低水平/负扰动时的结果序列
+        high_values  : 参数取高水平/正扰动时的结果序列
+        baseline     : 基准结果值，默认 0.0
+        low_label    : 低扰动图例标签，默认 "Low (-)"
+        high_label   : 高扰动图例标签，默认 "High (+)"
+        xlabel/ylabel: 坐标轴标签
+        title        : 图标题
+        sort_by_swing: 是否按 ``max(|high - baseline|, |low - baseline|)`` / 总摆幅降序置顶（默认 True）
+        show_values  : 是否在条形末端标注数值（默认 True）
+        fmt          : 数值格式，默认 ".2f"
+        bar_height   : 柱高，默认 0.58
+        venue        : 期刊样式预设
+        palette      : 配色方案名称
+        lang         : 语言设置
+
+    返回:
+        PlotResult 对象。
+
+    示例:
+        >>> fig, ax = sp.plot_tornado(
+        ...     ["Discount Rate", "CAPEX", "OPEX", "Lifetime"],
+        ...     [18.5, 21.0, 22.8, 20.1],
+        ...     [29.2, 26.8, 25.4, 27.9],
+        ...     baseline=24.0, xlabel="NPV ($M)",
+        ... )
+    """
+    from sciplot.utils.guards import style_patch_edges, truncate_tick_labels
+
+    param_list = [str(p) for p in parameters]
+    if not param_list:
+        raise ValueError("参数 'parameters' 不能为空")
+    low_arr = np.asarray(low_values, dtype=float).ravel()
+    high_arr = np.asarray(high_values, dtype=float).ravel()
+    if low_arr.size != len(param_list) or high_arr.size != len(param_list):
+        raise ValueError(
+            f"low_values ({low_arr.size}) 与 high_values ({high_arr.size}) 长度必须与 parameters ({len(param_list)}) 一致"
+        )
+    if not np.all(np.isfinite(low_arr)) or not np.all(np.isfinite(high_arr)):
+        raise ValueError("low_values 和 high_values 不能包含 NaN 或 Inf")
+    if not np.isfinite(baseline):
+        raise ValueError(f"baseline 必须为有限数值，实际值: {baseline!r}")
+
+    swing = np.maximum(np.abs(high_arr - low_arr), np.abs(high_arr - baseline) + np.abs(low_arr - baseline))
+    if sort_by_swing:
+        order = np.argsort(-swing, kind="stable")
+        param_list = [param_list[i] for i in order]
+        low_arr = low_arr[order]
+        high_arr = high_arr[order]
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = _get_cycle_colors()
+    c_low = colors[0]
+    c_high = colors[1] if len(colors) > 1 else "#E76F51"
+
+    y = np.arange(len(param_list), dtype=float)
+    for idx in range(len(param_list)):
+        if idx % 2 == 0:
+            ax.axhspan(idx - 0.44, idx + 0.44, color="#F1F5F9", alpha=0.65, zorder=0)
+
+    bar_kw = dict(kwargs)
+    has_edge = "edgecolor" in bar_kw or "ec" in bar_kw
+    has_alpha = "alpha" in bar_kw
+
+    bars_low = ax.barh(
+        y, low_arr - baseline, left=baseline, height=bar_height,
+        color=c_low, label=low_label, zorder=3, **bar_kw,
+    )
+    bars_high = ax.barh(
+        y, high_arr - baseline, left=baseline, height=bar_height,
+        color=c_high, label=high_label, zorder=3, **bar_kw,
+    )
+    if not has_edge and not has_alpha:
+        style_patch_edges(bars_low, [c_low] * len(param_list), fill_alpha=0.84, darken_amount=0.25, linewidth=0.75)
+        style_patch_edges(bars_high, [c_high] * len(param_list), fill_alpha=0.84, darken_amount=0.25, linewidth=0.75)
+
+    ax.axvline(baseline, color="#334155", linewidth=1.15, zorder=4)
+
+    all_vals = np.concatenate([low_arr, high_arr, np.array([baseline])])
+    xmin, xmax = float(all_vals.min()), float(all_vals.max())
+    span = max(xmax - xmin, 1e-6)
+    pad = span * 0.025
+
+    if show_values:
+        fs = relative_fontsize(-1, floor=6)
+        for yi, lv, hv in zip(y, low_arr, high_arr):
+            if lv != baseline:
+                ha_l = "right" if lv < baseline else "left"
+                off_l = -pad if lv < baseline else pad
+                ax.text(lv + off_l, yi, format(lv, fmt), ha=ha_l, va="center", fontsize=fs, color="#334155", zorder=5)
+            if hv != baseline:
+                ha_h = "left" if hv >= baseline else "right"
+                off_h = pad if hv >= baseline else -pad
+                ax.text(hv + off_h, yi, format(hv, fmt), ha=ha_h, va="center", fontsize=fs, color="#334155", zorder=5)
+
+    margin_x = span * (0.18 if show_values else 0.08)
+    ax.set_xlim(xmin - margin_x, xmax + margin_x)
+    ax.set_yticks(y)
+    ax.set_yticklabels(param_list)
+    ax.invert_yaxis()
+    truncate_tick_labels(ax, axis="y", max_len=24)
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    smart_legend(ax)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 四象限回归残差诊断面板（Residual Diagnostics 2x2）
+# ============================================================================
+
+def plot_residual_diagnostics(
+    y_true: Union[List[float], Tuple[float, ...], np.ndarray],
+    y_pred: Union[List[float], Tuple[float, ...], np.ndarray],
+    title: str = "",
+    panel_labels: bool = True,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> PlotResult:
+    """绘制 2×2 四象限回归残差诊断组合图。
+
+    四格联合检查模型假设：
+    - **(a) Residuals vs Fitted**：标准化残差与 ±2σ 参考带，突出离群点（|z| > 2.5）；
+    - **(b) Normal Q-Q Plot**：理论正态分位数散点与 95% Beta 逐点置信包络；
+    - **(c) Residual Distribution**：标准化残差直方图叠加理论正态密度曲线与 Shapiro-Wilk p 值；
+    - **(d) Residual ACF**：前阶残差自相关棒棒糖图与 95% 白噪声边界（±1.96/√n）。
+
+    参数:
+        y_true      : 观测真实值序列
+        y_pred      : 模型预测值序列（与 y_true 等长，至少 4 个样本）
+        title       : 整体总标题（fig.suptitle）
+        panel_labels: 是否自动添加并防碰撞排列子图编号 ``(a)-(d)``，默认 True
+        venue       : 期刊样式预设
+        palette     : 配色方案名称
+        lang        : 语言设置
+
+    返回:
+        PlotResult 对象，其 ``ax`` 为 ``(2, 2)`` 子图阵列 ``axes``。
+
+    示例:
+        >>> fig, axes = sp.plot_residual_diagnostics(y_true, y_pred, title="Model Diagnostics")
+    """
+    from sciplot._core.layout import add_panel_labels, new_figure
+    from sciplot._core.style import VENUES
+    from sciplot._core.utils import apply_resolved_style
+    from sciplot.utils.guards import repel_panel_labels
+
+    yt = np.asarray(y_true, dtype=float).ravel()
+    yp = np.asarray(y_pred, dtype=float).ravel()
+    if yt.size != yp.size:
+        raise ValueError(f"y_true 长度 ({yt.size}) 与 y_pred 长度 ({yp.size}) 不一致")
+    if yt.size < 4:
+        raise ValueError(f"残差诊断至少需要 4 个样本点，当前仅 {yt.size} 个")
+    if not np.all(np.isfinite(yt)) or not np.all(np.isfinite(yp)):
+        raise ValueError("y_true 和 y_pred 不能包含 NaN 或 Inf")
+
+    resid = yt - yp
+    n_obs = resid.size
+    r_sd = float(np.std(resid, ddof=1))
+    std_resid = resid / r_sd if r_sd > 1e-12 else resid.copy()
+
+    effective_venue = apply_resolved_style(venue, palette, lang) or venue or "nature"
+    base_w, base_h = VENUES.get(effective_venue, VENUES["nature"]).figsize
+    fig, raw_axes = new_figure(nrows=2, ncols=2, figsize=(base_w * 1.78, base_h * 1.72))
+    axes: np.ndarray = np.asarray(raw_axes)
+
+    colors = _get_cycle_colors()
+    c_primary = colors[0]
+    c_accent = colors[1] if len(colors) > 1 else "#D95F02"
+
+    # ── (a) Standardized Residuals vs Fitted ──
+    ax0 = axes[0, 0]
+    _render_residuals_ax(ax0, yp, std_resid, c_primary, show_zero_line=True, band_k=2.0)
+    outliers = np.abs(std_resid) > 2.5
+    if np.any(outliers):
+        ax0.scatter(
+            yp[outliers], std_resid[outliers],
+            s=36, facecolors="none", edgecolors=c_accent, linewidths=1.3, zorder=5,
+        )
+    polish_axis(ax0, clean_spines=True, grid="both", grid_alpha=0.16)
+    ax0.set_xlabel("Fitted Values")
+    ax0.set_ylabel("Std. Residuals")
+    ax0.set_title("Residuals vs Fitted")
+
+    # ── (b) Normal Q-Q Plot ──
+    ax1 = axes[0, 1]
+    _render_qq_ax(
+        ax1, std_resid, distribution="norm", show_line=True,
+        marker_color=c_primary, ref_color=c_accent,
+    )
+    polish_axis(ax1, clean_spines=True, grid="both", grid_alpha=0.16)
+    ax1.set_xlabel("Theoretical Quantiles")
+    ax1.set_ylabel("Std. Residuals")
+    ax1.set_title("Normal Q-Q")
+
+    # ── (c) Residual Histogram + Normal Overlay ──
+    ax2 = axes[1, 0]
+    if _is_constant(std_resid):
+        ax2.axvline(float(std_resid[0]), color=c_primary, linewidth=2.0)
+    else:
+        n_bins = min(24, max(6, int(np.ceil(np.sqrt(n_obs) * 1.4))))
+        ax2.hist(
+            std_resid, bins=n_bins, density=True,
+            color=c_primary, alpha=0.58, edgecolor="white", linewidth=0.8, zorder=2,
+        )
+        mu_s = float(np.mean(std_resid))
+        sd_s = max(float(np.std(std_resid, ddof=1)), 1e-6)
+        xs = np.linspace(float(std_resid.min()) - 0.5 * sd_s, float(std_resid.max()) + 0.5 * sd_s, 160)
+        pdf = (1.0 / (sd_s * np.sqrt(2.0 * np.pi))) * np.exp(-0.5 * ((xs - mu_s) / sd_s) ** 2)
+        ax2.plot(xs, pdf, color=c_accent, linewidth=1.8, linestyle="-", zorder=4, label="Normal fit")
+
+        stats_mod = _try_import_optional("scipy.stats")
+        if stats_mod is not None and 4 <= n_obs <= 5000:
+            try:
+                _, p_sw = stats_mod.shapiro(resid)
+                if np.isfinite(p_sw):
+                    sw_txt = "SW p < 0.001" if p_sw < 0.001 else f"SW p = {p_sw:.3f}"
+                    ax2.text(
+                        0.96, 0.94, sw_txt,
+                        transform=ax2.transAxes, ha="right", va="top",
+                        fontsize=relative_fontsize(-2, floor=6),
+                        bbox={
+                            "boxstyle": "round,pad=0.25",
+                            "facecolor": ax2.get_facecolor(),
+                            "edgecolor": "#CBD5E1",
+                            "alpha": 0.90,
+                            "linewidth": 0.6,
+                        },
+                    )
+            except Exception:
+                pass
+    polish_axis(ax2, clean_spines=True, grid="y", grid_alpha=0.16)
+    ax2.set_xlabel("Std. Residuals")
+    ax2.set_ylabel("Density")
+    ax2.set_title("Residual Distribution")
+
+    # ── (d) Residual Autocorrelation (ACF) ──
+    ax3 = axes[1, 1]
+    max_lag = min(15, max(2, n_obs // 3))
+    centered = resid - float(np.mean(resid))
+    denom = float(np.dot(centered, centered))
+    lags = np.arange(1, max_lag + 1)
+    acf_vals = np.array(
+        [
+            float(np.dot(centered[:-k], centered[k:]) / denom) if denom > 1e-12 else 0.0
+            for k in lags
+        ],
+        dtype=float,
+    )
+    ci_bound = 1.96 / np.sqrt(float(n_obs))
+    ax3.axhspan(-ci_bound, ci_bound, color=c_primary, alpha=0.08, zorder=0)
+    ax3.axhline(ci_bound, color=c_accent, linestyle="--", linewidth=0.95, zorder=1)
+    ax3.axhline(-ci_bound, color=c_accent, linestyle="--", linewidth=0.95, zorder=1)
+    ax3.axhline(0.0, color="#64748B", linewidth=0.9, zorder=1)
+    ax3.vlines(lags, 0.0, acf_vals, color=c_primary, linewidth=1.6, zorder=3)
+    ax3.scatter(lags, acf_vals, s=24, color=c_primary, edgecolors="white", linewidths=0.6, zorder=4)
+    ax3.set_xticks(lags if len(lags) <= 10 else lags[::2])
+    y_lim_acf = max(0.35, min(1.08, float(max(np.max(np.abs(acf_vals)), ci_bound) * 1.28)))
+    ax3.set_ylim(-y_lim_acf, y_lim_acf)
+    polish_axis(ax3, categorical_axis="x", clean_spines=True, grid="y", grid_alpha=0.16)
+    ax3.set_xlabel("Lag")
+    ax3.set_ylabel("ACF")
+    ax3.set_title("Residual Autocorrelation")
+
+    fig.subplots_adjust(hspace=0.40, wspace=0.30, top=0.90 if title else 0.94)
+    if title:
+        fig.suptitle(title)
+    if panel_labels:
+        add_panel_labels(axes, style="letter")
+        repel_panel_labels(fig)
+
+    return PlotResult(fig, axes, metadata={"venue": effective_venue, "palette": palette})
+
+
 __all__ = [
     "plot_residuals",
     "plot_qq",
@@ -1467,4 +1888,6 @@ __all__ = [
     "plot_forest",
     "plot_funnel",
     "plot_paired",
+    "plot_tornado",
+    "plot_residual_diagnostics",
 ]

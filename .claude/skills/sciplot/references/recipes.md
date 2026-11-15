@@ -870,28 +870,115 @@ res_hm = sp.plot_heatmap(
 )
 ```
 
-### 7.6 出版级 4 面板 Hero 排版 (`hero_layout` 复合工作流)
+### 7.6 出版级多面板复合叙事排版 (`figure_panels` / `hero_layout` 工作流)
 
 ```python
-import matplotlib.pyplot as plt
+import numpy as np
 import sciplot as sp
 
-sp.setup_style("nature", "olive-apricot", lang="en")
-fig = plt.figure(figsize=(10.5, 7.2))
-gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.28)
+# 使用 figure_panels / hero_layout 创建排版，再用底层原语与 polish_axis 精修每个子面板
+sp.setup_style("nature", "coral-teal", lang="en")
+fig, axes = sp.figure_panels(template="triptych", panel_labels="letter")
+colors = sp.get_palette("coral-teal")
 
-ax_a = fig.add_subplot(gs[0, 0])
-ax_b = fig.add_subplot(gs[0, 1])
-ax_c = fig.add_subplot(gs[1, 0])
-ax_d = fig.add_subplot(gs[1, 1])
+# Panel (a): 主对比曲线 + 分层渐透置信带
+x = np.linspace(0, 10, 80)
+y = np.sin(x) * np.exp(-0.15 * x) + 1.2
+axes[0].plot(x, y, color=colors[0], linewidth=2.0, label="Proposed")
+sp.layered_fill_between(axes[0], x, y - 0.12, y + 0.12, color=colors[0], base_alpha=0.22, layers=3)
+sp.polish_axis(axes[0], clean_spines=True, grid="both", grid_alpha=0.18)
+axes[0].set_xlabel("Time (s)")
+axes[0].set_ylabel("Signal")
 
-# 在各子图上调用 sciplot 绘图原语，传入 ax=...
-sp.plot_scatter(x, y, fit_line=True, show_stats=True, ax=ax_a, title="Dose-Response")
-sp.plot_raincloud([g1, g2, g3], labels=["Ctrl", "Mid", "High"], ax=ax_b, title="Distribution")
-sp.plot_roc(y_true, {"Ours": p1, "Base": p2}, ax=ax_c, title="Discrimination")
-sp.plot_paired(pre, post, ax=ax_d, title="Paired Shift")
+# Panel (b)-(c): 并排对比条与散点
+cats = ["A", "B", "C", "D"]
+bars = axes[1].bar(cats, [0.81, 0.86, 0.90, 0.94], color=sp.make_highlight_palette(4, highlight_idx=3, palette="coral-teal"))
+sp.style_patch_edges(bars, sp.make_highlight_palette(4, highlight_idx=3, palette="coral-teal"))
+sp.polish_axis(axes[1], categorical_axis="x", clean_spines=True, grid="y")
 
-sp.add_panel_labels([ax_a, ax_b, ax_c, ax_d], style="lower_paren")
+axes[2].scatter(x[::2], y[::2], color=colors[1], edgecolors="white", linewidths=0.5, s=28)
+sp.polish_axis(axes[2], clean_spines=True, grid="both", grid_alpha=0.18)
+
+sp.repel_panel_labels(fig)  # 自动防止 (a)-(c) 与轴标签重叠
 sp.audit_figure(fig, check_visual_guards=True)
 sp.save(fig, "composite_hero", formats=("png", "pdf"))
+```
+
+### 7.7 双因素分组小提琴 (`plot_grouped_violin`) 与镜像对比 (`plot_back_to_back_bar`)
+
+```python
+import numpy as np
+import sciplot as sp
+
+rng = np.random.default_rng(7)
+stages = ["Stage I", "Stage II", "Stage III"]
+series = {
+    "Baseline": [rng.normal(2.1, 0.5, 45), rng.normal(2.6, 0.6, 45), rng.normal(3.1, 0.7, 45)],
+    "Intervention": [rng.normal(2.8, 0.4, 45), rng.normal(3.7, 0.5, 45), rng.normal(4.4, 0.6, 45)],
+}
+fig, ax = sp.plot_grouped_violin(
+    stages, series, ylabel="Biomarker (log2 U)",
+    show_box=True, show_points=True, title="双因素各分期响应分布",
+    venue="nature", palette="coral-teal",
+)
+sp.save(fig, "grouped_violin")
+
+# 对称镜像对比两组跨多指标表现（含右端 Δ 徽章）
+metrics = ["Accuracy", "Precision", "Recall", "F1-Score", "AUC"]
+fig2, ax2 = sp.plot_back_to_back_bar(
+    metrics,
+    [82.1, 79.4, 80.8, 80.0, 86.5],
+    [89.6, 87.2, 88.9, 88.0, 93.4],
+    left_label="Baseline", right_label="Proposed",
+    xlabel="Metric Score (%)", sort_by="diff", palette="coral-teal",
+)
+sp.save(fig2, "back_to_back_bar")
+```
+
+### 7.8 多方法跨量纲评测矩阵 (`plot_method_heatmap`)
+
+```python
+import sciplot as sp
+
+methods = ["Linear", "XGBoost", "ResNet-50", "Transformer", "Proposed"]
+metrics = ["Accuracy", "F1", "Latency (ms)", "Memory (MB)"]
+scores = [
+    [0.78, 0.75, 4.2, 120.0],
+    [0.86, 0.84, 11.5, 310.0],
+    [0.89, 0.88, 24.0, 840.0],
+    [0.91, 0.90, 32.5, 1120.0],
+    [0.94, 0.93, 9.8, 280.0],
+]
+fig, ax = sp.plot_method_heatmap(
+    scores, methods=methods, metrics=metrics,
+    higher_is_better={"Latency (ms)": False, "Memory (MB)": False},
+    show_overall=True, highlight_best=True, show_rank=True,
+    title="Multi-Metric Benchmark Comparison", venue="nature",
+)
+sp.save(fig, "method_heatmap")
+```
+
+### 7.9 四象限回归残差全诊断 (`plot_residual_diagnostics`) 与敏感性龙卷风图 (`plot_tornado`)
+
+```python
+import numpy as np
+import sciplot as sp
+
+rng = np.random.default_rng(12)
+y_true = np.linspace(10, 60, 80) + rng.normal(0, 2.0, 80)
+y_pred = np.linspace(10, 60, 80)
+fig, axes = sp.plot_residual_diagnostics(
+    y_true, y_pred, title="Regression Residual Diagnostics", venue="nature", palette="blue-sky"
+)
+sp.save(fig, "residual_diagnostics")
+
+# 单因素敏感性扰动分析
+fig_t, ax_t = sp.plot_tornado(
+    ["Discount Rate", "CAPEX", "Fuel Cost", "Efficiency", "Tax Credit"],
+    low_values=[19.5, 21.0, 22.8, 20.6, 23.2],
+    high_values=[28.8, 26.5, 25.4, 27.9, 25.0],
+    baseline=24.0, xlabel="NPV ($M)", title="Sensitivity Analysis",
+    palette="coral-teal",
+)
+sp.save(fig_t, "tornado_sensitivity")
 ```

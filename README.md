@@ -289,6 +289,34 @@
       <br><b>概率预测扇形图</b>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/56_grouped_violin.png" width="100%">
+      <br><b>双因素分组小提琴图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/57_back_to_back_bar.png" width="100%">
+      <br><b>双向镜像对比图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/58_method_heatmap.png" width="100%">
+      <br><b>方法×指标归一化基准矩阵</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/59_tornado.png" width="100%">
+      <br><b>单因素敏感性龙卷风图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/60_residual_diagnostics.png" width="100%">
+      <br><b>四合一残差诊断面板</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/54_calibration.png" width="100%">
+      <br><b>概率校准可靠性曲线</b>
+    </td>
+  </tr>
 </table>
 
 </div>
@@ -305,13 +333,13 @@
 
 | 特性 | 说明 |
 |------|------|
-| **🤖 数据画像与选图** | `profile_data()` + `recommend_charts()` 自动分析数据结构并推荐高信息密度图型，告别“全员柱状图” |
-| **🎨 全内置配色** | 7 套 Vivid 高对比配色 + 5 大基础色系 + 6 个人民币主题 + 发散/连续渐变生成 (`make_palette_cmap`)，零外部依赖 |
+| **🤖 数据画像与选图** | `profile_data()` + `recommend_charts()` 自动分析数据结构、`干0–干9` 决策路径与反模式预警，告别“全员柱状图” |
+| **🎨 全内置配色** | 7 套 Vivid 高对比配色 + `make_highlight_palette()` 灰阶退隐焦点配色 + 5 大基础色系 + 发散/连续渐变，零外部依赖 |
 | **🀄 中文优化** | 默认宋体中文环境，IEEE 中文字号自动调优 |
 | **📄 论文级输出** | Nature/IEEE/APS/Springer/Thesis 预置尺寸，Word/LaTeX 一键切换 |
-| **📐 高下限与视觉守卫** | 底层统一定尺四边轴脊/刻度/细描边；`polish_axis()` 与 `audit_figure(fig, check_visual_guards=True)` 防重叠与裁切 |
+| **📐 高下限与视觉守卫** | 抑制连续轴冗余次刻度、主轴脊柔化；`polish_axis()`、`repel_panel_labels()` 与 `audit_figure(fig, check_visual_guards=True)` 防重叠与裁切 |
 | **🧠 智能配色** | ≤6 条线自动选择最优子集，支持自定义配色方案 |
-| **📊 丰富图表** | 45+ 图表类型：涵盖帕累托/配对斜率/预测扇形/ROC/校准/雨云/山脊/火山/泰勒/弦图/三元/UpSet 等 |
+| **📊 丰富图表** | 50+ 图表类型：含分组小提琴/双向镜像柱/方法对比基准矩阵/龙卷风/四联残差诊断/帕累托/配对/预测扇形/ROC 等 |
 | **🧠 复合图模板** | `figure_panels(template=...)` 一键生成 Nature 级多面板：条件矩阵/时间推进/对照双列/流水线/临床三联画 |
 | **✨ 智能辅助** | 自动标签旋转、智能图例、稀疏角落自动探测 (`pick_best_corner`)、颜色对比度检查、标注自动对比色 |
 | **🎯 色盲安全** | Okabe-Ito 色盲安全调色板 + `simulate_colorblind()`/`audit_palette()` 配色防线 |

@@ -21,12 +21,15 @@ weeks = np.arange(0, 13)
 group_a = 50 + 8 * np.log1p(weeks) + rng.normal(0, 1.2, 13)
 group_b = 50 + 4 * np.log1p(weeks) + rng.normal(0, 1.2, 13)
 
-# 森林图数据（6 个亚组效应）
-subgroups = ["亚组 1", "亚组 2", "亚组 3", "亚组 4", "亚组 5", "亚组 6"]
-fx = np.array([0.9, 0.6, 1.3, 0.75, 1.05, 0.45])
-fse = np.array([0.18, 0.22, 0.25, 0.20, 0.23, 0.19])
-flo = fx - 1.96 * fse
-fhi = fx + 1.96 * fse
+# 森林图数据（6 个亚组：主要终点 vs 次要终点，避免左右面板重复）
+subgroups = ["< 65 岁", ">= 65 岁", "女性", "男性", "早中期", "晚进展期"]
+fx_pri = np.array([0.82, 0.64, 1.18, 0.72, 0.96, 0.54])
+fse_pri = np.array([0.16, 0.19, 0.21, 0.17, 0.20, 0.15])
+flo_pri, fhi_pri = fx_pri - 1.96 * fse_pri, fx_pri + 1.96 * fse_pri
+
+fx_sec = np.array([0.94, 0.78, 1.05, 0.85, 1.12, 0.68])
+fse_sec = np.array([0.14, 0.17, 0.18, 0.16, 0.19, 0.16])
+flo_sec, fhi_sec = fx_sec - 1.96 * fse_sec, fx_sec + 1.96 * fse_sec
 
 # 汇总柱数据（两列：有效率 / 不良事件率）
 cat_a = np.array([72, 68, 75, 64, 70, 66])
@@ -42,25 +45,36 @@ for ax, series, label, color in zip(
     ["治疗组", "对照组"],
     ["#C0392B", "#2E6DA4"],
 ):
-    ax.plot(weeks, series, "-o", color=color, markersize=3,
+    ax.plot(weeks, series, "-o", color=color, markersize=3.4,
+            markeredgecolor="white", markeredgewidth=0.6,
             linewidth=1.5, label=label)
     ax.set_ylim(45, 85)
-    ax.set_xlabel("周", fontsize=8)
+    ax.set_xlabel("随访周数", fontsize=8)
     ax.set_ylabel("指标值", fontsize=8)
     ax.legend(frameon=False, fontsize=7, loc="lower right")
     ax.tick_params(labelsize=7)
+    sp.polish_axis(ax, clean_spines=True, grid="y")
 
-# ── 中行：森林图（效应量） ────────────────────────────────────
-for ax in axes[1]:
+# ── 中行：森林图（左：主要终点；右：次要终点） ─────────────────
+forest_specs = [
+    (axes[1, 0], fx_pri, flo_pri, fhi_pri, "#C0392B", "主要终点 HR (95% CI)"),
+    (axes[1, 1], fx_sec, flo_sec, fhi_sec, "#2E6DA4", "次要终点 HR (95% CI)"),
+]
+for idx, (ax, fx, flo, fhi, col, xlab) in enumerate(forest_specs):
     ax.errorbar(fx, np.arange(6), xerr=[fx - flo, fhi - fx],
-                fmt="D", color="#C0392B", markersize=4,
-                elinewidth=1.2, capsize=2.5, capthick=1.0)
-    ax.axvline(1.0, color="#444444", linestyle="--", linewidth=0.9)
+                fmt="D", color=col, markeredgecolor="white", markeredgewidth=0.5,
+                markersize=4.2, elinewidth=1.2, capsize=2.5, capthick=1.0)
+    ax.axvline(1.0, color="#64748B", linestyle="--", linewidth=0.9)
     ax.set_yticks(np.arange(6))
-    ax.set_yticklabels(subgroups, fontsize=7)
+    if idx == 0:
+        ax.set_yticklabels(subgroups, fontsize=7)
+    else:
+        ax.set_yticklabels([])
     ax.invert_yaxis()
-    ax.set_xlabel("效应量 (95% CI)", fontsize=8)
+    ax.set_xlim(0.15, 1.75)
+    ax.set_xlabel(xlab, fontsize=8)
     ax.tick_params(labelsize=7)
+    sp.polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
 
 # ── 下行：汇总柱 ──────────────────────────────────────────────
 x_cat = np.arange(6)
@@ -70,13 +84,14 @@ for ax, vals, label, color in zip(
     ["有效率 (%)", "不良事件率 (%)"],
     ["#2E6DA4", "#C0392B"],
 ):
-    ax.bar(x_cat, vals, color=color, width=0.6,
-           edgecolor="white", linewidth=0.6)
+    bars = ax.bar(x_cat, vals, color=color, width=0.6)
     ax.set_ylim(0, 90)
     ax.set_xticks(x_cat)
     ax.set_xticklabels([f"G{i+1}" for i in range(6)], fontsize=7)
     ax.set_ylabel(label, fontsize=8)
     ax.tick_params(labelsize=7)
+    sp.style_patch_edges(bars, [color])
+    sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
 
 # ── 保存 ──────────────────────────────────────────────────────
 sp.save(fig, "showcase/48_composite_triptych", formats=("png",), dpi=300)
