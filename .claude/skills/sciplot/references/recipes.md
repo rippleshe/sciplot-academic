@@ -503,14 +503,22 @@ fig, ax = sp.new_figure("nature")
 
 # 按聚类绘制散点
 cluster_names = ["Cluster A", "Cluster B", "Cluster C", "Cluster D"]
+palette = sp.get_palette("coral-teal")
 for i in range(4):
     mask = y == i
-    ax.scatter(X_pca[mask, 0], X_pca[mask, 1], label=cluster_names[i], alpha=0.7, s=30)
+    ax.scatter(
+        X_pca[mask, 0], X_pca[mask, 1],
+        color=palette[i % len(palette)],
+        edgecolors="#FFFFFF", linewidths=0.5,
+        label=cluster_names[i], alpha=0.82, s=36,
+    )
 
 ax.set_xlabel(f"PC1 ({variance_ratio[0]:.1f}% variance)")
 ax.set_ylabel(f"PC2 ({variance_ratio[1]:.1f}% variance)")
 ax.set_title("PCA Visualization of High-Dimensional Data")
-ax.legend()
+ax.legend(frameon=False)
+sp.polish_axis(ax)
+sp.audit_figure(fig, check_visual_guards=True)
 sp.save(fig, "PCA可视化", formats=("png", "pdf"), dpi=1200)
 ```
 
@@ -611,9 +619,14 @@ axes[0, 0].legend()
 # (b) 柱状图
 categories = ["方法A", "方法B", "方法C", "本文"]
 values = [72.3, 78.5, 81.2, 89.6]
-axes[0, 1].bar(categories, values, color=sp.get_palette("pastel-3", 4))
+axes[0, 1].bar(
+    categories, values,
+    color=sp.get_palette("pastel-3")[:4],
+    edgecolor="#1E293B", linewidth=0.7,
+)
 axes[0, 1].set_ylabel("准确率 (%)")
 axes[0, 1].set_ylim(60, 95)
+sp.polish_axis(axes[0, 1], categorical_axis="x")
 
 # (c) 散点图
 x_scatter = np.random.randn(50)
@@ -699,24 +712,186 @@ r_squared = r_value**2
 x_line = np.linspace(x.min(), x.max(), 100)
 y_line = slope * x_line + intercept
 
-sp.setup_style("thesis", "pastel-2", lang="zh")
-fig, ax = sp.new_figure("thesis")
+sp.setup_style("thesis", "coral-teal", lang="zh")
 
-# 绘制散点
-ax.scatter(x, y, alpha=0.6, s=40, label="观测值")
+res = sp.plot_scatter(
+    x, y,
+    xlabel="施肥量 (kg/亩)",
+    ylabel="产量 (kg)",
+    title="施肥量与产量的线性关系",
+    fit_line=True,
+    ci=True,
+    show_stats=True,
+    venue="thesis",
+    palette="coral-teal",
+    lang="zh",
+)
+sp.audit_figure(res.fig, check_visual_guards=True)
+sp.save(res.fig, "散点回归图", formats=("png", "pdf"), dpi=1200)
+```
 
-# 绘制回归线
-ax.plot(x_line, y_line, color="#e76f51", linewidth=2, linestyle="--", label="拟合线")
+---
 
-# 添加 R² 标注
-textstr = f"R² = {r_squared:.3f}\ny = {slope:.2f}x + {intercept:.2f}"
-props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
-ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=10,
-        verticalalignment="top", bbox=props)
+## 7. v1.15.0 新增高信息密度图表范式
 
-ax.set_xlabel("施肥量 (kg/亩)")
-ax.set_ylabel("产量 (kg)")
-ax.set_title("施肥量与产量的线性关系")
-ax.legend()
-sp.save(fig, "散点回归图", formats=("png", "pdf"), dpi=1200)
+### 7.1 帕累托图 (`plot_pareto`) — 根因分析 / 长尾频数识别
+
+```python
+import sciplot as sp
+
+categories = ["参数漂移", "数据缺失", "网络超时", "磁盘满", "格式错误", "其他"]
+counts = [142, 98, 56, 31, 18, 12]
+
+res = sp.plot_pareto(
+    categories, counts,
+    xlabel="故障类型",
+    ylabel="发生次数",
+    cum_ylabel="累积占比 (%)",
+    title="系统异常帕累托分析",
+    threshold=80.0,
+    show_values=True,
+    venue="nature",
+    palette="coral-teal",
+)
+sp.audit_figure(res.fig, check_visual_guards=True)
+sp.save(res.fig, "pareto_analysis")
+```
+
+### 7.2 前后配对斜率图 (`plot_paired`) — 患者/样本干预对比
+
+```python
+import numpy as np
+import sciplot as sp
+
+rng = np.random.default_rng(42)
+before = rng.normal(7.2, 1.1, 24)
+after = before - rng.normal(1.5, 0.6, 24)
+
+res = sp.plot_paired(
+    before, after,
+    labels=("基线期", "治疗后"),
+    ylabel="临床评分",
+    title="治疗前后个体配对变化",
+    show_box=True,
+    show_mean=True,
+    show_stats=True,
+    venue="nature",
+    palette="coral-teal",
+)
+sp.audit_figure(res.fig, check_visual_guards=True)
+sp.save(res.fig, "paired_slope")
+```
+
+### 7.3 概率预测扇形图 (`plot_fan`) — 多置信区间时序预测
+
+```python
+import numpy as np
+import sciplot as sp
+
+hist_x = np.arange(0, 20)
+hist_y = 10 + 0.3 * hist_x + np.random.default_rng(7).normal(0, 0.5, 20)
+fc_x = np.arange(19, 32)
+samples = 15.7 + 0.35 * (fc_x - 19) + np.cumsum(
+    np.random.default_rng(7).normal(0, 0.45, size=(300, len(fc_x))), axis=1
+)
+
+res = sp.plot_fan(
+    fc_x,
+    samples=samples,
+    intervals=(50, 80, 95),
+    history_x=hist_x,
+    history_y=hist_y,
+    xlabel="时间步",
+    ylabel="预测指标",
+    title="时序预测不确定性扇形带 (50% / 80% / 95%)",
+    venue="nature",
+    palette="ocean-breeze",
+)
+sp.audit_figure(res.fig, check_visual_guards=True)
+sp.save(res.fig, "forecast_fan")
+```
+
+### 7.4 二分类 ROC 与校准曲线 (`plot_roc` + `plot_calibration`)
+
+```python
+import sciplot as sp
+
+# 多模型对比支持传入 dict[str, y_scores]
+scores = {"Proposed Model": prob_ours, "Baseline RF": prob_rf, "Logistic": prob_lr}
+
+res_roc = sp.plot_roc(
+    y_true, scores,
+    mode="roc",          # 可切换为 mode="pr" 绘制 Precision-Recall 曲线
+    show_threshold=True,
+    title="多模型 ROC 曲线对比",
+    venue="nature",
+    palette="coral-teal",
+)
+
+res_cal = sp.plot_calibration(
+    y_true, scores,
+    n_bins=10,
+    show_hist=True,
+    title="模型预测概率校准曲线 (Reliability Diagram)",
+    venue="nature",
+    palette="coral-teal",
+)
+```
+
+### 7.5 替代普通箱线图：雨云图 (`plot_raincloud`) 与下三角显著性热图 (`plot_heatmap`)
+
+```python
+import sciplot as sp
+
+# 雨云图同时展示密度、箱线、原始散点，信息密度远超普通箱线图
+res_rain = sp.plot_raincloud(
+    [group_a, group_b, group_c],
+    labels=["Control", "Low Dose", "High Dose"],
+    ylabel="表达量 (log2 TPM)",
+    title="剂量组分布特征 (Raincloud)",
+    show_stats=True,
+    venue="nature",
+    palette="olive-apricot",
+)
+
+# 相关矩阵去冗余：下三角 + 显著性星号 + 发散色带
+res_hm = sp.plot_heatmap(
+    corr_matrix,
+    row_labels=feat_names,
+    col_labels=feat_names,
+    cmap=sp.make_palette_cmap("coral-teal", kind="diverging"),
+    triangle="lower",
+    p_values=p_mat,
+    show_values=True,
+    vmin=-1, vmax=1,
+    colorbar_label="Pearson r",
+    title="特征相关性矩阵 (下三角 + 显著性)",
+    venue="nature",
+)
+```
+
+### 7.6 出版级 4 面板 Hero 排版 (`hero_layout` 复合工作流)
+
+```python
+import matplotlib.pyplot as plt
+import sciplot as sp
+
+sp.setup_style("nature", "olive-apricot", lang="en")
+fig = plt.figure(figsize=(10.5, 7.2))
+gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.28)
+
+ax_a = fig.add_subplot(gs[0, 0])
+ax_b = fig.add_subplot(gs[0, 1])
+ax_c = fig.add_subplot(gs[1, 0])
+ax_d = fig.add_subplot(gs[1, 1])
+
+# 在各子图上调用 sciplot 绘图原语，传入 ax=...
+sp.plot_scatter(x, y, fit_line=True, show_stats=True, ax=ax_a, title="Dose-Response")
+sp.plot_raincloud([g1, g2, g3], labels=["Ctrl", "Mid", "High"], ax=ax_b, title="Distribution")
+sp.plot_roc(y_true, {"Ours": p1, "Base": p2}, ax=ax_c, title="Discrimination")
+sp.plot_paired(pre, post, ax=ax_d, title="Paired Shift")
+
+sp.add_panel_labels([ax_a, ax_b, ax_c, ax_d], style="lower_paren")
+sp.audit_figure(fig, check_visual_guards=True)
+sp.save(fig, "composite_hero", formats=("png", "pdf"))
 ```

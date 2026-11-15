@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 from sciplot._core.layout import add_colorbar
 from sciplot._core.result import PlotResult
@@ -45,18 +45,20 @@ def plot_pca(
     data: np.ndarray,
     labels: Optional[np.ndarray] = None,
     n_components: int = 2,
+    show_ellipse: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    PCA 降维可视化（2D）
+    PCA 降维可视化（2D，自动标注方差解释率并支持 95% 置信椭圆与类别中心）
 
     参数:
         data        : 原始特征矩阵 (n_samples, n_features)
         labels      : 类别标签数组，有则按类着色
         n_components: 降维维度，目前仅支持 2
+        show_ellipse: 有分类标签且单类样本 >= 4 时是否绘制 95% 置信椭圆，默认 True
         venue       : 期刊样式，如 "nature", "ieee"
         palette     : 配色方案，如 "pastel", "earth"
         lang        : 语言设置
@@ -73,6 +75,9 @@ def plot_pca(
         >>> result = plot_pca(X, labels=y, venue="nature")
         >>> result.save("pca")
     """
+    from matplotlib.patches import Ellipse
+    from sciplot.utils.guards import polish_axis
+
     data = np.asarray(data)
     if data.ndim != 2:
         raise ValueError(f"data 必须是二维数组，当前维度: {data.ndim}")
@@ -102,16 +107,51 @@ def plot_pca(
     pca = PCA(n_components=n_components)
     proj = pca.fit_transform(data)
     var = pca.explained_variance_ratio_
+    scatter_kwargs = dict(kwargs)
+    scatter_kwargs.setdefault("s", 28)
+    scatter_kwargs.setdefault("alpha", 0.80)
+    scatter_kwargs.setdefault("edgecolors", "white")
+    scatter_kwargs.setdefault("linewidths", 0.45)
+
+    ax.axhline(0.0, color="#CBD5E1", linestyle=":", linewidth=0.8, zorder=0)
+    ax.axvline(0.0, color="#CBD5E1", linestyle=":", linewidth=0.8, zorder=0)
 
     if labels is not None:
         unique_labels = np.unique(labels)
-        for label in unique_labels:
+        colors = get_cycle_colors()
+        explicit_color = scatter_kwargs.pop("color", scatter_kwargs.pop("c", None))
+        for idx, label in enumerate(unique_labels):
             mask = labels == label
-            ax.scatter(proj[mask, 0], proj[mask, 1], label=str(label), **kwargs)
-        ax.legend()
-    else:
-        ax.scatter(proj[:, 0], proj[:, 1], **kwargs)
+            c = explicit_color if explicit_color is not None else colors[idx % len(colors)]
+            pts_c = proj[mask]
+            ax.scatter(
+                pts_c[:, 0], pts_c[:, 1],
+                color=c, label=str(label), zorder=3, **scatter_kwargs
+            )
+            if show_ellipse and pts_c.shape[0] >= 4:
+                cov = np.cov(pts_c[:, 0], pts_c[:, 1])
+                if np.all(np.isfinite(cov)):
+                    vals, vecs = np.linalg.eigh(cov)
+                    if np.all(vals > 1e-12):
+                        order = vals.argsort()[::-1]
+                        vals, vecs = vals[order], vecs[:, order]
+                        theta = float(np.degrees(np.arctan2(*vecs[:, 0][::-1])))
+                        # 2D 95% chi-square quantile sqrt(5.991) ≈ 2.4477
+                        w, h = 2.0 * 2.4477 * np.sqrt(vals)
+                        ell = Ellipse(
+                            xy=(float(np.mean(pts_c[:, 0])), float(np.mean(pts_c[:, 1]))),
+                            width=float(w), height=float(h), angle=theta,
+                            facecolor=c, alpha=0.10, edgecolor=c,
+                            linestyle="--", linewidth=1.0, zorder=2,
+                        )
+                        ax.add_patch(ell)
+        from sciplot.utils.smart import smart_legend
 
+        smart_legend(ax)
+    else:
+        ax.scatter(proj[:, 0], proj[:, 1], zorder=3, **scatter_kwargs)
+
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(f"PC1 ({var[0]*100:.1f}%)")
     if len(var) >= 2:
         ax.set_ylabel(f"PC2 ({var[1]*100:.1f}%)")
@@ -338,9 +378,203 @@ def plot_learning_curve(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def _binary_roc_pr_arrays(y_true: np.ndarray, y_score: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float, float]:
+    """纯 NumPy 计算二分类 ROC（FPR, TPR）与 PR（Recall, Precision）曲线及 AUC/AP。"""
+    order = np.argsort(y_score)[::-1]
+    y_sorted = y_true[order]
+    n_pos = int(np.sum(y_true == 1))
+    n_neg = int(np.sum(y_true == 0))
+    if n_pos == 0 or n_neg == 0:
+        raise ValueError("y_true 必须同时包含正例(1)与负例(0)")
+
+    tp = np.cumsum(y_sorted == 1).astype(float)
+    fp = np.cumsum(y_sorted == 0).astype(float)
+    tpr = np.r_[0.0, tp / n_pos]
+    fpr = np.r_[0.0, fp / n_neg]
+    try:
+        auc_roc = float(np.trapezoid(tpr, fpr))
+    except AttributeError:
+        auc_roc = float(np.trapz(tpr, fpr))  # type: ignore[attr-defined]
+
+    precision = tp / np.maximum(tp + fp, 1.0)
+    recall = tp / n_pos
+    rec_curve = np.r_[0.0, recall]
+    prec_curve = np.r_[1.0, precision]
+    ap = float(np.sum((rec_curve[1:] - rec_curve[:-1]) * precision))
+    return fpr, tpr, rec_curve, prec_curve, auc_roc, ap
+
+
+def plot_roc(
+    y_true: Sequence[int],
+    scores: Any,
+    *,
+    mode: str = "roc",
+    show_threshold: bool = True,
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
+    title: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制 ROC 或 Precision-Recall 分类模型对比曲线（自动标注 AUC/AP 与最优约登阈值）。
+
+    参数:
+        y_true        : 二分类真实标签 (0/1)
+        scores        : 一维预测概率/分数数组，或 ``{模型名: 预测分数}`` 字典
+        mode          : ``"roc"``（默认）或 ``"pr"``（Precision-Recall 曲线）
+        show_threshold: ROC 模式下是否用空心白圈标注最大约登指数 (TPR-FPR) 最优点
+    """
+    from sciplot.utils.guards import polish_axis
+    from sciplot.utils.smart import smart_legend
+
+    y_arr = np.asarray(y_true, dtype=int).ravel()
+    if y_arr.size == 0 or not np.all(np.isin(y_arr, (0, 1))):
+        raise ValueError("y_true 必须为非空 0/1 二分类标签数组")
+    if mode not in {"roc", "pr"}:
+        raise ValueError(f"mode 仅支持 'roc' 或 'pr'，实际值: {mode!r}")
+
+    if isinstance(scores, dict):
+        if not scores:
+            raise ValueError("scores 字典不能为空")
+        score_map = {str(k): np.asarray(v, dtype=float).ravel() for k, v in scores.items()}
+    else:
+        score_map = {"Model": np.asarray(scores, dtype=float).ravel()}
+
+    for name, s_arr in score_map.items():
+        if len(s_arr) != len(y_arr):
+            raise ValueError(f"scores['{name}'] 长度 ({len(s_arr)}) 与 y_true ({len(y_arr)}) 不一致")
+        if not np.all(np.isfinite(s_arr)):
+            raise ValueError(f"scores['{name}'] 不能包含 NaN 或 Inf")
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = get_cycle_colors()
+
+    for idx, (name, s_arr) in enumerate(score_map.items()):
+        fpr, tpr, rec, prec, auc_roc, ap = _binary_roc_pr_arrays(y_arr, s_arr)
+        c = colors[idx % len(colors)]
+        if mode == "roc":
+            ax.plot(fpr, tpr, color=c, linewidth=1.8,
+                    label=f"{name} (AUC = {auc_roc:.3f})", zorder=3, **kwargs)
+            if show_threshold and fpr.size > 2:
+                best_j = int(np.argmax(tpr - fpr))
+                ax.scatter([fpr[best_j]], [tpr[best_j]], s=42, color=c,
+                           edgecolors="white", linewidths=1.1, zorder=5)
+        else:
+            ax.plot(rec, prec, color=c, linewidth=1.8,
+                    label=f"{name} (AP = {ap:.3f})", zorder=3, **kwargs)
+
+    if mode == "roc":
+        ax.plot([0, 1], [0, 1], color="#94A3B8", linestyle="--", linewidth=1.0,
+                label="Random (0.500)", zorder=1)
+        ax.set_xlabel(xlabel or "False Positive Rate")
+        ax.set_ylabel(ylabel or "True Positive Rate")
+    else:
+        baseline = float(np.mean(y_arr == 1))
+        ax.axhline(baseline, color="#94A3B8", linestyle="--", linewidth=1.0,
+                   label=f"Baseline ({baseline:.2f})", zorder=1)
+        ax.set_xlabel(xlabel or "Recall")
+        ax.set_ylabel(ylabel or "Precision")
+
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-0.02, 1.04)
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.22)
+    if title:
+        ax.set_title(title)
+    smart_legend(ax, loc="lower right" if mode == "roc" else "lower left")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+def plot_calibration(
+    y_true: Sequence[int],
+    probs: Any,
+    *,
+    n_bins: int = 10,
+    show_hist: bool = True,
+    xlabel: str = "预测概率均值",
+    ylabel: str = "实测正例频率",
+    title: str = "",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> PlotResult:
+    """绘制概率校准曲线（可靠性图 + ECE/Brier 指标 + 可选底部预测分布直方条）。"""
+    from sciplot.utils.guards import polish_axis
+    from sciplot.utils.smart import smart_legend
+
+    y_arr = np.asarray(y_true, dtype=int).ravel()
+    if y_arr.size == 0 or not np.all(np.isin(y_arr, (0, 1))):
+        raise ValueError("y_true 必须为非空 0/1 二分类数组")
+    if n_bins < 2:
+        raise ValueError("n_bins 必须 >= 2")
+
+    if isinstance(probs, dict):
+        if not probs:
+            raise ValueError("probs 字典不能为空")
+        prob_map = {str(k): np.asarray(v, dtype=float).ravel() for k, v in probs.items()}
+    else:
+        prob_map = {"Model": np.asarray(probs, dtype=float).ravel()}
+
+    for name, p_arr in prob_map.items():
+        if len(p_arr) != len(y_arr):
+            raise ValueError(f"probs['{name}'] 长度与 y_true 不一致")
+        if np.any(p_arr < 0.0) or np.any(p_arr > 1.0) or not np.all(np.isfinite(p_arr)):
+            raise ValueError(f"probs['{name}'] 必须位于 [0, 1] 区间内")
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = get_cycle_colors()
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+
+    ax.plot([0, 1], [0, 1], color="#64748B", linestyle="--", linewidth=1.0,
+            label="理想校准 (Ideal)", zorder=1)
+
+    for idx, (name, p_arr) in enumerate(prob_map.items()):
+        c = colors[idx % len(colors)]
+        mean_pred, frac_pos, ece = [], [], 0.0
+        for b in range(n_bins):
+            if b < n_bins - 1:
+                mask = (p_arr >= edges[b]) & (p_arr < edges[b + 1])
+            else:
+                mask = (p_arr >= edges[b]) & (p_arr <= edges[b + 1])
+            cnt = int(np.sum(mask))
+            if cnt > 0:
+                mp = float(np.mean(p_arr[mask]))
+                fp = float(np.mean(y_arr[mask]))
+                mean_pred.append(mp)
+                frac_pos.append(fp)
+                ece += (cnt / y_arr.size) * abs(mp - fp)
+        brier = float(np.mean((p_arr - y_arr) ** 2))
+        ax.plot(
+            mean_pred, frac_pos, marker="o", markersize=4.5,
+            color=c, linewidth=1.7,
+            label=f"{name} (ECE={ece:.3f}, Brier={brier:.3f})", zorder=3,
+        )
+        if show_hist:
+            hist_vals, _ = np.histogram(p_arr, bins=edges)
+            max_h = max(int(hist_vals.max()), 1)
+            norm_h = hist_vals / max_h * 0.14
+            ax.bar(
+                edges[:-1], norm_h, width=1.0 / n_bins, align="edge",
+                color=c, alpha=0.14, edgecolor=c, linewidth=0.5, zorder=1,
+            )
+
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(-0.02, 1.04)
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.22)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    smart_legend(ax, loc="upper left")
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_pca",
     "plot_confusion_matrix",
     "plot_feature_importance",
     "plot_learning_curve",
+    "plot_roc",
+    "plot_calibration",
 ]

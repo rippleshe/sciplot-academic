@@ -9,9 +9,35 @@
 
 ## Unreleased
 
+---
+
+## [1.15.0] - 2026-11-15
+
+### Added
+
+- **Vivid 高对比学术配色系统**：内置 `olive-apricot`、`coral-teal`、`blue-pink`、`blue-sky`、`soft-forest`、`pastel-girl`、`ocean-breeze` 共 7 套协调色板，新增 `list_vivid_palettes()`、`make_palette_cmap()`（离散色板一键转连续/发散色带）及只读常量 `VIVID_PALETTES`。
+- **视觉下限守卫与自动审校**：新增 `polish_axis()`、`style_patch_edges()`、`truncate_tick_labels()`、`pick_best_corner()`、`smart_labels()`、`inspect_figure_guards()`，并在 `audit_figure(fig, check_visual_guards=True)` 中返回 `guard_warnings`。
+- **5 个高信息密度分析与 ML 评估图表**（含别名）：
+  - `plot_pareto()` / `pareto()`：按频数降序 + 累积占比曲线 + 阈值参考线的帕累托图。
+  - `plot_paired()` / `paired()`：带变化方向着色的前后配对斜率散点图 + 箱线/配对统计检验。
+  - `plot_fan()` / `fan()`：多层级置信区间概率预测扇形带（支持历史观测衔接与采样矩阵）。
+  - `plot_roc()` / `roc()`：二分类 ROC 与 Precision-Recall 曲线，支持多模型对比、AUC/AP 与最优阈值标记。
+  - `plot_calibration()` / `calibration()`：概率校准可靠性曲线（Reliability Diagram），自动计算并标注 ECE 及预测分布直方图。
+- **数据画像与图表智能推荐引擎**：新增 `profile_data()` 与 `recommend_charts()`，支持 `DataFrame`、CSV、Parquet、JSON、字典与数组输入，自动诊断列类型、偏度、异常比例与结构形态，输出反单调的图型排序、推荐配色及示例调用代码。
+- **Companion Skill v3.0.0**：全面重构 `.claude/skills/sciplot/`，新增 `scripts/profile_and_recommend.py` 与 `references/chart-selection.md`，推动 Agent 从“默认画柱图/折线”转向“先画像数据，再精准选型与精修”。
+
+### Changed
+
+- 全面抬高核心统计图表默认审美与信息密度：`plot_scatter()` 新增 `fit_line`、`ci`、`show_stats`；`plot_bar()` 新增 `show_values`、`yerr`；`plot_grouped_bar()` 新增 `colors`、`errors`；`plot_box()` 新增 `show_points`、`show_means`；`plot_violin()` 默认内嵌精确四分位盒与细描边；`plot_histogram()` 新增 `show_kde`、`show_median`；`plot_heatmap()` 新增 `triangle`、`p_values` 显著性星号与 `cell_border`；`plot_scatter_matrix()` 新增 `upper`；`plot_pca()` 默认启用 `show_ellipse=True`；`plot_volcano()` 新增 `show_counts`。
+- 新增并重绘 `showcase/51_pareto.png` ~ `55_fan.png` 及复合主图 `showcase/50_composite_hero.png`，逐张完成视觉检查。
+
 ### Fixed
 
 - 修复 `publish.py` 将 PyPI token 放入命令行参数并可能随命令日志输出的问题；现在仅通过 `TWINE_USERNAME` / `TWINE_PASSWORD` 子进程环境变量传递凭据。
+- 修复 `plot_raincloud()` 中位数线未按半小提琴纵向幅度正确缩放的问题。
+- 修复 `plot_ridgeline()` 中位数指示线定位与白色轮廓 halo 可读性问题。
+- 修复 `plot_volcano()` 在启用引导线时因 `Annotation.get_window_extent()` 计入箭头锚点导致的图例区域避让误判，现在先以纯文本边界完成避让再绘制引导线。
+- 修复 `showcase/50_composite_hero.png` 子图 (b) 展示格式及 `tests/unit/test_raincloud.py` 暗色样式状态泄露到后续测试的问题。
 
 ---
 

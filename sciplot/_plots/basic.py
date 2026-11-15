@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
@@ -230,36 +231,132 @@ def plot_scatter(
     ylabel: str = "",
     title: str = "",
     label: str = "",
-    s: float = 20,
-    alpha: float = 0.7,
+    s: float = 24,
+    alpha: float = 0.78,
+    fit_line: bool = False,
+    ci: bool = True,
+    show_stats: bool = True,
+    line_color: Optional[str] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制散点图
+    绘制散点图（支持一键叠加线性拟合、95% 置信带与统计摘要）
 
     参数:
-        s    : 点大小，默认 20
-        alpha: 透明度，默认 0.7
-        lang : 语言设置
+        s         : 点大小，默认 24
+        alpha     : 透明度，默认 0.78
+        fit_line  : 是否绘制线性拟合线（默认 False）
+        ci        : ``fit_line=True`` 时是否叠加 95% 置信带（默认 True）
+        show_stats: ``fit_line=True`` 时是否在稀疏象限标注 r / R² / p / n
+        line_color: 拟合线颜色；None 时自动选取主色或次色
+        lang      : 语言设置
 
     示例:
         >>> fig, ax = sp.plot_scatter(x, y, xlabel="X", ylabel="Y",
-        ...                           label="样本", s=30, alpha=0.6)
+        ...                           label="样本", fit_line=True)
         >>> sp.save(fig, "scatter")
     """
+    from sciplot.utils.guards import pick_best_corner, polish_axis
+
     _validate_xy_lengths(x, y)
+    x_arr = np.asarray(x, dtype=float).ravel()
+    y_arr = np.asarray(y, dtype=float).ravel()
 
     effective_venue, fig, ax = create_sciplot_figure(venue, palette, lang)
-    ax.scatter(x, y, s=s, alpha=alpha, label=label, **kwargs)
+    scatter_kwargs = dict(kwargs)
+    scatter_kwargs.setdefault("edgecolors", "white")
+    scatter_kwargs.setdefault("linewidths", 0.45)
+
+    ax.scatter(x_arr, y_arr, s=s, alpha=alpha, label=label, **scatter_kwargs)
+
+    if fit_line:
+        valid = np.isfinite(x_arr) & np.isfinite(y_arr)
+        xv, yv = x_arr[valid], y_arr[valid]
+        if xv.size >= 3 and np.ptp(xv) > 0:
+            slope, intercept = np.polyfit(xv, yv, 1)
+            x_grid = np.linspace(float(xv.min()), float(xv.max()), 120)
+            y_pred_grid = slope * x_grid + intercept
+
+            fit_c = line_color
+            if fit_c is None:
+                cycle = get_cycle_colors()
+                # 拟合线优先选取与散点不同的次色（提升层次对比）
+                fit_c = cycle[1] if len(cycle) > 1 else "#D95F02"
+
+            ax.plot(x_grid, y_pred_grid, color=fit_c, linewidth=1.6, zorder=4)
+
+            if ci and xv.size >= 4:
+                y_hat = slope * xv + intercept
+                resid = yv - y_hat
+                dof = xv.size - 2
+                s_err = float(np.sqrt(np.sum(resid**2) / max(dof, 1)))
+                x_mean = float(np.mean(xv))
+                sxx = float(np.sum((xv - x_mean) ** 2))
+                if sxx > 0:
+                    try:
+                        from scipy import stats as _sp_stats
+
+                        t_crit = float(_sp_stats.t.ppf(0.975, dof))
+                    except ImportError:
+                        t_crit = 1.96
+                    se_fit = s_err * np.sqrt(1.0 / xv.size + (x_grid - x_mean) ** 2 / sxx)
+                    ax.fill_between(
+                        x_grid,
+                        y_pred_grid - t_crit * se_fit,
+                        y_pred_grid + t_crit * se_fit,
+                        color=fit_c,
+                        alpha=0.16,
+                        linewidth=0,
+                        zorder=2,
+                    )
+
+            if show_stats:
+                r_val = float(np.corrcoef(xv, yv)[0, 1]) if np.std(yv) > 0 else 0.0
+                r2_val = r_val**2
+                p_str = ""
+                try:
+                    from scipy import stats as _sp_stats
+
+                    _, p_val = _sp_stats.pearsonr(xv, yv)
+                    p_str = "\np < 0.001" if p_val < 0.001 else f"\np = {p_val:.3f}"
+                except Exception:
+                    pass
+                stat_text = f"$r$ = {r_val:.3f}, $R^2$ = {r2_val:.3f}{p_str}\n$n$ = {xv.size}"
+                best_loc = pick_best_corner(ax, xv, yv)
+                coord_map = {
+                    "upper left": (0.04, 0.96, "left", "top"),
+                    "upper right": (0.96, 0.96, "right", "top"),
+                    "lower left": (0.04, 0.04, "left", "bottom"),
+                    "lower right": (0.96, 0.04, "right", "bottom"),
+                }
+                tx, ty, ha, va = coord_map[best_loc]
+                ax.text(
+                    tx,
+                    ty,
+                    stat_text,
+                    transform=ax.transAxes,
+                    ha=ha,
+                    va=va,
+                    fontsize=max(7, int(plt.rcParams.get("font.size", 9)) - 1),
+                    bbox={
+                        "boxstyle": "round,pad=0.32",
+                        "facecolor": ax.get_facecolor(),
+                        "edgecolor": "#B8C0CC",
+                        "alpha": 0.90,
+                        "linewidth": 0.6,
+                    },
+                )
+
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.20)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
     if label:
-        ax.legend()
+        smart_legend(ax)
     return create_plot_result(fig, ax, venue, palette, lang)
 
 

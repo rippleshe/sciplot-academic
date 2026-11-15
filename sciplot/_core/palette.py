@@ -28,6 +28,7 @@ import logging
 from typing import Dict, List, Optional, Sequence
 
 import matplotlib.pyplot as plt
+import numpy as np
 from cycler import cycler
 from matplotlib.colors import LinearSegmentedColormap
 import warnings
@@ -234,6 +235,23 @@ DIVERGING_PALETTES: Dict[str, List[str]] = {
     "coolwarm": ["#3A5FCC", "#7A9EF0", "#C8D8F8", "#F5F5F5", "#F8C8C8", "#F07A7A", "#CC3A3A"],
 }
 
+# 8. 学术精选配色（按视觉对比区分度排序并生成 1-N 子集）
+_VIVID_SERIES_BASE: Dict[str, List[str]] = {
+    "olive-apricot": ["#606C38", "#DDA15E", "#BC6C25", "#A68A64", "#936639", "#7F4F24", "#4A5A2B"],
+    "coral-teal": ["#4ECDC4", "#FF6B6B", "#A06CD5", "#F7A072", "#45B7D1", "#7DCFB6", "#F79256"],
+    "blue-pink": ["#6797C7", "#D7979C", "#A494C2", "#99999F", "#91ACC7"],
+    "blue-sky": ["#377EB8", "#B23648", "#8AAA7B", "#B5A34F", "#DC7369", "#8E999D", "#86B3C7", "#A39A77"],
+    "soft-forest": ["#80AC7B", "#4A4F7E", "#D19246", "#7EA4B6", "#9C966F", "#81989B", "#71A682", "#78AE6B"],
+    "pastel-girl": ["#E9687A", "#9693B6", "#C6A497", "#F1837A", "#A5A1B2", "#DE9888", "#A49FBE", "#AAA0A0"],
+    "ocean-breeze": ["#86B6A3", "#EA9E58", "#4198AC", "#B5A56C", "#ED8D5A", "#51999F", "#D8A258", "#69AEBC"],
+}
+
+VIVID_PALETTES: Dict[str, List[str]] = {}
+for _vp_name, _vp_colors in _VIVID_SERIES_BASE.items():
+    VIVID_PALETTES[_vp_name] = list(_vp_colors)
+    for _vp_k in range(1, len(_vp_colors) + 1):
+        VIVID_PALETTES[f"{_vp_name}-{_vp_k}"] = list(_vp_colors[:_vp_k])
+
 # 向后兼容别名（v1.8.2 之前使用的发散配色名称）
 _DIVERGING_ALIASES: Dict[str, str] = {
     "diverging-rdylbu": "rdbu",
@@ -248,6 +266,7 @@ RESIDENT_PALETTES: Dict[str, List[str]] = {
     **OCEAN_PALETTE,
     **FOREST_PALETTE,
     **SUNSET_PALETTE,
+    **VIVID_PALETTES,
     **RMB_PALETTES,
     **DIVERGING_PALETTES,
 }
@@ -496,6 +515,11 @@ def list_diverging_palettes() -> List[str]:
     return list(DIVERGING_PALETTES.keys())
 
 
+def list_vivid_palettes() -> List[str]:
+    """列出学术精选配色方案名称（含 1-N 子集）。"""
+    return list(VIVID_PALETTES.keys())
+
+
 def register_color_scheme(
     name: str,
     scheme: Dict[str, List[str]],
@@ -645,3 +669,57 @@ def dual_encode_colors(
                 row.append(mcolors.to_hex(colorsys.hls_to_rgb(h, lightness, s)))
         matrix.append(row)
     return matrix
+
+
+def make_palette_cmap(
+    palette: Optional[str] = None,
+    kind: str = "sequential",
+    center: str = "#FFFFFF",
+    reverse: bool = False,
+    n_lut: int = 256,
+) -> LinearSegmentedColormap:
+    """从指定（或当前启用）配色方案派生连续顺序/发散 colormap。
+
+    顺序色图从浅底色平滑过渡到主色；发散色图选取主色与色距最远的对比色
+    分居中性中点 ``center`` 两侧，避免直接用红绿等不协调色阶。
+
+    参数:
+        palette: 配色名；None 则使用当前色循环
+        kind   : "sequential"（顺序）或 "diverging"（发散）
+        center : 发散色图中间中性色，默认纯白 ``"#FFFFFF"``
+        reverse: 是否反转色带方向
+        n_lut  : 色表查找表级数
+
+    返回:
+        LinearSegmentedColormap 实例
+    """
+    import matplotlib.colors as mcolors
+
+    if kind not in {"sequential", "diverging"}:
+        raise ValueError(f"kind 仅支持 'sequential' 或 'diverging'，实际值: {kind!r}")
+
+    if palette is not None:
+        colors = get_palette(palette)
+    else:
+        colors = [c["color"] for c in plt.rcParams["axes.prop_cycle"] if "color" in c]
+        if not colors:
+            colors = list(VIVID_PALETTES["blue-sky"])
+
+    first_rgb = np.array(mcolors.to_rgb(colors[0]))
+    if kind == "sequential":
+        light_start = mcolors.to_hex(0.90 * np.ones(3) + 0.10 * first_rgb)
+        stops = [light_start, colors[0]]
+    else:
+        if len(colors) >= 2:
+            other = max(
+                colors[1:],
+                key=lambda c: float(np.linalg.norm(np.array(mcolors.to_rgb(c)) - first_rgb)),
+            )
+        else:
+            other = "#2B5B84"
+        stops = [colors[0], center, other]
+
+    if reverse:
+        stops = list(reversed(stops))
+    cmap_name = f"sciplot_{palette or 'active'}_{kind}"
+    return LinearSegmentedColormap.from_list(cmap_name, stops, N=n_lut)

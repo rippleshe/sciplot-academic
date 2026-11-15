@@ -32,6 +32,26 @@
 
 自动注册为 matplotlib colormap，可直接用 `cmap="rdbu"`。
 
+### Vivid 高对比学术配色 (`vivid-illustration` 系列)
+
+专为期刊主图与多面板展示设计的 7 套高对比协调色板，自动兼顾色彩区分度与印刷可读性：
+
+| 色板名 | 风格与典型色域 | 适用场景 |
+|---|---|---|
+| `olive-apricot` | 橄榄绿 + 杏橙（双色强对比） | 两组对比、控制 vs 处理 |
+| `coral-teal` | 珊瑚橙红 + 孔雀青 | 临床/ML 基线对比、配对前後 |
+| `blue-pink` | 天空蓝 + 玫瑰粉 | 对称双向分组、男女/阴阳性对照 |
+| `blue-sky` | 钴蓝到浅青渐变序列 | 多模型指标条形图、阶段递进 |
+| `soft-forest` | 森林绿系柔和对比 | 生态、农业、多组盒须图/山脊图 |
+| `pastel-girl` | 柔和马卡龙四色 | 四分类对比、轻量分组概览 |
+| `ocean-breeze` | 深海蓝到薄荷青 | 时序扇形预测、消融实验堆叠 |
+
+```python
+sp.list_vivid_palettes()                              # 查看 7 套高对比色板名与颜色
+cmap_seq = sp.make_palette_cmap("ocean-breeze")       # 转连续 colormap (用于热力图/密度图)
+cmap_div = sp.make_palette_cmap("coral-teal", kind="diverging")  # 转发散 colormap (中心白)
+```
+
 ---
 
 ## 2. 子集选择
@@ -96,10 +116,27 @@ sp.setup_style(palette="mytheme-triple")                 # 明确指定
 
 ```python
 sp.get_palette("pastel")           # → ['#845EC2', '#D65DB1', ...]
+sp.get_palette("coral-teal")       # 获取 vivid 高对比色板十六进制列表
 sp.get_color_scheme("mytheme")     # → {"single": [...], "double": [...], ...}
 sp.list_palettes()                 # 所有可用配色名
+sp.list_vivid_palettes()           # 查看 7 套 vivid 高对比配色
+sp.make_palette_cmap("blue-sky")   # 基于离散色板生成连续/发散 colormap
 sp.auto_select_palette("mytheme", 3)  # 自动选择 3 色
 sp.list_color_schemes()            # 已注册的配色方案
+```
+
+### 视觉下限守卫与美学精修 (`sciplot` Visual Guards)
+
+当手写复合子图或需要显式加固排版时，可直接使用以下守卫函数（`audit_figure` 亦支持一键检查）：
+
+```python
+sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid=None)
+sp.style_patch_edges(ax, edgecolor="#1E293B", linewidth=0.7)
+sp.truncate_tick_labels(ax, axis="x", max_len=14)
+loc = sp.pick_best_corner(ax)                # 避开数据点自动选择稀疏角落 (用于图例/统计框)
+sp.smart_labels(ax, texts, adjust=True)      # 多标签避让
+warnings = sp.inspect_figure_guards(fig)     # 检查重叠/裁切/过密刻度/空白异常
+report = sp.audit_figure(fig, check_visual_guards=True)
 ```
 
 ---

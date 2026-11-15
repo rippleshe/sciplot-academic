@@ -270,6 +270,24 @@
       <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/50_composite_hero.png" width="100%">
       <br><b>复合图：Hero 主导面板</b>
     </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/51_pareto.png" width="100%">
+      <br><b>帕累托分析图</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/52_paired.png" width="100%">
+      <br><b>前后配对斜率图</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/53_roc.png" width="100%">
+      <br><b>多模型 ROC 曲线</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/rippleshe/sciplot-academic/master/showcase/55_fan.png" width="100%">
+      <br><b>概率预测扇形图</b>
+    </td>
   </tr>
 </table>
 
@@ -281,22 +299,23 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  SciPlot Academic = 专业配色 + 期刊样式 + 中文优化 + 智能辅助            │
+│  SciPlot Academic = 数据智能选型 + 高对比美学 + 期刊契约 + 视觉守卫     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 | 特性 | 说明 |
 |------|------|
-| **🎨 全内置配色** | 5 大基础色系 + 6 个人民币主题 + 2 个发散配色，零外部依赖 |
+| **🤖 数据画像与选图** | `profile_data()` + `recommend_charts()` 自动分析数据结构并推荐高信息密度图型，告别“全员柱状图” |
+| **🎨 全内置配色** | 7 套 Vivid 高对比配色 + 5 大基础色系 + 6 个人民币主题 + 发散/连续渐变生成 (`make_palette_cmap`)，零外部依赖 |
 | **🀄 中文优化** | 默认宋体中文环境，IEEE 中文字号自动调优 |
 | **📄 论文级输出** | Nature/IEEE/APS/Springer/Thesis 预置尺寸，Word/LaTeX 一键切换 |
-| **📐 高下限默认** | 四边向内主/次刻度、完整轴脊、克制线宽、无框图例与高分辨率导出由底层统一兜底，随手调用也保持论文图完成度 |
+| **📐 高下限与视觉守卫** | 底层统一定尺四边轴脊/刻度/细描边；`polish_axis()` 与 `audit_figure(fig, check_visual_guards=True)` 防重叠与裁切 |
 | **🧠 智能配色** | ≤6 条线自动选择最优子集，支持自定义配色方案 |
-| **📊 丰富图表** | 40+ 图表类型：折线/散点/柱状/箱线/小提琴/热力/气泡/山脊/六边形/瀑布/雷达/网络/3D/森林/漏斗/冲积/旭日/UpSet 等 |
+| **📊 丰富图表** | 45+ 图表类型：涵盖帕累托/配对斜率/预测扇形/ROC/校准/雨云/山脊/火山/泰勒/弦图/三元/UpSet 等 |
 | **🧠 复合图模板** | `figure_panels(template=...)` 一键生成 Nature 级多面板：条件矩阵/时间推进/对照双列/流水线/临床三联画 |
-| **✨ 智能辅助** | 自动标签旋转、智能图例、布局优化、颜色对比度检查、标注自动对比色 |
+| **✨ 智能辅助** | 自动标签旋转、智能图例、稀疏角落自动探测 (`pick_best_corner`)、颜色对比度检查、标注自动对比色 |
 | **🎯 色盲安全** | Okabe-Ito 色盲安全调色板 + `simulate_colorblind()`/`audit_palette()` 配色防线 |
-| **🔌 扩展模块** | ML 可视化（PCA/混淆矩阵）+ 3D 可视化（曲面/等高线/散点/瀑布） |
+| **🔌 扩展模块** | ML 可视化（PCA/混淆矩阵/ROC/PR/校准曲线/学习曲线）+ 3D 可视化（曲面/等高线/散点/瀑布） |
 | **🚀 增强 API** | `PlotResult` 链式调用、语法糖别名、上下文管理器 |
 | **🌙 暗色主题** | `theme="dark"` 一键切换深色背景，适合演示与屏幕展示 |
 | **⚙️ 配置系统** | `set_defaults()` 持久化默认值，`setup_style()` 自动读取 |
@@ -431,12 +450,17 @@ with sp.style_context("presentation", theme="dark"):
 | `plot_density()` | 核密度估计曲线 | `density()` |
 | `plot_multi_density()` | 多组核密度对比 | `multi_density()` |
 
-### 多维/进阶图表
+### 多维/进阶与高信息密度图表
 | 函数 | 用途 | 别名 |
 |------|------|------|
 | `plot_radar()` | 雷达图 | `radar()` |
 | `plot_parallel()` | 平行坐标图 | — |
-| `plot_scatter_matrix()` | 散点矩阵图 | — |
+| `plot_scatter_matrix()` | 散点矩阵图（支持上三角相关） | — |
+| `plot_pareto()` | 帕累托图（降序柱形+累积占比） | `pareto()` |
+| `plot_paired()` | 前后配对斜率散点与检验图 | `paired()` |
+| `plot_fan()` | 多置信区间概率预测扇形图 | `fan()` |
+| `plot_roc()` | 二分类 ROC / PR 曲线（多模型对比） | `roc()` |
+| `plot_calibration()` | 概率校准可靠性曲线与 ECE | `calibration()` |
 | `plot_residuals()` | 残差图 | — |
 | `plot_qq()` | Q-Q 图 | — |
 
@@ -461,13 +485,15 @@ with sp.style_context("presentation", theme="dark"):
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
+│  vivid      → olive-apricot / coral-teal / blue-pink / blue-sky /   │
+│               soft-forest / pastel-girl / ocean-breeze（7 套高对比） │
 │  pastel     → 柔和粉彩（默认，6 色）                                  │
 │  ocean      → 海洋蓝绿（6 色）                                       │
 │  forest     → 森林渐变（6 色）                                       │
 │  sunset     → 日落暖色（5 色）                                       │
 │  earth      → 大地色系（5 色）                                       │
 │  rmb        → 人民币配色（6 个面额主题）                              │
-│  diverging  → 发散配色（rdbu / coolwarm）                             │
+│  diverging  → 发散配色（rdbu / coolwarm + make_palette_cmap 生成）    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -532,13 +558,16 @@ sp.plot_combo(
 sp.annotate_significance(ax, x1=1, x2=2, y=8.5, p_value=0.03)  # *
 ```
 
-### 智能辅助工具
+### 智能辅助与数据选型工具
 
 ```python
-sp.auto_rotate_labels(ax)           # 自动旋转标签避免重叠
-sp.smart_legend(ax, outside=True)   # 智能图例位置
-sp.optimize_layout(fig)             # 自动优化布局
-sp.check_color_contrast("#FFF", "#000")  # 颜色对比度检查
+report = sp.recommend_charts(df, goal="auto")  # 先剖析数据画像，再推荐高信息密度图型
+sp.auto_rotate_labels(ax)                      # 自动旋转标签避免重叠
+sp.smart_legend(ax, outside=True)              # 智能图例位置
+sp.polish_axis(ax)                             # 视觉下限守卫精修
+sp.audit_figure(fig, check_visual_guards=True) # 投稿质量与排版自检
+sp.optimize_layout(fig)                        # 自动优化布局
+sp.check_color_contrast("#FFF", "#000")        # 颜色对比度检查
 ```
 
 ---

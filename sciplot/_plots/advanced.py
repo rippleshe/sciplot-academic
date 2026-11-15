@@ -197,13 +197,16 @@ def plot_heatmap(
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     aspect: Union[Literal["auto", "equal"], float, None] = "auto",
+    triangle: Optional[str] = None,
+    p_values: Optional[np.ndarray] = None,
+    cell_border: bool = True,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制热力图（相关矩阵、混淆矩阵、参数扫描结果等）
+    绘制热力图（相关矩阵、混淆矩阵、参数扫描结果等，支持三角遮罩与显著性星号）
 
     参数:
         data         : 二维数组
@@ -217,33 +220,63 @@ def plot_heatmap(
         vmin         : 颜色映射最小值
         vmax         : 颜色映射最大值
         aspect       : 纵横比（"auto" | "equal"）
+        triangle     : 三角矩阵掩膜，"lower" 仅显示下三角，"upper" 仅显示上三角
+        p_values     : 可选与 data 同形的显著性 p 值矩阵，自动在格内追加 */**/*** 星号
+        cell_border  : 是否在热力格之间绘制精致白色分隔线，默认 True
 
     示例:
         >>> corr = np.corrcoef(data.T)
         >>> fig, ax = sp.plot_heatmap(
         ...     corr, row_labels=feat_names, col_labels=feat_names,
-        ...     cmap="RdBu_r", show_values=True, fmt=".2f",
+        ...     cmap="RdBu_r", triangle="lower", show_values=True, fmt=".2f",
         ...     title="相关系数矩阵"
         ... )
         >>> sp.save(fig, "correlation")
     """
-    data = np.asarray(data)
-    if data.ndim != 2:
-        raise ValueError(f"data 必须是二维数组，当前维度: {data.ndim}")
+    from sciplot.utils.guards import polish_axis
 
-    if row_labels is not None and len(row_labels) != data.shape[0]:
+    data_arr = np.asarray(data, dtype=float).copy()
+    if data_arr.ndim != 2:
+        raise ValueError(f"data 必须是二维数组，当前维度: {data_arr.ndim}")
+
+    if row_labels is not None and len(row_labels) != data_arr.shape[0]:
         raise ValueError(
-            f"row_labels 长度 ({len(row_labels)}) 与行数 ({data.shape[0]}) 不一致"
+            f"row_labels 长度 ({len(row_labels)}) 与行数 ({data_arr.shape[0]}) 不一致"
         )
-    if col_labels is not None and len(col_labels) != data.shape[1]:
+    if col_labels is not None and len(col_labels) != data_arr.shape[1]:
         raise ValueError(
-            f"col_labels 长度 ({len(col_labels)}) 与列数 ({data.shape[1]}) 不一致"
+            f"col_labels 长度 ({len(col_labels)}) 与列数 ({data_arr.shape[1]}) 不一致"
         )
+    if triangle not in {None, "lower", "upper"}:
+        raise ValueError(f"triangle 仅支持 None / 'lower' / 'upper'，实际值: {triangle!r}")
+
+    p_arr: Optional[np.ndarray] = None
+    if p_values is not None:
+        p_arr = np.asarray(p_values, dtype=float)
+        if p_arr.shape != data_arr.shape:
+            raise ValueError(f"p_values 形状 {p_arr.shape} 与 data {data_arr.shape} 不一致")
+
+    if triangle == "lower":
+        data_arr[np.triu_indices_from(data_arr, k=1)] = np.nan
+    elif triangle == "upper":
+        data_arr[np.tril_indices_from(data_arr, k=-1)] = np.nan
+
+    # 自动识别外部传入的“严格上三角为 NaN”矩阵
+    is_lower_tri = triangle == "lower"
+    if (
+        triangle is None
+        and data_arr.shape[0] == data_arr.shape[1]
+        and data_arr.shape[0] >= 3
+    ):
+        upper_idx = np.triu_indices_from(data_arr, k=1)
+        if np.all(np.isnan(data_arr[upper_idx])):
+            is_lower_tri = True
 
     fig, ax = new_styled_figure(venue, palette, lang)
 
-    im = ax.imshow(data, cmap=cmap, aspect=aspect, vmin=vmin, vmax=vmax, **kwargs)
+    im = ax.imshow(data_arr, cmap=cmap, aspect=aspect, vmin=vmin, vmax=vmax, **kwargs)
     cbar = add_colorbar(fig, im, ax=ax)
+    cbar.ax.tick_params(which="minor", length=0)
     if colorbar_label:
         cbar.set_label(colorbar_label)
 
@@ -256,15 +289,35 @@ def plot_heatmap(
         ax.set_yticks(np.arange(len(row_labels)))
         ax.set_yticklabels(row_labels)
 
-    # 数值标注
-    if show_values:
-        from matplotlib.colors import to_rgb
+    # 精致单元格白色分割 + 清除锯齿次刻度
+    if cell_border and min(data_arr.shape) <= 30:
+        ax.set_xticks(np.arange(-0.5, data_arr.shape[1], 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, data_arr.shape[0], 1), minor=True)
+        ax.grid(which="minor", color="white", linestyle="-", linewidth=1.0)
+        ax.tick_params(which="minor", length=0)
+        ax.set_axisbelow(False)
+    else:
+        polish_axis(ax, categorical_axis="both", clean_spines=False)
 
+    if is_lower_tri:
+        polish_axis(ax, clean_spines=True)
+    elif triangle == "upper":
+        for hidden in ("bottom", "left"):
+            if hidden in ax.spines:
+                ax.spines[hidden].set_visible(False)
+        ax.tick_params(axis="x", which="both", bottom=False, top=True, labelbottom=False, labeltop=True)
+        ax.tick_params(axis="y", which="both", left=False, right=True, labelleft=False, labelright=True)
+    else:
+        ax.tick_params(axis="x", which="both", top=False)
+        ax.tick_params(axis="y", which="both", right=False)
+
+    # 数值（+可选显著性星号）标注
+    if show_values:
         fontsize = max(6, plt.rcParams.get("font.size", 9) - 1)
         norm = im.norm
-        for i in range(data.shape[0]):
-            for j in range(data.shape[1]):
-                cell_value = data[i, j]
+        for i in range(data_arr.shape[0]):
+            for j in range(data_arr.shape[1]):
+                cell_value = data_arr[i, j]
                 if not np.isfinite(cell_value):
                     continue  # NaN 掩膜格（如上三角）不写文字
                 if annot_color is None:
@@ -273,8 +326,17 @@ def plot_heatmap(
                     text_color = contrast_text_color(rgba)
                 else:
                     text_color = annot_color
+                label_txt = format(cell_value, fmt)
+                if p_arr is not None and np.isfinite(p_arr[i, j]):
+                    pv = float(p_arr[i, j])
+                    if pv < 0.001:
+                        label_txt += "\n***"
+                    elif pv < 0.01:
+                        label_txt += "\n**"
+                    elif pv < 0.05:
+                        label_txt += "\n*"
                 ax.text(
-                    j, i, format(cell_value, fmt),
+                    j, i, label_txt,
                     ha="center", va="center", fontsize=fontsize,
                     color=text_color,
                 )
@@ -1076,14 +1138,19 @@ def plot_marginal(
     colors = get_cycle_colors()
     main_color = color if color is not None else colors[0]
 
-    ax_main.scatter(x_arr, y_arr, s=20, alpha=alpha, color=main_color, **kwargs)
+    main_kwargs = dict(kwargs)
+    main_kwargs.setdefault("edgecolors", "white")
+    main_kwargs.setdefault("linewidths", 0.4)
+    ax_main.scatter(x_arr, y_arr, s=22, alpha=alpha, color=main_color, **main_kwargs)
 
     # ── X 边缘分布（顶部） ──
     if marginal == "hist":
-        ax_x.hist(x_arr, bins=bins, color=main_color, alpha=0.8)
+        ax_x.hist(x_arr, bins=bins, color=main_color, alpha=0.80,
+                  edgecolor="white", linewidth=0.5)
     elif marginal == "box":
         boxplot_with_orientation(
             ax_x, x_arr, orientation="horizontal", patch_artist=True, widths=0.6,
+            medianprops={"color": "#2D3436", "linewidth": 1.2},
         )
         for patch in ax_x.patches[:1]:
             patch.set_facecolor(main_color)
@@ -1097,10 +1164,12 @@ def plot_marginal(
 
     # ── Y 边缘分布（右侧） ──
     if marginal == "hist":
-        ax_y.hist(y_arr, bins=bins, orientation="horizontal", color=main_color, alpha=0.8)
+        ax_y.hist(y_arr, bins=bins, orientation="horizontal", color=main_color,
+                  alpha=0.80, edgecolor="white", linewidth=0.5)
     elif marginal == "box":
         boxplot_with_orientation(
             ax_y, y_arr, orientation="vertical", patch_artist=True, widths=0.6,
+            medianprops={"color": "#2D3436", "linewidth": 1.2},
         )
         for patch in ax_y.patches[:1]:
             patch.set_facecolor(main_color)
@@ -1112,11 +1181,15 @@ def plot_marginal(
         ax_y.plot(y_kde(y_eval), y_eval, color=main_color)
         ax_y.fill_betweenx(y_eval, y_kde(y_eval), color=main_color, alpha=0.3)
 
-    # 边缘轴清理
-    ax_x.tick_params(labelbottom=False)
-    ax_y.tick_params(labelleft=False)
-    for m_ax in (ax_x, ax_y):
-        m_ax.grid(False)
+    # 边缘轴清理：隐藏冗余外框和 facing 次刻度
+    from sciplot.utils.guards import polish_axis
+
+    ax_x.tick_params(labelbottom=False, top=False, right=False)
+    ax_y.tick_params(labelleft=False, top=False, right=False)
+    polish_axis(ax_x, clean_spines=True, grid=False)
+    polish_axis(ax_y, clean_spines=True, grid=False)
+    polish_axis(ax_main, clean_spines=False, grid="both", grid_alpha=0.18)
+    ax_main.tick_params(top=False, right=False)
 
     if show_corr:
         r_value = float(np.corrcoef(x_arr, y_arr)[0, 1])

@@ -3,6 +3,16 @@
 
 完整的变更记录见仓库根目录 ``CHANGELOG.md``。
 
+v1.15.0 (2026-11-15)
+--------------------
+
+- **数据画像与智能选图**：新增 ``profile_data()`` 与 ``recommend_charts()``，自动识别数据形态并推荐高信息密度图表与配色
+- **Vivid 高对比配色与连续色带**：新增 7 套 ``vivid`` 学术配色板、``list_vivid_palettes()`` 及 ``make_palette_cmap()``
+- **视觉下限守卫**：新增 ``polish_axis()`` / ``inspect_figure_guards()`` / ``smart_labels()`` 等守卫函数与 ``audit_figure(..., check_visual_guards=True)``
+- **5 个新图表**：帕累托 ``plot_pareto``、前后配对斜率 ``plot_paired``、概率预测扇形 ``plot_fan``、ROC/PR ``plot_roc``、概率校准 ``plot_calibration``
+- **默认图型升级与缺陷修复**：升级散点回归/小提琴盒线/下三角显著性热图/PCA 置信椭圆，修复雨云/山脊中位数对齐及火山图引导线避让
+- **Companion Skill v3.0.0**：接入先画像后推荐工作流（``scripts/profile_and_recommend.py``）
+
 v1.13.1 (2026-08-03)
 --------------------
 

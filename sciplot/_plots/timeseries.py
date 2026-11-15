@@ -1074,4 +1074,102 @@ def plot_bump(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
-__all__ = ["plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_streamgraph", "plot_bump"]
+def plot_fan(
+    x: Sequence[Any],
+    center: Optional[Sequence[float]] = None,
+    *,
+    bands: Optional[Dict[Union[int, float], Tuple[Sequence[float], Sequence[float]]]] = None,
+    samples: Optional[np.ndarray] = None,
+    intervals: Sequence[int] = (50, 80, 95),
+    history_x: Optional[Sequence[Any]] = None,
+    history_y: Optional[Sequence[float]] = None,
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    center_label: str = "预测中位数",
+    history_label: str = "历史观测",
+    color: Optional[str] = None,
+    history_color: str = "#334155",
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+) -> PlotResult:
+    """绘制概率预测扇形图（多层嵌套置信带 + 中心路径 + 可选历史前缀）。
+
+    既可直接传入集合模拟/蒙特卡洛样本矩阵 ``samples`` (n_members, n_t) 自动计算
+    各分位数区间，也可显式传入 ``center`` 与 ``bands={50: (lo, hi), 80: ..., 95: ...}``。
+    """
+    from sciplot.utils.guards import polish_axis
+
+    x_arr = np.asarray(x)
+    n_t = len(x_arr)
+    if n_t < 2:
+        raise ValueError("x 至少需要 2 个点")
+
+    resolved_bands: Dict[float, Tuple[np.ndarray, np.ndarray]] = {}
+    if samples is not None:
+        mat = np.asarray(samples, dtype=float)
+        if mat.ndim != 2 or mat.shape[1] != n_t:
+            raise ValueError(f"samples 必须为形状 (n_members, {n_t}) 的二维数组，实际: {mat.shape}")
+        if mat.shape[0] < 2:
+            raise ValueError("samples 至少需要 2 组预测实现")
+        center_arr = np.median(mat, axis=0) if center is None else np.asarray(center, dtype=float).ravel()
+        for level in sorted(intervals, reverse=True):
+            tail = (100.0 - float(level)) / 2.0
+            lo = np.percentile(mat, tail, axis=0)
+            hi = np.percentile(mat, 100.0 - tail, axis=0)
+            resolved_bands[float(level)] = (lo, hi)
+    else:
+        if center is None:
+            raise ValueError("未提供 samples 时必须指定 center")
+        center_arr = np.asarray(center, dtype=float).ravel()
+        if len(center_arr) != n_t:
+            raise ValueError(f"center 长度 ({len(center_arr)}) 与 x 长度 ({n_t}) 不一致")
+        if bands:
+            for level, (lo, hi) in bands.items():
+                lo_arr = np.asarray(lo, dtype=float).ravel()
+                hi_arr = np.asarray(hi, dtype=float).ravel()
+                if len(lo_arr) != n_t or len(hi_arr) != n_t:
+                    raise ValueError(f"bands[{level}] 长度与 x 不一致")
+                resolved_bands[float(level)] = (lo_arr, hi_arr)
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    main_color = color or cycle_color(get_cycle_colors(), 0)
+
+    if history_x is not None and history_y is not None:
+        hx = np.asarray(history_x)
+        hy = np.asarray(history_y, dtype=float)
+        ax.plot(hx, hy, color=history_color, linewidth=1.6, label=history_label, zorder=4)
+        ax.axvline(x_arr[0], color="#94A3B8", linestyle=":", linewidth=1.0, zorder=2)
+
+    sorted_levels = sorted(resolved_bands.keys(), reverse=True)
+    n_lv = max(1, len(sorted_levels))
+    for rank, lv in enumerate(sorted_levels):
+        lo_arr, hi_arr = resolved_bands[lv]
+        alpha = 0.14 + 0.24 * (rank / max(1, n_lv - 1)) if n_lv > 1 else 0.24
+        ax.fill_between(
+            x_arr, lo_arr, hi_arr,
+            color=main_color, alpha=alpha, linewidth=0.0,
+            label=f"{lv:g}% PI", zorder=1 + rank,
+        )
+
+    ax.plot(x_arr, center_arr, color=main_color, linewidth=2.0, label=center_label, zorder=10)
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.22)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    smart_legend(ax)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+__all__ = [
+    "plot_timeseries",
+    "plot_multi_timeseries",
+    "plot_slope",
+    "plot_gantt",
+    "plot_calendar_heatmap",
+    "plot_streamgraph",
+    "plot_bump",
+    "plot_fan",
+]

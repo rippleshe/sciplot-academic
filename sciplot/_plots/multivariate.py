@@ -271,13 +271,21 @@ def plot_scatter_matrix(
     columns: Optional[List[str]] = None,
     color_by: Optional[np.ndarray] = None,
     diag: str = "hist",
-    alpha: float = 0.5,
-    s: float = 10,
+    upper: str = "scatter",
+    alpha: float = 0.6,
+    s: float = 12,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
 ) -> PlotResult:
-    """绘制散点矩阵，展示多特征两两关系。"""
+    """绘制散点矩阵，展示多特征两两关系（支持上三角相关系数卡片与柔边样式）。
+
+    参数:
+        diag : 对角线分布模式："hist" | "kde" | "none"
+        upper: 上三角显示模式："scatter"（传统镜像散点）或 "corr"（相关性数值卡片 + r 值）
+    """
+    from sciplot.utils.guards import polish_axis
+
     values = np.asarray(data, dtype=float)
     if values.ndim != 2:
         raise ValueError(f"data 必须是二维数组，当前维度: {values.ndim}")
@@ -285,6 +293,8 @@ def plot_scatter_matrix(
     n_samples, n_features = values.shape
     if n_features < 2:
         raise ValueError(f"至少需要 2 个特征，当前: {n_features}")
+    if upper not in {"scatter", "corr"}:
+        raise ValueError(f"upper 仅支持 'scatter' 或 'corr'，实际值: {upper!r}")
 
     if columns is None:
         columns = [f"特征 {i + 1}" for i in range(n_features)]
@@ -341,6 +351,7 @@ def plot_scatter_matrix(
         scatter_colors = None
         cmap = None
 
+    diag_color = cycle_color(get_cycle_colors(), 0)
     for row in range(n_features):
         for col in range(n_features):
             ax = axes[row, col]
@@ -349,16 +360,33 @@ def plot_scatter_matrix(
 
             if row == col:
                 if diag == "hist":
-                    ax.hist(x_col, bins=20, alpha=0.75)
+                    ax.hist(x_col, bins=20, alpha=0.80, color=diag_color,
+                            edgecolor="white", linewidth=0.5)
                 elif diag == "kde":
                     finite = x_col[np.isfinite(x_col)]
                     if finite.size >= 2 and scipy_stats_module is not None:
                         kde = scipy_stats_module.gaussian_kde(finite)
                         x_eval = np.linspace(finite.min(), finite.max(), 200)
                         y_eval = kde(x_eval)
-                        ax.plot(x_eval, y_eval)
-                        ax.fill_between(x_eval, y_eval, alpha=0.2)
+                        ax.plot(x_eval, y_eval, color=diag_color, linewidth=1.4)
+                        ax.fill_between(x_eval, y_eval, color=diag_color, alpha=0.22)
                 # diag == "none" 时保持空白
+            elif upper == "corr" and row < col:
+                valid = np.isfinite(x_col) & np.isfinite(y_col)
+                xv, yv = x_col[valid], y_col[valid]
+                r_val = float(np.corrcoef(xv, yv)[0, 1]) if xv.size >= 2 and np.std(xv) > 0 and np.std(yv) > 0 else 0.0
+                cmap_div = get_cmap_safe("RdBu_r")
+                bg = cmap_div(0.5 + 0.45 * np.clip(r_val, -1.0, 1.0))
+                ax.set_facecolor(bg)
+                ax.text(
+                    0.5, 0.52, f"r = {r_val:.2f}",
+                    transform=ax.transAxes, ha="center", va="center",
+                    fontsize=max(7, int(plt.rcParams.get("font.size", 9)) + int(abs(r_val) * 2)),
+                    fontweight="bold" if abs(r_val) >= 0.5 else "normal",
+                    color="#1F2937" if abs(r_val) < 0.7 else "white",
+                )
+                ax.set_xticks([])
+                ax.set_yticks([])
             else:
                 ax.scatter(
                     x_col,
@@ -367,7 +395,8 @@ def plot_scatter_matrix(
                     cmap=cmap,
                     s=s,
                     alpha=alpha,
-                    edgecolors="none",
+                    edgecolors="white",
+                    linewidths=0.35,
                 )
 
             if row == n_features - 1:
@@ -380,7 +409,7 @@ def plot_scatter_matrix(
             else:
                 ax.set_yticklabels([])
 
-            ax.grid(False)
+            polish_axis(ax, clean_spines=True, grid=False)
 
     fig.tight_layout()
     return PlotResult(fig, axes, metadata={"venue": effective_venue, "palette": palette})

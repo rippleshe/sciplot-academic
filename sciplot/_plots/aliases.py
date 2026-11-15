@@ -36,6 +36,7 @@ from sciplot._plots.distribution import (
     plot_dumbbell,
     plot_diverging_bar,
     plot_waffle,
+    plot_pareto,
 )
 from sciplot._plots.advanced import (
     plot_errorbar,
@@ -68,6 +69,7 @@ from sciplot._plots.timeseries import (
     plot_streamgraph,
     plot_bump,
     plot_slope,
+    plot_fan,
 )
 from sciplot._plots.statistical import (
     plot_density,
@@ -80,6 +82,7 @@ from sciplot._plots.statistical import (
     plot_volcano,
     plot_forest,
     plot_funnel,
+    plot_paired,
 )
 from sciplot._ext.plot3d import (
     plot_waterfall3d,
@@ -91,6 +94,8 @@ from sciplot._ext.ml import (
     plot_feature_importance,
     plot_learning_curve,
     plot_pca,
+    plot_roc,
+    plot_calibration,
 )
 from sciplot._ext.network import (
     plot_network,
@@ -148,6 +153,7 @@ dumbbell = _make_alias(plot_dumbbell)
 diverging_bar = _make_alias(plot_diverging_bar)
 waffle = _make_alias(plot_waffle)
 lollipop = _make_alias(plot_lollipop)
+pareto = _make_alias(plot_pareto)
 
 # ═══════════════════════════════════════════════════════════════
 # 高级图表
@@ -204,6 +210,10 @@ raincloud = _make_alias(plot_raincloud)
 volcano = _make_alias(plot_volcano)
 forest = _make_alias(plot_forest)
 funnel = _make_alias(plot_funnel)
+paired = _make_alias(plot_paired)
+fan = _make_alias(plot_fan)
+roc = _make_alias(plot_roc)
+calibration = _make_alias(plot_calibration)
 waterfall3d = _make_alias(plot_waterfall3d)
 
 
@@ -211,12 +221,12 @@ __all__ = [
     "line", "scatter", "step", "area",
     "multi", "multi_line", "multi_area",
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop",
+    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "lollipop", "pareto",
     "errorbar", "confidence", "heatmap", "bubble_heatmap", "bubble", "hexbin", "marginal", "packed_bubble", "chord", "combo", "sankey", "treemap", "donut", "streamgraph", "waterfall", "alluvial", "bump", "sunburst", "upset",
-    "radar", "taylor", "circular_barplot", "ternary", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap",
+    "radar", "taylor", "circular_barplot", "ternary", "timeseries", "multi_timeseries", "fan", "gantt", "calendar_heatmap",
     "parallel", "pca", "slope", "surface", "contour",
-    "confusion", "learning_curve", "feature_importance",
+    "confusion", "learning_curve", "feature_importance", "roc", "calibration",
     "venn2", "venn3", "network",
     "density", "multi_density",
-    "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "forest", "funnel", "waterfall3d",
+    "residuals", "qq", "bland_altman", "ridgeline", "raincloud", "volcano", "forest", "funnel", "paired", "waterfall3d",
 ]

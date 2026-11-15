@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from statistics import NormalDist
 
 import matplotlib.pyplot as plt
@@ -374,6 +374,9 @@ def plot_density(
         if fill:
             ax.fill_between(x_eval, y_eval, alpha=alpha, color=line.get_color())
 
+    from sciplot.utils.guards import polish_axis
+
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -553,28 +556,44 @@ def plot_ridgeline(
                 label=label, **line_kwargs,
             )
             if show_median:
-                ax.axvline(x=float(values[0]), ymin=(base + 0.1) / (base + 1.2),
-                           ymax=(base + 0.9) / (base + 1.2),
-                           color=median_color, alpha=median_alpha, linewidth=1.0)
+                ax.plot(
+                    [float(values[0]), float(values[0])],
+                    [base + 0.05, base + 0.80],
+                    color=median_color, alpha=median_alpha, linewidth=1.2, zorder=4,
+                )
             continue
 
         kde = stats.gaussian_kde(values, bw_method=bw_method)
         y_eval = kde(x_eval)
         y_norm = y_eval / y_eval.max()
 
-        line_kwargs.setdefault("linewidth", 1.4)
-        (line,) = ax.plot(x_eval, base + y_norm, label=label, **line_kwargs)
+        line_kwargs.setdefault("linewidth", 1.5)
+        (line,) = ax.plot(x_eval, base + y_norm, label=label, zorder=3 + i * 2, **line_kwargs)
+        try:
+            import matplotlib.patheffects as pe
+
+            line.set_path_effects([
+                pe.Stroke(linewidth=float(line.get_linewidth()) + 1.2, foreground="white", alpha=0.85),
+                pe.Normal(),
+            ])
+        except Exception:
+            pass
         if fill:
-            ax.fill_between(x_eval, base, base + y_norm, color=line.get_color(), alpha=alpha)
+            ax.fill_between(x_eval, base, base + y_norm, color=line.get_color(),
+                            alpha=alpha, zorder=2 + i * 2)
 
         if show_median:
             median_val = float(np.median(values))
-            ax.axvline(
-                x=median_val, ymin=(base + 0.08) / (base + 1.2),
-                ymax=(base + 0.95) / (base + 1.2),
-                color=median_color, alpha=median_alpha, linewidth=1.0,
+            med_height = float(kde([median_val])[0] / y_eval.max())
+            ax.plot(
+                [median_val, median_val], [base, base + med_height],
+                color=median_color, alpha=median_alpha, linewidth=1.2,
+                linestyle="--", zorder=4 + i * 2,
             )
 
+    from sciplot.utils.guards import polish_axis
+
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
     ax.set_yticks([i * step for i in range(len(normalized_data))])
     ax.set_yticklabels(labels)
     ax.set_ylim(-0.15, (len(normalized_data) - 1) * step + 1.15)
@@ -665,8 +684,16 @@ def plot_raincloud(
     colors = _get_cycle_colors()
     rng = np.random.default_rng(42)
 
+    from matplotlib.colors import to_hex
+    from sciplot.utils import darken_color
+    from sciplot.utils.guards import polish_axis
+
     for i, (values, label) in enumerate(zip(normalized_data, labels)):
         color = cycle_color(colors, i)
+        try:
+            edge_color = darken_color(to_hex(color), amount=0.28)
+        except Exception:
+            edge_color = "#2D3436"
         pos = float(i)
 
         if orientation == "h":
@@ -674,84 +701,110 @@ def plot_raincloud(
             if show_points:
                 jitter = rng.uniform(-point_jitter, point_jitter, len(values))
                 ax.scatter(
-                    values, pos - 0.28 + jitter,
-                    s=point_size, alpha=point_alpha, color=color,
-                    edgecolors="none",
+                    values, pos - 0.26 + jitter,
+                    s=max(point_size, 8.0), alpha=max(point_alpha, 0.45), color=color,
+                    edgecolors="white", linewidths=0.35, zorder=3,
                 )
 
             # ── 箱线（中部） ──
             if show_box:
-                boxplot_with_orientation(
-                    ax, values, orientation="horizontal", positions=[pos],
+                bp = boxplot_with_orientation(
+                    ax, values, orientation="horizontal", positions=[pos - 0.04],
                     widths=box_width, patch_artist=True, showfliers=False,
+                    medianprops={"color": "#2D3436", "linewidth": 1.4},
+                    whiskerprops={"color": "#4A5568", "linewidth": 0.95},
+                    capprops={"color": "#4A5568", "linewidth": 0.95},
                 )
-                for patch in ax.patches[-1:]:
+                for patch in bp["boxes"]:
                     patch.set_facecolor(color)
-                    patch.set_alpha(0.35)
+                    patch.set_alpha(0.55)
+                    patch.set_edgecolor(edge_color)
+                    patch.set_linewidth(0.9)
 
-            # ── 半小提琴（右侧） ──
+            # ── 半小提琴（右侧/上方） ──
+            kde_at_median = violin_scale * 0.85
             if show_violin:
                 if _is_constant(values):
-                    ax.plot([values[0], values[0]], [pos, pos + violin_scale * 2],
-                            color=color, linewidth=1.2)
+                    ax.plot([values[0], values[0]], [pos + 0.02, pos + violin_scale],
+                            color=color, linewidth=1.3)
+                    kde_at_median = violin_scale
                 else:
                     kde = stats.gaussian_kde(values, bw_method=bw_method)
                     x_eval = np.linspace(values.min(), values.max(), 200)
-                    d = kde(x_eval)
-                    d = d / d.max() * violin_scale
-                    ax.fill_between(x_eval, pos, pos + d, color=color, alpha=violin_alpha)
-                    ax.plot(x_eval, pos + d, color=color, linewidth=1.0)
+                    d_raw = kde(x_eval)
+                    d_max = float(d_raw.max()) if float(d_raw.max()) > 0 else 1.0
+                    d = d_raw / d_max * violin_scale
+                    base_y = pos + 0.02
+                    ax.fill_between(x_eval, base_y, base_y + d, color=color, alpha=violin_alpha, zorder=2)
+                    ax.plot(x_eval, base_y + d, color=edge_color, linewidth=1.05, zorder=3)
+                    med_val = float(np.median(values))
+                    kde_at_median = float(kde([med_val])[0] / d_max * violin_scale)
 
-            # ── 中位数刻度 ──
+            # ── 中位数刻度（精确止于 KDE 轮廓内侧） ──
             if show_median:
                 median_val = float(np.median(values))
-                ax.plot([median_val, median_val], [pos + 0.02, pos + violin_scale * 2 - 0.02],
-                        color="#333333", linewidth=1.0, alpha=0.9)
+                top_y = pos + 0.02 + kde_at_median
+                ax.plot([median_val, median_val], [pos + 0.02, top_y],
+                        color="#333333", linewidth=1.1, linestyle="--", alpha=0.85, zorder=4)
         else:
-            # 垂直版本：镜像布局（点在下、箱线居中、小提琴在上）
+            # 垂直版本：点在左、箱线居中、半小提琴在右
             if show_points:
                 jitter = rng.uniform(-point_jitter, point_jitter, len(values))
                 ax.scatter(
-                    pos - 0.28 + jitter, values,
-                    s=point_size, alpha=point_alpha, color=color,
-                    edgecolors="none",
+                    pos - 0.26 + jitter, values,
+                    s=max(point_size, 8.0), alpha=max(point_alpha, 0.45), color=color,
+                    edgecolors="white", linewidths=0.35, zorder=3,
                 )
 
             if show_box:
-                boxplot_with_orientation(
-                    ax, values, orientation="vertical", positions=[pos],
+                bp = boxplot_with_orientation(
+                    ax, values, orientation="vertical", positions=[pos - 0.04],
                     widths=box_width, patch_artist=True, showfliers=False,
+                    medianprops={"color": "#2D3436", "linewidth": 1.4},
+                    whiskerprops={"color": "#4A5568", "linewidth": 0.95},
+                    capprops={"color": "#4A5568", "linewidth": 0.95},
                 )
-                for patch in ax.patches[-1:]:
+                for patch in bp["boxes"]:
                     patch.set_facecolor(color)
-                    patch.set_alpha(0.35)
+                    patch.set_alpha(0.55)
+                    patch.set_edgecolor(edge_color)
+                    patch.set_linewidth(0.9)
 
+            kde_at_median = violin_scale * 0.85
             if show_violin:
                 if _is_constant(values):
-                    ax.plot([pos, pos + violin_scale * 2], [values[0], values[0]],
-                            color=color, linewidth=1.2)
+                    ax.plot([pos + 0.02, pos + violin_scale], [values[0], values[0]],
+                            color=color, linewidth=1.3)
+                    kde_at_median = violin_scale
                 else:
                     kde = stats.gaussian_kde(values, bw_method=bw_method)
                     y_eval = np.linspace(values.min(), values.max(), 200)
-                    d = kde(y_eval)
-                    d = d / d.max() * violin_scale
-                    ax.fill_betweenx(y_eval, pos, pos + d, color=color, alpha=violin_alpha)
-                    ax.plot(pos + d, y_eval, color=color, linewidth=1.0)
+                    d_raw = kde(y_eval)
+                    d_max = float(d_raw.max()) if float(d_raw.max()) > 0 else 1.0
+                    d = d_raw / d_max * violin_scale
+                    base_x = pos + 0.02
+                    ax.fill_betweenx(y_eval, base_x, base_x + d, color=color, alpha=violin_alpha, zorder=2)
+                    ax.plot(base_x + d, y_eval, color=edge_color, linewidth=1.05, zorder=3)
+                    med_val = float(np.median(values))
+                    kde_at_median = float(kde([med_val])[0] / d_max * violin_scale)
 
             if show_median:
                 median_val = float(np.median(values))
-                ax.plot([pos + 0.02, pos + violin_scale * 2 - 0.02], [median_val, median_val],
-                        color="#333333", linewidth=1.0, alpha=0.9)
+                right_x = pos + 0.02 + kde_at_median
+                ax.plot([pos + 0.02, right_x], [median_val, median_val],
+                        color="#333333", linewidth=1.1, linestyle="--", alpha=0.85, zorder=4)
 
     # 坐标轴标签与范围
     if orientation == "h":
+        polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
         ax.set_yticks(np.arange(len(normalized_data)))
         ax.set_yticklabels(labels)
-        ax.set_ylim(-0.6, len(normalized_data) - 0.4)
+        ax.set_ylim(-0.6, len(normalized_data) - 0.35)
     else:
+        polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
         ax.set_xticks(np.arange(len(normalized_data)))
         ax.set_xticklabels(labels)
-        ax.set_xlim(-0.6, len(normalized_data) - 0.4)
+        ax.set_xlim(-0.6, len(normalized_data) - 0.35)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -776,6 +829,7 @@ def plot_volcano(
     annotate_top: bool = True,
     top_n: int = 8,
     show_thresholds: bool = True,
+    show_counts: bool = False,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
@@ -878,6 +932,15 @@ def plot_volcano(
         legend_labels = ["显著上调", "显著下调", "不显著"]
     else:
         legend_labels = ["Up-regulated", "Down-regulated", "Not significant"]
+    if show_counts:
+        n_up = int(np.sum(is_up))
+        n_down = int(np.sum(is_down))
+        n_ns = int(n - n_up - n_down)
+        legend_labels = [
+            f"{legend_labels[0]} ({n_up})",
+            f"{legend_labels[1]} ({n_down})",
+            f"{legend_labels[2]} ({n_ns})",
+        ]
     handles = [
         Patch(facecolor=color_up, label=legend_labels[0], alpha=alpha),
         Patch(facecolor=color_down, label=legend_labels[1], alpha=alpha),
@@ -904,8 +967,8 @@ def plot_volcano(
         legend_bbox = legend.get_window_extent(renderer=renderer).expanded(1.04, 1.08)
 
         # 优先把文字放在点的“内侧”：左半边向右、右半边向左，降低轴外裁剪概率。
-        vertical_offsets = (7, 18, -9, 30, -20, 43, -33, 57, -47)
-        horizontal_offsets = (6, 13, 21)
+        vertical_offsets = (7, 18, -9, 30, -20, 43, -33, 57, -47, -62, -78)
+        horizontal_offsets = (6, 14, 24, 36)
         placed_bboxes: List[Any] = []
 
         def _bbox_inside_axes(box: Any, padding: float = 2.0) -> bool:
@@ -921,6 +984,7 @@ def plot_volcano(
             side = 1 if x0 < 0 else -1
             ha = "left" if side > 0 else "right"
             accepted = None
+            accepted_offset: Optional[Tuple[int, int]] = None
 
             for dx_abs in horizontal_offsets:
                 if accepted is not None:
@@ -943,13 +1007,36 @@ def plot_volcano(
                     )
                     if _bbox_inside_axes(box) and not collides:
                         accepted = (annotation, box)
+                        accepted_offset = (dx_abs, dy)
                         break
                     annotation.remove()
 
             # 极端拥挤时宁可少标一个，也不要输出互相盖住、越界的文字。
             if accepted is not None:
                 placed_bboxes.append(accepted[1])
+                if accepted_offset is not None:
+                    a_dx, a_dy = accepted_offset
+                    if abs(a_dy) > 18 or a_dx >= 24:
+                        ax.annotate(
+                            "",
+                            xy=(x0, y0),
+                            xytext=(side * a_dx, a_dy),
+                            textcoords="offset points",
+                            arrowprops={
+                                "arrowstyle": "-",
+                                "color": "#666666",
+                                "lw": 0.65,
+                                "alpha": 0.65,
+                                "shrinkA": 2,
+                                "shrinkB": 3,
+                            },
+                            annotation_clip=True,
+                            zorder=max(1, int(accepted[0].get_zorder()) - 1),
+                        )
 
+    from sciplot.utils.guards import polish_axis
+
+    polish_axis(ax, clean_spines=True, grid="both", grid_alpha=0.18)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -1111,6 +1198,9 @@ def plot_forest(
                 va="center", ha="right", fontweight="bold",
                 color=summary_color, clip_on=False)
 
+    from sciplot.utils.guards import polish_axis
+
+    polish_axis(ax, categorical_axis="y", clean_spines=True, grid="x")
     ax.set_yticks([])
     ax.set_xlabel(xlabel)
     if title:
@@ -1242,6 +1332,129 @@ def plot_funnel(
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
+def plot_paired(
+    before: Union[List[float], np.ndarray],
+    after: Union[List[float], np.ndarray],
+    labels: Tuple[str, str] = ("干预前", "干预后"),
+    xlabel: str = "",
+    ylabel: str = "",
+    title: str = "",
+    show_box: bool = True,
+    show_mean: bool = True,
+    show_stats: bool = True,
+    color_up: str = "#2A9D8F",
+    color_down: str = "#E76F51",
+    color_flat: str = "#94A3B8",
+    line_alpha: float = 0.45,
+    jitter: float = 0.03,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制配对样本对比图（个体斜率连线 + 散点 + 均值/箱线摘要 + 配对统计检验）。
+
+    揭示同一样本/被试在两种条件下的真实个体变化轨迹（上升/下降人数与幅度），
+    避免普通分组柱状图掩盖个体差异或虚假放大组间均值差。
+
+    参数:
+        before, after: 等长配对观测数组
+        labels       : 两个条件的名称二元组，默认 ``("干预前", "干预后")``
+        show_box     : 是否叠加半透明轻箱线，默认 True
+        show_mean    : 是否加粗连线均值变化并标注 Δ，默认 True
+        show_stats   : True 且安装 scipy 时标注配对 t 检验 p 值与 Δ 均值
+    """
+    from sciplot.utils.guards import polish_axis
+
+    b_arr = np.asarray(before, dtype=float).ravel()
+    a_arr = np.asarray(after, dtype=float).ravel()
+    if b_arr.size == 0 or a_arr.size == 0:
+        raise ValueError("before/after 不能为空")
+    if b_arr.size != a_arr.size:
+        raise ValueError(f"before 长度 ({b_arr.size}) 与 after 长度 ({a_arr.size}) 不一致")
+    if not (np.all(np.isfinite(b_arr)) and np.all(np.isfinite(a_arr))):
+        raise ValueError("before 和 after 不能包含 NaN 或 Inf")
+    if len(labels) != 2:
+        raise ValueError("labels 必须是长度为 2 的二元组")
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = _get_cycle_colors()
+    c_before = colors[0]
+    c_after = colors[1] if len(colors) > 1 else colors[0]
+
+    rng = np.random.default_rng(42)
+    x_jitter = rng.uniform(-jitter, jitter, size=b_arr.size) if jitter > 0 else np.zeros(b_arr.size)
+    x0 = np.zeros(b_arr.size) + x_jitter
+    x1 = np.ones(b_arr.size) + x_jitter
+
+    for i in range(b_arr.size):
+        diff = a_arr[i] - b_arr[i]
+        lc = color_up if diff > 1e-12 else (color_down if diff < -1e-12 else color_flat)
+        ax.plot([x0[i], x1[i]], [b_arr[i], a_arr[i]], color=lc, alpha=line_alpha,
+                linewidth=1.0, zorder=2)
+
+    if show_box:
+        bp = ax.boxplot(
+            [b_arr, a_arr],
+            positions=[-0.22, 1.22],
+            widths=0.14,
+            patch_artist=True,
+            showfliers=False,
+            medianprops={"color": "#2D3436", "linewidth": 1.3},
+            whiskerprops={"color": "#4A5568", "linewidth": 0.9},
+            capprops={"color": "#4A5568", "linewidth": 0.9},
+        )
+        for patch, col in zip(bp["boxes"], (c_before, c_after)):
+            patch.set_facecolor(col)
+            patch.set_alpha(0.45)
+            patch.set_edgecolor("#2D3436")
+            patch.set_linewidth(0.85)
+
+    scatter_kw = dict(kwargs)
+    scatter_kw.setdefault("s", 26)
+    scatter_kw.setdefault("alpha", 0.85)
+    scatter_kw.setdefault("edgecolors", "white")
+    scatter_kw.setdefault("linewidths", 0.5)
+    ax.scatter(x0, b_arr, color=c_before, zorder=4, **scatter_kw)
+    ax.scatter(x1, a_arr, color=c_after, zorder=4, **scatter_kw)
+
+    if show_mean:
+        mb, ma = float(np.mean(b_arr)), float(np.mean(a_arr))
+        ax.plot([0.0, 1.0], [mb, ma], color="#1E293B", linewidth=2.2, zorder=5)
+        ax.scatter([0.0, 1.0], [mb, ma], marker="D", s=46,
+                   color=[c_before, c_after], edgecolors="#1E293B", linewidths=1.0, zorder=6)
+
+    if show_stats:
+        delta_mean = float(np.mean(a_arr - b_arr))
+        p_text = ""
+        if b_arr.size >= 3 and np.any(a_arr != b_arr):
+            try:
+                stats_mod = _check_scipy_stats()
+                _, p_val = stats_mod.ttest_rel(b_arr, a_arr)
+                if np.isfinite(p_val):
+                    p_text = "p < 0.001" if p_val < 0.001 else f"p = {p_val:.3f}"
+            except Exception:
+                pass
+        badge = f"Δ = {delta_mean:+.2f}" + (f" ({p_text})" if p_text else "")
+        ax.text(
+            0.5, 0.96, badge,
+            transform=ax.transAxes, ha="center", va="top",
+            fontsize=relative_fontsize(-1, floor=6),
+            bbox={"boxstyle": "round,pad=0.25", "facecolor": ax.get_facecolor(),
+                  "edgecolor": "#CBD5E1", "alpha": 0.9, "linewidth": 0.6},
+        )
+
+    ax.set_xticks([0.0, 1.0])
+    ax.set_xticklabels(list(labels))
+    ax.set_xlim(-0.45 if show_box else -0.30, 1.45 if show_box else 1.30)
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
 __all__ = [
     "plot_residuals",
     "plot_qq",
@@ -1253,4 +1466,5 @@ __all__ = [
     "plot_volcano",
     "plot_forest",
     "plot_funnel",
+    "plot_paired",
 ]

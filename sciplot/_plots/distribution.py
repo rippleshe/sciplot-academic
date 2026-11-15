@@ -38,26 +38,35 @@ def plot_bar(
     ylabel: str = "",
     title: str = "",
     width: float = 0.6,
+    show_values: bool = False,
+    value_fmt: str = ".1f",
+    yerr: Optional[Union[List[float], np.ndarray]] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制单组柱状图（每个柱子自动赋不同颜色）
+    绘制单组柱状图（柔填充深轮廓 + 干净 L 轴 + 可选误差棒/柱顶数值）
 
     参数:
-        lang: 语言设置
+        width      : 柱宽，默认 0.6
+        show_values: 是否在柱顶直接标注数值
+        value_fmt  : 柱顶数值格式，默认 ".1f"
+        yerr       : 可选误差棒数组（与 values 等长）
+        lang       : 语言设置
 
     示例:
         >>> fig, ax = sp.plot_bar(
         ...     ["方法A", "方法B", "方法C"],
         ...     np.array([82.3, 85.1, 88.7]),
         ...     xlabel="方法", ylabel="准确率 (%)",
-        ...     palette="pastel-3"
+        ...     palette="pastel-3", show_values=True,
         ... )
         >>> sp.save(fig, "accuracy_bar")
     """
+    from sciplot.utils.guards import polish_axis, style_patch_edges
+
     # 输入验证 - 使用 EAFP 风格（Easier to Ask for Forgiveness than Permission）
     try:
         if len(categories) == 0:
@@ -70,6 +79,13 @@ def plot_bar(
         if not np.all(np.isfinite(values_arr)):
             raise ValueError("values 不能包含 NaN 或 Inf")
         width = validate_positive_number(width, "width", allow_zero=False)
+        yerr_arr = None
+        if yerr is not None:
+            yerr_arr = np.asarray(yerr, dtype=float).ravel()
+            if len(yerr_arr) != len(values_arr):
+                raise ValueError(
+                    f"yerr 长度 ({len(yerr_arr)}) 与 values 长度 ({len(values_arr)}) 不一致"
+                )
     except TypeError as e:
         raise ValueError(f"参数类型错误: {e}") from e
 
@@ -80,7 +96,42 @@ def plot_bar(
     explicit_color = kwargs.pop("color", None)
     if explicit_color is not None:
         bar_colors = explicit_color
-    ax.bar(categories, values_arr, width=width, color=bar_colors, **kwargs)
+    has_edge_override = "edgecolor" in kwargs or "ec" in kwargs
+    has_alpha_override = "alpha" in kwargs
+    bar_kwargs = dict(kwargs)
+    if yerr_arr is not None:
+        bar_kwargs.setdefault("yerr", yerr_arr)
+        bar_kwargs.setdefault("capsize", 3)
+        bar_kwargs.setdefault("error_kw", {"linewidth": 0.9, "ecolor": "#333333"})
+
+    bars = ax.bar(categories, values_arr, width=width, color=bar_colors, **bar_kwargs)
+    if not has_edge_override and not has_alpha_override:
+        resolved_fills = (
+            [explicit_color] * len(bars)
+            if isinstance(explicit_color, str)
+            else list(bar_colors)
+            if isinstance(bar_colors, (list, tuple))
+            else [cycle_color(colors, i) for i in range(len(bars))]
+        )
+        style_patch_edges(bars, resolved_fills, fill_alpha=0.86, darken_amount=0.26, linewidth=0.7)
+
+    if show_values:
+        span = float(np.ptp(values_arr)) if values_arr.size > 1 else abs(float(values_arr[0]))
+        pad = max(span, 1.0) * 0.018
+        for i, (bar, v) in enumerate(zip(bars, values_arr)):
+            err_offset = float(yerr_arr[i]) if yerr_arr is not None else 0.0
+            y_pos = (v + err_offset + pad) if v >= 0 else (v - err_offset - pad)
+            va = "bottom" if v >= 0 else "top"
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                y_pos,
+                f"{v:{value_fmt}}",
+                ha="center",
+                va=va,
+                fontsize=max(6, int(plt.rcParams.get("font.size", 9)) - 1),
+            )
+
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -105,13 +156,14 @@ def plot_grouped_bar(
     value_fmt: str = ".1f",
     legend_loc: str = "best",
     colors: Optional[Sequence[str]] = None,
+    errors: Optional[Dict[str, Union[List[float], np.ndarray]]] = None,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制分组柱状图（多方法/多指标对比，论文最常见）
+    绘制分组柱状图（多方法/多指标对比，含可选误差棒与柔和深边层次）
 
     参数:
         groups    : 横轴分组标签（如 ["数据集A", "数据集B", "数据集C"])
@@ -122,6 +174,7 @@ def plot_grouped_bar(
         show_values: True 则在柱顶显示数值
         value_fmt  : 数值格式字符串，默认 ".1f"
         legend_loc : 图例位置
+        errors     : 可选误差棒字典 {方法名: 各组误差数组}
         lang       : 语言设置
 
     示例:
@@ -136,6 +189,8 @@ def plot_grouped_bar(
         ... )
         >>> sp.save(fig, "compare_bar")
     """
+    from sciplot.utils.guards import polish_axis, style_patch_edges
+
     # 输入验证
     if not groups:
         raise ValueError("参数 'groups' 不能为空列表")
@@ -155,6 +210,16 @@ def plot_grouped_bar(
     width = validate_positive_number(width, "width", allow_zero=False)
     gap = validate_positive_number(gap, "gap", allow_zero=True)
 
+    normalized_errors: Dict[str, np.ndarray] = {}
+    if errors is not None:
+        for series_name, err_vals in errors.items():
+            err_arr = np.asarray(err_vals, dtype=float).ravel()
+            if len(err_arr) != n_groups:
+                raise ValueError(
+                    f"errors['{series_name}'] 长度 ({len(err_arr)}) 与 groups 长度 ({n_groups}) 不一致"
+                )
+            normalized_errors[series_name] = err_arr
+
     fig, ax = new_styled_figure(venue, palette, lang)
 
     n_series = len(normalized_data)
@@ -172,24 +237,37 @@ def plot_grouped_bar(
 
     bar_w = (width - gap * (n_series - 1)) / n_series
     group_centers = np.arange(n_groups)
+    has_edge_override = "edgecolor" in kwargs or "ec" in kwargs
+    has_alpha_override = "alpha" in kwargs
 
     for i, (series_name, values) in enumerate(normalized_data.items()):
         offsets = group_centers + (i - (n_series - 1) / 2) * (bar_w + gap)
         color = cycle_color(colors, i)
+        bar_kwargs = dict(kwargs)
+        err_arr = normalized_errors.get(series_name)
+        if err_arr is not None:
+            bar_kwargs.setdefault("yerr", err_arr)
+            bar_kwargs.setdefault("capsize", 2.8)
+            bar_kwargs.setdefault("error_kw", {"linewidth": 0.85, "ecolor": "#333333"})
         bars = ax.bar(
             offsets, values, width=bar_w,
-            color=color, label=series_name, **kwargs
+            color=color, label=series_name, **bar_kwargs
         )
+        if not has_edge_override and not has_alpha_override:
+            style_patch_edges(bars, [color], fill_alpha=0.86, darken_amount=0.25, linewidth=0.68)
         if show_values:
-            for bar, v in zip(bars, values):
+            val_pad = max(float(np.ptp(values)) * 0.015, abs(float(np.max(np.abs(values)))) * 0.012, 1e-6)
+            for idx_b, (bar, v) in enumerate(zip(bars, values)):
+                err_off = float(err_arr[idx_b]) if err_arr is not None else 0.0
                 ax.text(
                     bar.get_x() + bar.get_width() / 2,
-                    bar.get_height(),
+                    bar.get_height() + err_off + val_pad * 0.35,
                     f"{v:{value_fmt}}",
                     ha="center", va="bottom",
-                    fontsize=plt.rcParams.get("font.size", 9) - 1,
+                    fontsize=max(6, int(plt.rcParams.get("font.size", 9)) - 1),
                 )
 
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
     ax.set_xticks(group_centers)
     ax.set_xticklabels(groups)
     ax.set_xlabel(xlabel)
@@ -212,27 +290,35 @@ def plot_box(
     ylabel: str = "",
     title: str = "",
     showfliers: bool = True,
+    show_points: bool = False,
+    show_means: bool = False,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制箱线图（展示中位数、四分位距和离群值）
+    绘制箱线图（展示中位数、四分位距、异常值及可选原始散点叠加）
 
     参数:
-        data      : 单个数组或数组列表，每个数组代表一组数据
-        showfliers: 是否显示离群点，默认 True
-        lang      : 语言设置
+        data       : 单个数组或数组列表，每个数组代表一组数据
+        showfliers : 是否显示离群点，默认 True
+        show_points: 是否叠加半透明抖动原始观测点，默认 False
+        show_means : 是否在箱体中标注均值菱形，默认 False
+        lang       : 语言设置
 
     示例:
         >>> fig, ax = sp.plot_box(
         ...     [scores_a, scores_b, scores_c],
         ...     labels=["算法A", "算法B", "算法C"],
-        ...     ylabel="得分", palette="pastel-3"
+        ...     ylabel="得分", palette="pastel-3", show_points=True,
         ... )
         >>> sp.save(fig, "boxplot")
     """
+    from matplotlib.colors import to_hex
+    from sciplot.utils import darken_color
+    from sciplot.utils.guards import polish_axis
+
     if isinstance(data, (list, tuple)):
         if not data:
             raise ValueError("参数 'data' 不能为空列表")
@@ -257,23 +343,63 @@ def plot_box(
     colors = _get_cycle_colors()
     # 显式 patch_artist 参数覆盖默认（避免 kwargs 与 True 冲突）
     patch_artist = bool(kwargs.pop("patch_artist", True))
+    box_kwargs = dict(kwargs)
+    box_kwargs.setdefault("medianprops", {"color": "#2D3436", "linewidth": 1.4})
+    box_kwargs.setdefault("whiskerprops", {"color": "#4A5568", "linewidth": 0.95})
+    box_kwargs.setdefault("capprops", {"color": "#4A5568", "linewidth": 0.95})
+    if showfliers:
+        box_kwargs.setdefault("flierprops", {
+            "marker": "o", "markersize": 3.5, "alpha": 0.65,
+            "markerfacecolor": "#718096", "markeredgecolor": "none",
+        })
+    if show_means:
+        box_kwargs.setdefault("showmeans", True)
+        box_kwargs.setdefault("meanprops", {
+            "marker": "D", "markersize": 4.5,
+            "markerfacecolor": "white", "markeredgecolor": "#2D3436",
+        })
+
     bp = ax.boxplot(
         data, showfliers=showfliers,
-        patch_artist=patch_artist, **kwargs
+        patch_artist=patch_artist, **box_kwargs
     )
-    if labels is not None:
-        ax.set_xticklabels(labels)
     if patch_artist:
         for i, patch in enumerate(bp["boxes"]):
-            patch.set_facecolor(cycle_color(colors, i))
-            patch.set_alpha(0.75)
+            c = cycle_color(colors, i)
+            patch.set_facecolor(c)
+            patch.set_alpha(0.72)
+            try:
+                patch.set_edgecolor(darken_color(to_hex(c), amount=0.28))
+            except Exception:
+                patch.set_edgecolor("#2D3436")
+            patch.set_linewidth(0.95)
+
+    if show_points:
+        groups_seq = (
+            [np.asarray(g, dtype=float).ravel() for g in data]
+            if isinstance(data, (list, tuple))
+            else ([np.asarray(data, dtype=float).ravel()] if np.asarray(data).ndim == 1
+                  else [np.asarray(data, dtype=float)[:, c] for c in range(np.asarray(data).shape[1])])
+        )
+        rng = np.random.default_rng(42)
+        for i, vals in enumerate(groups_seq):
+            c = cycle_color(colors, i)
+            jit = rng.uniform(-0.14, 0.14, size=vals.size)
+            ax.scatter(
+                (i + 1) + jit, vals,
+                s=12, alpha=0.45, color=c,
+                edgecolors="white", linewidths=0.35, zorder=4,
+            )
+
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
+    if labels is not None:
+        ax.set_xticklabels(labels)
+        auto_rotate_labels(ax, axis="x")
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    if labels is not None:
-        auto_rotate_labels(ax, axis="x")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -289,17 +415,21 @@ def plot_violin(
     title: str = "",
     showmeans: bool = False,
     showmedians: bool = True,
+    show_box: bool = True,
+    show_points: bool = False,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制小提琴图（比箱线图更直观地展示数据分布形状）
+    绘制小提琴图（柔和轮廓 + 内嵌四分位胶囊 + 可选原始散点）
 
     参数:
-        showmeans  : 是否显示均值线，默认 False
-        showmedians: 是否显示中位数线，默认 True
+        showmeans  : 是否显示均值标记，默认 False
+        showmedians: 是否显示中位数标记，默认 True
+        show_box   : 是否在琴身内部绘制 IQR 四分位短胶囊 + 白点中位数，默认 True
+        show_points: 是否叠加半透明原始样本点，默认 False
         lang       : 语言设置
 
     示例:
@@ -309,23 +439,34 @@ def plot_violin(
         ...     ylabel="Accuracy (%)", showmedians=True
         ... )
     """
+    from matplotlib.colors import to_hex
+    from sciplot.utils import darken_color
+    from sciplot.utils.guards import polish_axis
+
     if isinstance(data, (list, tuple)):
         if not data:
             raise ValueError("参数 'data' 不能为空列表")
+        groups_seq: List[np.ndarray] = []
         for i, values in enumerate(data):
             values_arr = np.asarray(values, dtype=float).ravel()
             if values_arr.size == 0:
                 raise ValueError(f"data[{i}] 不能为空")
             if not np.all(np.isfinite(values_arr)):
                 raise ValueError(f"data[{i}] 不能包含 NaN 或 Inf")
-        n_groups = len(data)
+            groups_seq.append(values_arr)
+        n_groups = len(groups_seq)
     else:
         data_arr = np.asarray(data, dtype=float)
         if data_arr.size == 0:
             raise ValueError("参数 'data' 不能为空")
         if not np.all(np.isfinite(data_arr)):
             raise ValueError("data 不能包含 NaN 或 Inf")
-        n_groups = data_arr.shape[1] if data_arr.ndim > 1 else 1
+        if data_arr.ndim > 1:
+            n_groups = data_arr.shape[1]
+            groups_seq = [data_arr[:, j].ravel() for j in range(n_groups)]
+        else:
+            n_groups = 1
+            groups_seq = [data_arr.ravel()]
 
     if labels is not None and len(labels) != n_groups:
         raise ValueError(
@@ -340,19 +481,62 @@ def plot_violin(
     )
     bodies: list = parts["bodies"]  # type: ignore[assignment]
     for i, pc in enumerate(bodies):
-        pc.set_facecolor(cycle_color(colors, i))
-        pc.set_alpha(0.75)
+        c = cycle_color(colors, i)
+        pc.set_facecolor(c)
+        pc.set_alpha(0.55)
+        try:
+            pc.set_edgecolor(darken_color(to_hex(c), amount=0.28))
+        except Exception:
+            pc.set_edgecolor("#2D3436")
+        pc.set_linewidth(0.95)
 
+    # 统一小提琴内部极值/均值/中位线的视觉克制（避免亮紫色横杠喧宾夺主）
+    for stat_key in ("cbars", "cmins", "cmaxes", "cmedians", "cmeans"):
+        coll = parts.get(stat_key)
+        if coll is not None:
+            if show_box and stat_key in {"cbars", "cmins", "cmaxes", "cmedians"}:
+                coll.set_visible(False)
+            else:
+                coll.set_color("#2D3436")
+                coll.set_linewidth(0.95)
+
+    if show_box:
+        for i, vals in enumerate(groups_seq):
+            pos = float(i + 1)
+            q25, med, q75 = np.percentile(vals, [25, 50, 75])
+            iqr = q75 - q25
+            lo_w = max(float(vals.min()), q25 - 1.5 * iqr)
+            hi_w = min(float(vals.max()), q75 + 1.5 * iqr)
+            ax.vlines(pos, lo_w, hi_w, color="#2D3436", linewidth=0.95, zorder=3)
+            ax.vlines(pos, q25, q75, color="#2D3436", linewidth=4.2, zorder=4)
+            if showmedians:
+                ax.scatter([pos], [med], color="white", edgecolors="#2D3436",
+                           s=18, linewidths=0.8, zorder=5)
+            if showmeans:
+                ax.scatter([pos], [float(np.mean(vals))], marker="D",
+                           color="#E76F51", edgecolors="white", s=20, linewidths=0.5, zorder=6)
+
+    if show_points:
+        rng = np.random.default_rng(42)
+        for i, vals in enumerate(groups_seq):
+            c = cycle_color(colors, i)
+            jit = rng.uniform(-0.10, 0.10, size=vals.size)
+            ax.scatter(
+                (i + 1) + jit, vals,
+                s=10, alpha=0.40, color=c,
+                edgecolors="white", linewidths=0.3, zorder=2,
+            )
+
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
     if labels is not None:
         ax.set_xticks(range(1, n_groups + 1))
         ax.set_xticklabels(labels)
+        auto_rotate_labels(ax, axis="x")
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    if labels is not None:
-        auto_rotate_labels(ax, axis="x")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 
@@ -367,26 +551,32 @@ def plot_histogram(
     ylabel: str = "Frequency",
     title: str = "",
     density: bool = False,
-    alpha: float = 0.75,
+    alpha: float = 0.78,
+    show_kde: bool = False,
+    show_median: bool = False,
     venue: Optional[str] = None,
     palette: Optional[str] = None,
     lang: Optional[str] = None,
     **kwargs: Any,
 ) -> PlotResult:
     """
-    绘制直方图
+    绘制直方图（白边分离柱体 + 干净 L 轴 + 可选 KDE 密度与中位数线）
 
     参数:
-        bins   : 柱数，默认 30
-        density: True 则归一化为概率密度
-        lang   : 语言设置
+        bins       : 柱数，默认 30
+        density    : True 则归一化为概率密度
+        show_kde   : True 时叠加核密度平滑曲线（需 scipy）
+        show_median: True 时叠加中位数竖虚线与均值参考
+        lang       : 语言设置
 
     示例:
         >>> fig, ax = sp.plot_histogram(
-        ...     data, bins=40, density=True,
+        ...     data, bins=40, density=True, show_kde=True,
         ...     xlabel="残差", ylabel="概率密度"
         ... )
     """
+    from sciplot.utils.guards import polish_axis
+
     values = np.asarray(data, dtype=float).ravel()
     finite_values = values[np.isfinite(values)]
     if finite_values.size == 0:
@@ -398,9 +588,30 @@ def plot_histogram(
     colors = _get_cycle_colors()
     # 显式 color 参数覆盖自动配色（避免 kwargs 与 colors[0] 冲突）
     explicit_color = kwargs.pop("color", None)
-    ax.hist(finite_values, bins=bins, density=density, alpha=alpha,
-            color=explicit_color if explicit_color is not None else colors[0],
-            **kwargs)
+    main_color = explicit_color if explicit_color is not None else colors[0]
+    hist_kwargs = dict(kwargs)
+    hist_kwargs.setdefault("edgecolor", "white")
+    hist_kwargs.setdefault("linewidth", 0.6)
+
+    effective_density = density or show_kde
+    ax.hist(
+        finite_values, bins=bins, density=effective_density, alpha=alpha,
+        color=main_color, **hist_kwargs
+    )
+
+    if show_kde and finite_values.size >= 3 and np.ptp(finite_values) > 0:
+        from scipy import stats as _sp_stats
+
+        kde = _sp_stats.gaussian_kde(finite_values)
+        x_eval = np.linspace(float(finite_values.min()), float(finite_values.max()), 200)
+        line_c = colors[1] if len(colors) > 1 and main_color == colors[0] else "#2D3436"
+        ax.plot(x_eval, kde(x_eval), color=line_c, linewidth=1.6, zorder=4)
+
+    if show_median:
+        med = float(np.median(finite_values))
+        ax.axvline(med, color="#2D3436", linestyle="--", linewidth=1.1, zorder=5)
+
+    polish_axis(ax, clean_spines=True, grid="y")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     if title:
@@ -451,6 +662,8 @@ def plot_stacked_bar(
         ...     show_values=True
         ... )
     """
+    from sciplot.utils.guards import polish_axis
+
     if not categories:
         raise ValueError("参数 'categories' 不能为空列表")
     data = validate_dict_not_empty(data, "data")
@@ -476,13 +689,16 @@ def plot_stacked_bar(
     colors = _get_cycle_colors()
 
     x = np.arange(n_groups)
+    bar_kwargs = dict(kwargs)
+    bar_kwargs.setdefault("edgecolor", "white")
+    bar_kwargs.setdefault("linewidth", 0.7)
 
     bottom = np.zeros(n_groups)
     for i, (series_name, values) in enumerate(normalized_data.items()):
         color = cycle_color(colors, i)
         bars = ax.bar(
             x, values, width=width,
-            bottom=bottom, color=color, label=series_name, **kwargs
+            bottom=bottom, color=color, label=series_name, **bar_kwargs
         )
         if show_values:
             for j, (bar, v) in enumerate(zip(bars, values)):
@@ -497,6 +713,7 @@ def plot_stacked_bar(
                     )
         bottom += values
 
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
     ax.set_xticks(x)
     ax.set_xticklabels(categories)
     ax.set_xlabel(xlabel)
@@ -1383,6 +1600,128 @@ def plot_waffle(
 
     if title:
         ax.set_title(title)
+    return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
+
+
+# ============================================================================
+# 帕累托图（贡献排序柱 + 累积占比曲线）
+# ============================================================================
+
+def plot_pareto(
+    categories: List[str],
+    values: Union[List[float], np.ndarray],
+    xlabel: str = "",
+    ylabel: str = "数值 / 频数",
+    cum_ylabel: str = "累积占比 (%)",
+    title: str = "",
+    threshold: float = 80.0,
+    show_values: bool = True,
+    value_fmt: str = ".0f",
+    line_color: Optional[str] = None,
+    venue: Optional[str] = None,
+    palette: Optional[str] = None,
+    lang: Optional[str] = None,
+    **kwargs: Any,
+) -> PlotResult:
+    """绘制帕累托图（降序柱状图 + 次轴累积百分比折线 + 80% 关键少数阈值线）。
+
+    自动按数值降序排列类别，以柔和色彩区分处于累积阈值内的核心驱动因素，
+    通过次坐标系叠加累积百分比折线并标注关键拐点，适合归因分解与关键瓶颈识别。
+
+    参数:
+        categories : 类别名称列表
+        values     : 各类别非负数值列表或数组
+        threshold  : 关键少数累积阈值（百分比，默认 80.0，传入 None 则不画参考线）
+        show_values: 是否在柱顶标注原始数值
+        value_fmt  : 数值格式字符串，默认 ``".0f"``
+        line_color : 累积折线颜色；None 时选取次色或深灰强调色
+    """
+    from sciplot._core.layout import create_twinx
+    from sciplot.utils.guards import polish_axis, style_patch_edges
+
+    if not categories:
+        raise ValueError("参数 'categories' 不能为空列表")
+    vals_arr = np.asarray(values, dtype=float).ravel()
+    if len(vals_arr) != len(categories):
+        raise ValueError(
+            f"categories 长度 ({len(categories)}) 与 values 长度 ({len(vals_arr)}) 不一致"
+        )
+    if not np.all(np.isfinite(vals_arr)):
+        raise ValueError("values 不能包含 NaN 或 Inf")
+    if np.any(vals_arr < 0):
+        raise ValueError("帕累托图 values 必须非负")
+    total = float(np.sum(vals_arr))
+    if total <= 0:
+        raise ValueError("values 总和必须大于 0")
+    if threshold is not None and not (0.0 < float(threshold) <= 100.0):
+        raise ValueError(f"threshold 必须在 (0, 100] 范围内，实际值: {threshold!r}")
+
+    order = np.argsort(vals_arr)[::-1]
+    sorted_vals = vals_arr[order]
+    sorted_cats = [str(categories[i]) for i in order]
+    cum_pct = np.cumsum(sorted_vals) / total * 100.0
+
+    fig, ax = new_styled_figure(venue, palette, lang)
+    colors = _get_cycle_colors()
+    primary_c = colors[0]
+    secondary_c = line_color or (colors[1] if len(colors) > 1 else "#C0392B")
+    muted_c = "#CBD5E1"
+
+    x = np.arange(len(sorted_cats))
+    if threshold is not None:
+        bar_fills = [
+            primary_c if (i == 0 or cum_pct[i - 1] < float(threshold)) else muted_c
+            for i in range(len(sorted_cats))
+        ]
+    else:
+        bar_fills = [primary_c] * len(sorted_cats)
+
+    bars = ax.bar(x, sorted_vals, width=0.64, color=bar_fills, **kwargs)
+    style_patch_edges(bars, bar_fills, fill_alpha=0.88, darken_amount=0.25, linewidth=0.7)
+
+    if show_values:
+        max_v = float(sorted_vals.max())
+        for bar, v in zip(bars, sorted_vals):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + max_v * 0.018,
+                f"{v:{value_fmt}}",
+                ha="center", va="bottom",
+                fontsize=max(6, int(plt.rcParams.get("font.size", 9)) - 1),
+            )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(sorted_cats)
+    ax.set_ylim(0, float(sorted_vals.max()) * 1.15)
+    polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")
+
+    ax2 = create_twinx(ax)
+    ax2.plot(
+        x, cum_pct, color=secondary_c, marker="o", markersize=4.5,
+        markerfacecolor="white", markeredgewidth=1.3, linewidth=1.8, zorder=5,
+        label=cum_ylabel,
+    )
+    ax2.set_ylim(0, 108)
+    ax2.set_ylabel(cum_ylabel, color=secondary_c)
+    ax2.tick_params(axis="y", which="both", colors=secondary_c, right=True)
+    ax2.yaxis.set_minor_locator(plt.NullLocator())
+    if "top" in ax2.spines:
+        ax2.spines["top"].set_visible(False)
+
+    if threshold is not None:
+        thr = float(threshold)
+        ax2.axhline(thr, color=secondary_c, linestyle="--", linewidth=0.95, alpha=0.75)
+        ax2.text(
+            len(sorted_cats) - 0.5, thr + 2.2, f"{thr:.0f}%",
+            color=secondary_c, ha="right", va="bottom",
+            fontsize=max(6, int(plt.rcParams.get("font.size", 9)) - 1),
+        )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    auto_rotate_labels(ax, axis="x")
     return PlotResult(fig, ax, metadata={"venue": venue, "palette": palette})
 
 

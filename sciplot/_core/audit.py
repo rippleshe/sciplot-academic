@@ -106,6 +106,7 @@ def audit_figure(
     check_font_size: bool = True,
     check_panel_labels: bool = True,
     check_axis_labels: bool = True,
+    check_visual_guards: bool = False,
     min_font_size: float = MIN_FONT_SIZE,
     verbose: bool = True,
 ) -> Dict[str, Any]:
@@ -113,28 +114,37 @@ def audit_figure(
     审计图表的投稿质量风险（审稿七宗罪防线）。
 
     检查项:
-        - font_size   : 是否存在小于 min_font_size 的文本（Nature 最小 5pt）
-        - panel_labels: 多面板图是否缺少 (a) (b) 面板标签
-        - axis_labels : 含数据的坐标轴是否未标注 x/y 轴
+        - font_size          : 是否存在小于 min_font_size 的文本（Nature 最小 5pt）
+        - panel_labels       : 多面板图是否缺少 (a) (b) 面板标签
+        - axis_labels        : 含数据的坐标轴是否未标注 x/y 轴
+        - check_visual_guards: 是否将视觉下限异常（轴外文本/刻字碰撞）合入 issues/warnings
 
     参数:
-        fig             : matplotlib Figure
-        check_font_size : 是否检查字号下限
-        check_panel_labels: 是否检查面板标签
-        check_axis_labels: 是否检查轴标签
-        min_font_size   : 字号下限（默认 5pt，Nature 规范）
-        verbose         : 是否将问题输出为警告
+        fig                : matplotlib Figure
+        check_font_size    : 是否检查字号下限
+        check_panel_labels : 是否检查面板标签
+        check_axis_labels  : 是否检查轴标签
+        check_visual_guards: 是否严格拦截视觉下限问题
+        min_font_size      : 字号下限（默认 5pt，Nature 规范）
+        verbose            : 是否将问题输出为警告
 
     返回:
-        {"issues": [...], "warnings": [...], "safe": bool}
+        {"issues": [...], "warnings": [...], "guard_warnings": [...], "safe": bool}
 
     示例:
         >>> report = sp.audit_figure(fig)
         >>> report["safe"]
         True
     """
+    from sciplot.utils.guards import inspect_figure_guards
+
     issues: List[str] = []
     warnings_list: List[str] = []
+    guard_warnings: List[str] = []
+    try:
+        guard_warnings = inspect_figure_guards(fig)
+    except Exception:
+        guard_warnings = []
 
     # ── 字号下限 ──
     if check_font_size:
@@ -201,6 +211,10 @@ def audit_figure(
             issues.append(msg)
             warnings_list.append(msg)
 
+    if check_visual_guards and guard_warnings:
+        issues.extend(guard_warnings)
+        warnings_list.extend(guard_warnings)
+
     safe = len(issues) == 0
 
     if verbose:
@@ -209,7 +223,12 @@ def audit_figure(
 
             _w.warn(f"[sciplot 审计] {msg}", UserWarning, stacklevel=3)
 
-    return {"issues": issues, "warnings": warnings_list, "safe": safe}
+    return {
+        "issues": issues,
+        "warnings": warnings_list,
+        "guard_warnings": guard_warnings,
+        "safe": safe,
+    }
 
 
 def _audit_and_warn(fig: Figure, enabled: bool) -> None:

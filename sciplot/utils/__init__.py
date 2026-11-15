@@ -152,6 +152,14 @@ from sciplot.utils.smart import (
     suggest_figsize,
     check_color_contrast,
 )
+from sciplot.utils.guards import (
+    polish_axis,
+    style_patch_edges,
+    truncate_tick_labels,
+    pick_best_corner,
+    smart_labels,
+    inspect_figure_guards,
+)
 
 __all__ = [
     # 颜色工具
@@ -167,4 +175,11 @@ __all__ = [
     "adjust_subplots",
     "suggest_figsize",
     "check_color_contrast",
+    # 视觉下限守卫
+    "polish_axis",
+    "style_patch_edges",
+    "truncate_tick_labels",
+    "pick_best_corner",
+    "smart_labels",
+    "inspect_figure_guards",
 ]

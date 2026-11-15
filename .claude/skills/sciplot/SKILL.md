@@ -1,198 +1,119 @@
 ---
 name: sciplot
 description: >-
-  SciPlot Academic 科研绘图与论文插图工作流。用户要求画科研图、论文图、实验结果图、
-  统计图、多面板图、期刊投稿图，或需要优化现有 matplotlib 科研图时触发；也适用于
-  “这些数据怎么可视化”“把图做得像顶刊”“提升论文图质量”等未指定图型的任务。
-  优先使用项目内 sciplot API 完成静态科研可视化；明确要求交互式网页图、地图或动画时不触发。
-version: 2.0.8
+  SciPlot Academic 科研绘图与数据驱动选型工作流。用户要求画科研图、论文插图、
+  实验对比图、多面板论文图，提供 CSV/Excel/DataFrame 数据问“该画什么图”，
+  或需要提升图表发表品质、排查视觉缺陷时触发。先完成数据画像与反单调图型选型，
+  再使用 sciplot 高频视觉增强 API 生成可投稿图像。明确要求交互式网页图或地图时除外。
+version: 3.0.0
 author: rippleshe
 user-invocable: true
 allowed-tools: "Read Write Edit Bash Glob Grep"
 ---
 
-# SciPlot Academic — publication figure workflow
+# SciPlot Academic — Data-Driven Publication Figure Workflow
 
-这个 Skill 的目标不是“调用一个画图函数”，而是把数据变成**语义正确、视觉克制、可复核、可投稿**的科研图。
+本 Skill 的核心原则：**先体检数据、再按感知精度与信息融合度决策选型、然后调用内置视觉守卫的 `sciplot` API 出图，绝不允许把任何数据都千篇一律拍成最简柱状图、空白箱线图或杂乱多折线。**
 
-## 1. 先判断，不要急着画
+---
 
-先回答四个问题：
+## Step 0 — 强制先做数据画像体检（Data Profiling Gate）
 
-1. **图要证明什么？** 趋势、差异、分布、相关、构成、流向、模型诊断还是机制流程？
-2. **数据是什么结构？** 连续/类别/时间/矩阵/网络/层级/多阶段流；是否有重复测量、误差或显著性？
-3. **使用场景是什么？** `nature` / `ieee` / `thesis` / `presentation`，中文还是英文？
-4. **读者第一眼应该看到什么？** 主结论必须比装饰、网格、背景、次要系列更抢眼。
-
-不要为了“高级”选择复杂图型。普通折线、散点、箱线、森林图如果更准确，就优先用它们。
-
-## 2. 图型选择
-
-常用入口：
-
-| 研究问题 | 首选 |
-|---|---|
-| 单/多组趋势 | `sp.plot()` / `sp.plot_multi()` |
-| 两连续变量关系 | `sp.plot_scatter()`；高密度用 `sp.plot_hexbin()` |
-| 分类数值比较 | `sp.plot_bar()` / `sp.plot_grouped_bar()` |
-| 前后/两条件变化 | `sp.plot_dumbbell()` |
-| 分布与原始点 | `sp.plot_raincloud()` / `sp.plot_beeswarm()` |
-| 经典分布摘要 | `sp.plot_box()` / `sp.plot_violin()` |
-| 矩阵/相关性 | `sp.plot_heatmap()` / `sp.plot_bubble_heatmap()` |
-| 模型比较与不确定性 | `sp.plot_errorbar()` / `sp.plot_forest()` / `sp.plot_taylor()` |
-| 组成占比 | `sp.plot_treemap()` / `sp.plot_donut()` / `sp.plot_waffle()` |
-| 排名变化 | `sp.plot_bump()` / `sp.plot_circular_barplot()` |
-| 多阶段流动 | `sp.plot_sankey()` / `sp.plot_alluvial()` |
-| 层级构成 | `sp.plot_sunburst()` |
-| 网络结构 | `sp.plot_network()` / `sp.plot_network_communities()` |
-| 多组分 | `sp.plot_ternary()` |
-| 多维性能 | `sp.plot_radar()`，但维度少且尺度一致时才用 |
-| 多面板论文图 | `sp.figure_panels()` + 各绘图 API |
-
-完整函数表和参数细节按需读取 `references/full-api.md`；常见组合范式读取 `references/recipes.md`；配色与视觉语义读取 `references/color-style.md`。不要把整个参考文件无差别读入上下文，只读当前任务需要的部分。
-
-如果参考文档与实际安装版本冲突，以运行时为准：
-
-```python
-import inspect
-import sciplot as sp
-print(sp.__version__)
-print(inspect.signature(sp.plot_scatter))
-```
-
-## 3. 默认工作流
-
-### Step A — 建立样式
+在写任何绘图代码前，必须先观察用户数据的真实形态与结构（变量数、样本量 `n`、偏度、异常值、正负方向、对称矩阵/配对/时序/二分类信号等）：
 
 ```python
 import sciplot as sp
-sp.setup_style("nature", palette="ocean", lang="en")
+
+# 1. 支持 DataFrame / dict / ndarray / group list / CSV / Excel / JSON 路径
+report = sp.recommend_charts(data, goal="auto", top_k=4)
+print(report.summary())
 ```
 
-常用场景：
+或直接在命令行运行辅助脚本快速诊断数据文件：
 
-- 英文期刊：`nature` 或 `ieee`，优先 PDF/SVG。
-- 中文论文/学位论文：`thesis`, `lang="zh"`。
-- PPT/答辩：`presentation`，PNG 300 dpi 足够。
-- 基础出版风格由 SciPlot 默认层兜底：四边向内主/次刻度、完整轴脊、无框图例、稳定线宽和保存边距；不要在业务代码里重复写这些“补妆”设置。
-- 不要因为用户没指定，就默认深色、渐变背景、玻璃拟态、阴影卡片。
+```bash
+uv run python .claude/skills/sciplot/scripts/profile_and_recommend.py data.csv --goal auto --top-k 4
+```
 
-### Step B — 画主图
+如未直接拿到数据文件、仅凭任务描述设计图表，先列出假设的样本量、分组数和字段类型，再进入 Step 1。
 
-高层 `plot_*` 默认返回 `PlotResult`，可以继续拿 `fig` / `ax` 做最后 10% 的定制：
+---
+
+## Step 1 — 反单调选型与候选比较（Chart Selection Gate）
+
+拿到画像后，查阅 `references/chart-selection.md`，严格按 **“数据形态 → 主任务 → 感知通道精度 → 单轴多层融合”** 比较 **≥ 2 个候选图型**，禁止无理由直接退化到最简图：
+
+| 常见平庸退化图（禁止默认） | 触发升级条件 | 推荐高信息密度图型与 SciPlot API |
+|---|---|---|
+| 普通单组/分组柱状图 | 仅是原始多次观测分布均值，未证明正态无双峰 | **`sp.plot_raincloud()`** 或 **`sp.plot_violin(..., show_box=True, show_points=True)`** |
+| 独立两组并排柱状图 | 同批被试干预前 vs 干预后配对数据 | **`sp.plot_paired(before, after)`** 或 `sp.plot_dumbbell()` |
+| 空白箱线图 `boxplot` | `n <= 40`/组或需看清多峰与异常样本密度 | **`sp.plot_raincloud()`** / `sp.plot_box(..., show_points=True, show_means=True)` |
+| 裸散点图 | 检查线性趋势或大样本过饱和重叠 | 中小样本用 **`sp.plot_marginal()`** / `sp.plot_scatter(..., fit_line=True, show_stats=True)`；大样本 (`n>=800`) 用 **`sp.plot_hexbin()`** |
+| 无序竖柱图 | 类别 >=5、正负增减并存、或非负归因排序 | 正负项→**`sp.plot_diverging_bar()`**；核心少数归因→**`sp.plot_pareto()`**；排名→`sp.plot_lollipop(sort=True)` |
+| 全阵单色相关性热图 | 对称相关矩阵 | **`sp.plot_heatmap(..., triangle="lower", cmap="RdBu_r", vmin=-1, vmax=1, p_values=...)`** |
+| 多条线拧成“意面图” | 时序系列 `>= 5` 条 | **`sp.paper_subplots(nrows, ncols, sharex=True, sharey=True)`** 分面 / `sp.plot_bump()` / `sp.plot_streamgraph()` |
+| 多面板均分网格 | 存在 1 个核心主结论 + 2 个支撑维度 | **`sp.hero_layout("hero_left")` / `hero_layout("hero_right")`** |
+| 模型准确率单一柱图 | 含二分类概率预测或回归残差 | **`sp.plot_roc()` + `sp.plot_calibration()`**（多模型同时比AUC、ECE与Brier） |
+| 单一折线未来展望 | 含多条预测轨迹或分位数不确定区间 | **`sp.plot_fan(..., samples=..., history_x=..., history_y=...)`** |
+
+> **选型产出自检**：向用户输出脚本前，先简要写明：**① 数据关键画像特征 → ② 为什么选主方案 → ③ 至少 1 个为什么不画普通柱/线/裸箱的淘汰理由。**
+
+---
+
+## Step 2 — 确定配色语义与期刊版式
+
+详细色值与搭配表按需阅读 `references/color-style.md`；函数细节与完整参数速查 `references/full-api.md`；典型组合模板参考 `references/recipes.md`。
+
+1. **期刊样式与字号基线**（绝对不在业务脚本中手搓 matplotlib 全局 `rcParams`）：
+   - 英文投稿：`sp.setup_style("nature", palette=..., lang="en")` 或 `"ieee"`（导出 PDF + PNG 600 dpi）。
+   - 中文学位/期刊论文：`sp.setup_style("thesis", palette=..., lang="zh")`（导出 PNG 1200 dpi 或 SVG）。
+   - 幻灯/汇报：`sp.setup_style("presentation", palette=..., lang="zh")`（可按需搭配 `theme="dark"`）。
+2. **配色首选原则**：
+   - 离散对比优先使用 **vivid-illustration 精选高分离配色**：`blue-sky`（清晰商务/通用对比）、`coral-teal`（强对立双组/正负干预）、`olive-apricot`（自然学术 7 色）、`soft-forest`（生态生信）、`ocean-breeze`（时序演化）、`blue-pink`、`pastel-girl`，或者经典内置 `pastel` / `earth` / `ocean` / `forest` / `sunset`。
+   - 有零点中心的矩阵/差异量必须用发散色图（`cmap="RdBu_r"`、`cmap="rdbu"` 或 `sp.make_palette_cmap("coral-teal", kind="diverging")`），绝不把顺序渐变直接画负相关。
+   - 多系列线/散点超过 3 组时开启冗余编码（`use_linestyles=True` 或结合白色描边 + 不同 marker）。
+   - 色盲安全关键发表图运行 `sp.check_colorblind_safe()` / `sp.audit_palette()`。
+
+---
+
+## Step 3 — 构建高质量图表与局部精细护卫
+
+1. **优先利用 SciPlot 内置多层视觉增强参数**，不再于外部手画混乱补丁：
+   - 散点分析自带回归线 + 95% 置信带 + 稀疏角统计卡：`sp.plot_scatter(x, y, fit_line=True, ci=True, show_stats=True)`
+   - 分组柱自动配深轮廓、误差棒与柱顶标值：`sp.plot_grouped_bar(groups, data, errors=errs, show_values=True)`
+   - 小提琴内嵌深色 IQR 胶囊与散点：`sp.plot_violin(groups, show_box=True, show_points=True)`
+   - 直方图融合平滑核密度与中位线：`sp.plot_histogram(vals, show_kde=True, show_median=True)`
+   - 火山图统计计数图例与防重叠引导线：`sp.plot_volcano(fc, p, labels=genes, show_counts=True)`
+   - 相关矩阵去重下三角与显著性星号：`sp.plot_heatmap(corr, triangle="lower", p_values=pmat, cmap="RdBu_r", vmin=-1, vmax=1, show_values=True)`
+   - PCA 降维自带 95% 置信椭圆：`sp.plot_pca(X, labels=groups, show_ellipse=True)`
+2. **自定义 Matplotlib Axes 子图时的视觉护卫工具**（当使用 `sp.paper_subplots` / `sp.hero_layout` 手动在某个 `ax` 绘制多层细节时）：
+   - `sp.polish_axis(ax, categorical_axis="x", clean_spines=True, grid="y")`: 清除分类轴锯齿次刻度、启用出版级 L 形极简边框与轻量化网格（绝不修改全局 `rcParams`）。
+   - `sp.style_patch_edges(patches, colors)`: 为自定义柱条/多边形赋予“柔和填充 + 同色系加深边框”。
+   - `sp.smart_labels(ax, texts, anchor_xy=pts, add_connectors=True)`: 基于像素 bbox 自动推开密集重叠文本并绘制微细引导线。
+   - `sp.truncate_tick_labels(ax, axis="y", max_len=24)` 与 `sp.auto_rotate_labels(ax)`：防止长类别标签挤压或互撞。
+
+---
+
+## Step 4 — 投稿质量审计 + 必须真正看图交付
 
 ```python
-result = sp.plot_scatter(x, y, xlabel="Dose (mg)", ylabel="Response")
-fig, ax = result
+report = sp.audit_figure(fig, check_visual_guards=True, verbose=True)
+paths = sp.save(fig, "figures/fig1", formats=("pdf", "png"), dpi=600)
 ```
 
-优先调用 SciPlot 已有参数，而不是在外面重复造一套 matplotlib 样式。
+保存后**必须真实打开生成的 PNG（如通过图片读取工具查看）进行逐项核对**——pytest 通过不等于图好看：
 
-### Step C — 只做有意义的收尾
+- **信息清晰度**：主结论是否在第一视觉焦点？是否被过粗网格、阴影、无意义背景框遮盖？
+- **文本与碰撞**：轴标签和单位是否完整？长标签、数字标记、图例、火山/散点标签或色条之间是否有任何穿插压盖？
+- **坐标规范**：柱条是否从 0 基线开始？分类 X/Y 轴是否已被净化为无锯齿小次刻度？多面板是否有清晰一致的 `(a)(b)(c)` 标签？
+- **发现缺陷根因修复**：若在开发包功能时发现某默认视图丑陋或布局失效，优先排查 `sciplot` 函数通用逻辑，而非只改数据掩饰。
 
-可以做：参考线、置信区间、少量重点标注、轴范围、科学计数法、共享图例、面板标签。
+---
 
-不要做：无意义标题、厚重外框、强网格、每个点都标数值、彩虹色、3D 化普通柱状图、为了“高级感”堆渐变和阴影。
+## 参考资料导航（按需读取，勿一次性全读）
 
-### Step D — 审计
-
-```python
-report = sp.audit_figure(fig, verbose=True)
-```
-
-至少检查：
-
-- 轴标签和单位是否完整；
-- 字号是否到出版下限；
-- 多面板是否有 `(a)(b)(c)`；
-- 图例是否遮挡数据；
-- 色彩是否仅承担必要语义；
-- 误差条/CI/显著性是否与数据和方法一致；
-- 轴截断是否可能误导比较。
-
-### Step E — 保存并真正看图
-
-```python
-sp.save(fig, "figures/fig1", formats=("pdf", "png"), dpi=600)
-```
-
-生成后必须打开 PNG 做视觉检查。**测试通过不等于图好看。**重点看：留白、主次、标签碰撞、图例位置、色条、极端值、小屏缩放、中文字体和多面板对齐。发现问题优先修通用实现，而不是只在 showcase 脚本里遮住。
-
-## 4. 科研绘图的硬规则
-
-### 数据语义优先
-
-- 不篡改数据，不为了好看删异常值。
-- 柱高、面积、颜色、点大小等编码必须与真实量对应。
-- 误差条必须知道是 SD、SE、CI 还是其他量；不知道就不要代填。
-- 显著性标记必须来自真实统计检验，不能凭均值差距画星号。
-- 时间序列保持时间顺序；类别排序要有理由（数值、实验顺序或自然顺序）。
-
-### 颜色是信息，不是装饰
-
-- 2–5 个离散系列优先使用少量、可区分的颜色。
-- 连续量用连续色图；有正负中心时用发散色图。
-- 同一语义跨面板保持同色。
-- 强调项用一个主色，其余可以降饱和或中性化。
-- 不把不同类别全部做成高饱和“糖果色”。
-- 需要色盲安全时使用 `sp.check_colorblind_safe()` / `sp.audit_palette()`。
-- 离散系列超过当前 palette 的安全颜色数时，必须增加线型或 marker 冗余编码；绝不能让两条需要区分的系列落成“同色 + 同线型”。
-
-### 线、点、字要有层级
-
-- 数据线 > 辅助线 > 网格。
-- 主方法可以加粗或提高 z-order；不要同时加粗、放大、换色、加阴影四重强调。
-- 大散点样本降低 alpha 或改 hexbin；小样本保留真实点更重要。
-- 标题不是必须。论文图通常由 caption 承担完整说明。
-- 密集自动标注必须在最终坐标变换后用 renderer 检查真实像素碰撞；空间不够时宁可少标或省略，也不要让文字越界、压住图例或互相覆盖。
-- 类别轴标签不要按“字符数”机械旋转；先按最终字体和画布的真实 bbox 判断是否碰撞，放得下就保持水平，只有确实重叠时才旋转。
-- colorbar 是辅助信息而不是第二主轴：outline、ticks 和字号应比主坐标轴略弱，尺寸/间距保持克制；不要让色条抢占数据区或成为视觉焦点。
-- 单栏窄画布中的大型长图例不能横穿数据区：先按真实 renderer bbox 判断占用；确实过密时优先移到图外下方并控制列数，保持正文宽度不被横向撑大。
-
-### 多面板图必须统一
-
-优先：
-
-```python
-fig, axes = sp.figure_panels(2, 2, venue="nature", panel_labels=True)
-```
-
-保持同类面板的轴范围、单位、字体、图例、配色语义一致。共享坐标轴时减少重复标签。不要把每个 panel 做成不同风格的独立海报。
-
-## 5. 不同图型的高质量下限
-
-- **折线**：时间/有序 x 才连接；多系列必要时叠加线型，避免只靠颜色。
-- **散点**：点重叠时降低 alpha/size；样本很大时考虑 hexbin；回归线必须说明模型。
-- **柱状**：默认从零基线；长类别名优先水平条形；组数过多不要堆几十种颜色。
-- **箱线/小提琴/雨云**：样本不大时尽量展示原始点；不要让小提琴形状掩盖 n 很小的事实。
-- **热力图**：色图必须匹配语义；相关矩阵优先以 0 为中心的发散色；标数字时保证对比度。
-- **雷达**：只用于少量同尺度维度；多组填充 alpha 要低，轮廓承担主要比较。
-- **Sankey/Alluvial/Chord**：流带宽度必须是真实量并在节点两端守恒；颜色应跟随源/类别语义，流多时先过滤视觉噪音。
-- **Treemap/Sunburst**：面积/角度承担数值，颜色用于层级或分组，不再额外编码无关变量。
-- **Ternary**：投影、顶点和三族辅助网格必须服从同一套 simplex/重心坐标几何；任何辅助线都不能越出三角形边界。
-- **网络图**：先减少边噪音和标签密度，再谈配色；3D 标签要在最终视角投影后检查屏幕空间重叠，社区结构应该一眼可辨。
-- **3D**：只有数据本身存在第三空间维度或曲面结构时使用，普通分类比较不要 3D。
-
-## 6. Showcase 与包开发时的额外要求
-
-如果任务是改 SciPlot 本身，而不只是调用它：
-
-1. 先跑基线测试，再改代码。
-2. 遇到难看的 showcase，要追到绘图实现；不要只换一组更“配合”的数据。
-3. 新增/修复 API 后补回归测试，特别关注 palette、NaN/Inf、空输入、长度错配、辅助 Axes、多面板和保存。
-4. 修改全局样式后，重新运行受影响 showcase 并目视检查。
-5. 运行 `ruff`、`mypy`、`pytest`；能跑全量就跑全量。
-6. 不用截图“证明”代码正确，也不用测试通过“证明”视觉优秀——两种证据都需要。
-
-## 7. 交付标准
-
-一次合格的科研绘图任务应交付：
-
-- 可复现脚本；
-- 实际生成的图；
-- 清楚的轴标签/单位/统计语义；
-- 与目标媒介匹配的格式和 dpi；
-- 通过必要的 figure audit；
-- 至少一次真实视觉检查。
-
-当用户说“做得更像 Nature/Science/顶刊”时，不要理解成复制某一家期刊的装饰风格。真正要提高的是：**信息层级、排版纪律、数据墨水比、可读性、统计表达和跨图一致性。**
+- `references/chart-selection.md` — 科研数据形态决策表、感知精度排序、反单调升级矩阵、单轴/Hero 融合策略
+- `references/color-style.md` — vivid-illustration 精选配色、内置/人民币/发散配色、`make_palette_cmap`、视觉护卫工具及配置优先序
+- `references/recipes.md` — 论文级即用场景配方（单图、云雨/提琴、帕累托、配对轨迹、ROC/校准、预测扇形、下三角相关矩阵、Hero 复合版式）
+- `references/full-api.md` — 全量函数最新签名与参数细节（冲突时以运行时 `inspect.signature(sp.<fn>)` 为准）
+- `scripts/profile_and_recommend.py` — 对 CSV/Excel/JSON/Parquet 或演示形态运行一键数据画像与图型推荐

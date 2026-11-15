@@ -118,6 +118,8 @@ from sciplot._core.palette import (
     list_palettes,
     list_all_palettes,
     list_resident_palettes,
+    list_vivid_palettes,
+    make_palette_cmap,
     list_pastel_subsets,
     list_earth_subsets,
     list_ocean_subsets,
@@ -130,6 +132,7 @@ from sciplot._core.palette import (
     auto_select_palette,
     DEFAULT_PALETTE,
     RESIDENT_PALETTES,
+    VIVID_PALETTES,
     PASTEL_PALETTE,
     EARTH_PALETTE,
     OCEAN_PALETTE,
@@ -211,6 +214,16 @@ from sciplot._core.colorblind import (
 # ── 质量审计 (Figure Audit) ────────────────────────────────────
 from sciplot._core.audit import audit_figure
 
+# ── 数据画像与图表智能推荐 (Data Profiling & Recommender) ──────
+from sciplot._core.recommend import (
+    ColumnProfile,
+    DataProfile,
+    ChartRecommendation,
+    ChartRecommendationReport,
+    profile_data,
+    recommend_charts,
+)
+
 # ── 类型定义 (Type Definitions) ─────────────────────────────────
 from sciplot._core.types import (
     # 基础类型
@@ -269,6 +282,7 @@ from sciplot._plots.distribution import (
     plot_dumbbell,
     plot_diverging_bar,
     plot_waffle,
+    plot_pareto,
     plot_combo,
     annotate_significance,
 )
@@ -298,6 +312,7 @@ from sciplot._plots.timeseries import (
     plot_slope,
     plot_gantt,
     plot_calendar_heatmap,
+    plot_fan,
 )
 from sciplot._plots.multivariate import (
     plot_parallel,
@@ -315,6 +330,7 @@ from sciplot._plots.statistical import (
     plot_volcano,
     plot_forest,
     plot_funnel,
+    plot_paired,
 )
 
 # ── 扩展模块 (Extensions) ──────────────────────────────────────
@@ -323,6 +339,8 @@ from sciplot._ext.ml import (
     plot_confusion_matrix,
     plot_feature_importance,
     plot_learning_curve,
+    plot_roc,
+    plot_calibration,
 )
 from sciplot._ext.plot3d import (
     plot_surface,
@@ -355,6 +373,7 @@ from sciplot._plots.aliases import (
     dumbbell,
     diverging_bar,
     waffle,
+    pareto,
     # 高级图表
     errorbar,
     confidence,
@@ -380,6 +399,7 @@ from sciplot._plots.aliases import (
     circular_barplot,
     timeseries,
     multi_timeseries,
+    fan,
     gantt,
     calendar_heatmap,
     taylor,
@@ -396,6 +416,7 @@ from sciplot._plots.aliases import (
     volcano,
     forest,
     funnel,
+    paired,
     parallel,
     pca,
     slope,
@@ -404,6 +425,8 @@ from sciplot._plots.aliases import (
     confusion,
     learning_curve,
     feature_importance,
+    roc,
+    calibration,
     venn2,
     venn3,
     network,
@@ -424,6 +447,13 @@ from sciplot.utils import (
     adjust_subplots,
     suggest_figsize,
     check_color_contrast,
+    # 视觉下限守卫
+    polish_axis,
+    style_patch_edges,
+    truncate_tick_labels,
+    pick_best_corner,
+    smart_labels,
+    inspect_figure_guards,
 )
 
 
@@ -600,6 +630,7 @@ SUNSET_PALETTE: Mapping[str, List[str]] = _freeze_palette_mapping(SUNSET_PALETTE
 RMB_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(RMB_PALETTES)
 DIVERGING_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(DIVERGING_PALETTES)
 RESIDENT_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(RESIDENT_PALETTES)
+VIVID_PALETTES: Mapping[str, List[str]] = _freeze_palette_mapping(VIVID_PALETTES)
 ALL_PALETTES = tuple(ALL_PALETTES)
 LINE_STYLES = tuple(LINE_STYLES)
 MARKERS = tuple(MARKERS)
@@ -627,6 +658,7 @@ __all__ = [
     "set_custom_palette", "register_color_scheme",
     "get_palette", "get_color_scheme",
     "list_palettes", "list_all_palettes", "list_resident_palettes",
+    "list_vivid_palettes", "make_palette_cmap",
     "list_pastel_subsets", "list_earth_subsets", "list_ocean_subsets", "dual_encode_colors",
     "list_forest_subsets", "list_sunset_subsets", "list_rmb_palettes",
     "list_diverging_palettes", "list_color_schemes",
@@ -664,6 +696,10 @@ __all__ = [
     # ── 质量审计 ──
     "audit_figure",
 
+    # ── 数据画像与图表推荐 ──
+    "ColumnProfile", "DataProfile", "ChartRecommendation", "ChartRecommendationReport",
+    "profile_data", "recommend_charts",
+
     # ── 折线 / 散点 / 面积（完整名称）──
     "plot", "plot_line", "plot_multi", "plot_multi_line",
     "plot_scatter", "plot_step",
@@ -676,19 +712,20 @@ __all__ = [
     # ── 分布 / 统计（完整名称）──
     "plot_bar", "plot_grouped_bar", "plot_stacked_bar", "plot_horizontal_bar", "plot_lollipop",
     "plot_box", "plot_violin", "plot_histogram", "plot_beeswarm",
-    "plot_dumbbell", "plot_diverging_bar", "plot_waffle",
+    "plot_dumbbell", "plot_diverging_bar", "plot_waffle", "plot_pareto",
     "plot_combo", "annotate_significance",
 
     # ── 分布 / 统计（简洁别名）──
     "bar", "grouped_bar", "stacked_bar", "hbar",
-    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle",
+    "hist", "box", "violin", "beeswarm", "dumbbell", "diverging_bar", "waffle", "pareto",
     "combo", "lollipop",
 
     # ── 极坐标 / 时序 / 统计（简洁别名）──
-    "radar", "timeseries", "multi_timeseries", "gantt", "calendar_heatmap", "taylor", "circular_barplot",
+    "radar", "timeseries", "multi_timeseries", "fan", "gantt", "calendar_heatmap", "taylor", "circular_barplot",
     "density", "multi_density",
     "residuals", "qq", "bland_altman", "waterfall3d", "ridgeline",
-    "ternary", "raincloud", "volcano", "forest", "funnel",
+    "ternary", "raincloud", "volcano", "forest", "funnel", "paired",
+    "roc", "calibration",
 
     # ── 高级（完整名称）──
     "plot_errorbar", "plot_confidence", "plot_heatmap", "plot_bubble_heatmap", "plot_bubble", "plot_hexbin", "plot_marginal", "plot_packed_bubble", "plot_chord", "plot_sankey", "plot_treemap", "plot_donut", "plot_streamgraph", "plot_waterfall", "plot_alluvial", "plot_bump", "plot_sunburst", "plot_upset",
@@ -700,17 +737,17 @@ __all__ = [
     "plot_radar", "plot_taylor", "plot_circular_barplot",
 
     # ── 时序图表 ──
-    "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_bump",
+    "plot_timeseries", "plot_multi_timeseries", "plot_slope", "plot_gantt", "plot_calendar_heatmap", "plot_bump", "plot_fan",
 
     # ── 多维图表 ──
     "plot_parallel", "plot_scatter_matrix", "plot_ternary",
 
     # ── 统计图表 ──
-    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano", "plot_forest", "plot_funnel",
+    "plot_residuals", "plot_qq", "plot_bland_altman", "plot_density", "plot_multi_density", "plot_ridgeline", "plot_raincloud", "plot_volcano", "plot_forest", "plot_funnel", "plot_paired",
 
     # ── 机器学习扩展 ──
     "plot_pca", "plot_confusion_matrix",
-    "plot_feature_importance", "plot_learning_curve",
+    "plot_feature_importance", "plot_learning_curve", "plot_roc", "plot_calibration",
 
     # ── 3D 扩展 ──
     "plot_surface", "plot_contour", "plot_3d_scatter", "plot_wireframe", "plot_waterfall3d",
@@ -724,9 +761,14 @@ __all__ = [
     "optimize_layout", "adjust_subplots",
     "suggest_figsize", "check_color_contrast",
 
+    # ── 视觉下限守卫 ──
+    "polish_axis", "style_patch_edges",
+    "truncate_tick_labels", "pick_best_corner",
+    "smart_labels", "inspect_figure_guards",
+
     # ── 常量 ──
     "VENUES", "PAPER_LAYOUTS", "LANGUAGES", "THEMES",
-    "RESIDENT_PALETTES",
+    "RESIDENT_PALETTES", "VIVID_PALETTES",
     "PASTEL_PALETTE", "EARTH_PALETTE", "OCEAN_PALETTE",
     "FOREST_PALETTE", "SUNSET_PALETTE", "RMB_PALETTES", "DIVERGING_PALETTES",
     "LINE_STYLES", "MARKERS", "DEFAULT_PALETTE", "ALL_PALETTES",

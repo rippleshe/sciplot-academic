@@ -40,14 +40,15 @@ ax_hero.set_ylim(0, 120)
 ax_hero.legend(frameon=False, fontsize=7, loc="lower right")
 
 ax_ic50 = result.ax_satellite(0)
-ax_ic50.boxplot(ic50, patch_artist=True, showfliers=False,
-                medianprops=dict(color="#333333"),
+ax_ic50.boxplot(ic50.T, patch_artist=True, showfliers=False,
+                medianprops=dict(color="#2D3436", linewidth=1.2),
                 boxprops=dict(facecolor="#D6E4F0", edgecolor="#2E6DA4"))
 ax_ic50.set_xticks(range(1, 5))
 ax_ic50.set_xticklabels([f"{d:.1f}" for d in doses], fontsize=7)
 ax_ic50.set_xlabel("剂量 (mg/kg)", fontsize=8)
 ax_ic50.set_ylabel("IC50", fontsize=8)
 ax_ic50.tick_params(labelsize=7)
+sp.polish_axis(ax_ic50, categorical_axis="x", clean_spines=True, grid="y")
 
 ax_conc = result.ax_satellite(1)
 ax_conc.scatter(dose_pts, conc, s=36, color="#C0392B",
@@ -56,5 +57,7 @@ ax_conc.plot(dose_pts, conc, color="#C0392B", linewidth=0.9, alpha=0.6)
 ax_conc.set_xlabel("剂量 (mg/kg)", fontsize=8)
 ax_conc.set_ylabel("稳态浓度", fontsize=8)
 ax_conc.tick_params(labelsize=7)
+sp.polish_axis(ax_conc, clean_spines=True, grid="both")
+sp.polish_axis(ax_hero, clean_spines=True, grid="both")
 
 sp.save(result.fig, "showcase/50_composite_hero", formats=("png",), dpi=300)

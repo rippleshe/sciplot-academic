@@ -68,13 +68,13 @@ fig, ax = sp.plot_multi_line(x, [y1, y2, y3], labels=["Train", "Val", "Test"], u
 ### plot_scatter
 
 ```python
-sp.plot_scatter(x, y, xlabel="", ylabel="", title="", label="", s=20, alpha=0.7, venue=None, palette=None, lang=None, **kwargs)
+sp.plot_scatter(x, y, xlabel="", ylabel="", title="", label="", s=24, alpha=0.78, fit_line=False, ci=True, show_stats=True, line_color=None, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-散点图。`s` 控制点大小，`alpha` 控制透明度。
+散点图（v1.15.0 新增 `fit_line` 回归拟合、`ci` 置信带与 `show_stats` 统计注释框）。
 
 ```python
-fig, ax = sp.plot_scatter(x, y, xlabel="X", ylabel="Y", s=30, alpha=0.6)
+fig, ax = sp.plot_scatter(x, y, xlabel="X", ylabel="Y", s=30, alpha=0.78, fit_line=True, show_stats=True)
 ```
 
 ### plot_step
@@ -120,22 +120,22 @@ fig, ax = sp.plot_multi_area(x, [y1, y2, y3], labels=["A", "B", "C"], stacked=Tr
 ### plot_bar
 
 ```python
-sp.plot_bar(categories, values, xlabel="", ylabel="", title="", width=0.6, venue=None, palette=None, lang=None, **kwargs)
+sp.plot_bar(categories, values, xlabel="", ylabel="", title="", width=0.6, show_values=False, value_fmt=".1f", yerr=None, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-单组柱状图，每个柱子自动赋不同颜色。
+单组柱状图，每个柱子自动赋不同颜色并带细描边，支持 `show_values` 与误差棒 `yerr`。
 
 ```python
-fig, ax = sp.plot_bar(["方法A", "方法B", "方法C"], np.array([82.3, 85.1, 88.7]), ylabel="准确率 (%)")
+fig, ax = sp.plot_bar(["方法A", "方法B", "方法C"], np.array([82.3, 85.1, 88.7]), ylabel="准确率 (%)", show_values=True)
 ```
 
 ### plot_grouped_bar
 
 ```python
-sp.plot_grouped_bar(groups, data, xlabel="", ylabel="", title="", width=0.8, gap=0.05, show_values=False, value_fmt=".1f", legend_loc="best", venue=None, palette=None, lang=None, **kwargs)
+sp.plot_grouped_bar(groups, data, xlabel="", ylabel="", title="", width=0.8, gap=0.05, show_values=False, value_fmt=".1f", legend_loc="best", colors=None, errors=None, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-分组柱状图（论文最常用）。`data` 为 `{方法名: [各组数值]}` 字典。
+分组柱状图（论文最常用）。`data` 为 `{方法名: [各组数值]}` 字典，可选 `colors` 与误差字典 `errors`。
 
 ```python
 methods = {"ResNet": [82, 84, 86], "ViT": [85, 87, 89]}
@@ -201,51 +201,51 @@ result = sp.plot_combo(["Q1", "Q2", "Q3", "Q4"],
 ### plot_box
 
 ```python
-sp.plot_box(data, labels=None, xlabel="", ylabel="", title="", showfliers=True, venue=None, palette=None, lang=None, **kwargs)
+sp.plot_box(data, labels=None, xlabel="", ylabel="", title="", showfliers=True, show_points=False, show_means=False, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-箱线图。`data` 为单个数组或数组列表。
+箱线图。`data` 为单个数组或数组列表；`show_points=True` 可叠加散点、`show_means=True` 显示均值标记。
 
 ```python
-fig, ax = sp.plot_box([scores_a, scores_b, scores_c], labels=["算法A", "算法B", "算法C"], ylabel="得分")
+fig, ax = sp.plot_box([scores_a, scores_b, scores_c], labels=["算法A", "算法B", "算法C"], ylabel="得分", show_points=True)
 ```
 
 ### plot_violin
 
 ```python
-sp.plot_violin(data, labels=None, xlabel="", ylabel="", title="", showmeans=False, showmedians=True, venue=None, palette=None, lang=None, **kwargs)
+sp.plot_violin(data, labels=None, xlabel="", ylabel="", title="", showmeans=False, showmedians=True, show_box=True, show_points=False, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-小提琴图，比箱线图更直观展示分布形状。
+小提琴图，内置四分位盒与细描边，比箱线图更直观展示分布形状。
 
 ```python
-fig, ax = sp.plot_violin([data_a, data_b], labels=["Method A", "Method B"], showmedians=True)
+fig, ax = sp.plot_violin([data_a, data_b], labels=["Method A", "Method B"], showmedians=True, show_box=True)
 ```
 
 ### plot_histogram
 
 ```python
-sp.plot_histogram(data, bins=30, xlabel="", ylabel="Frequency", title="", density=False, alpha=0.75, venue=None, palette=None, lang=None, **kwargs)
+sp.plot_histogram(data, bins=30, xlabel="", ylabel="Frequency", title="", density=False, alpha=0.78, show_kde=False, show_median=False, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-直方图。`density=True` 归一化为概率密度。
+直方图。`density=True` 归一化为概率密度，`show_kde=True` 叠加密度曲线，`show_median=True` 标出中位数。
 
 ```python
-fig, ax = sp.plot_histogram(data, bins=40, density=True, xlabel="残差", ylabel="概率密度")
+fig, ax = sp.plot_histogram(data, bins=40, density=True, show_kde=True, show_median=True, xlabel="残差", ylabel="概率密度")
 ```
 
 ### plot_heatmap
 
 ```python
-sp.plot_heatmap(data, row_labels=None, col_labels=None, xlabel="", ylabel="", title="", cmap="Blues", show_values=False, fmt=".2f", colorbar_label="", vmin=None, vmax=None, aspect="auto", venue=None, palette=None, lang=None, **kwargs)
+sp.plot_heatmap(data, row_labels=None, col_labels=None, xlabel="", ylabel="", title="", cmap="Blues", show_values=False, fmt=".2f", annot_color=None, colorbar_label="", vmin=None, vmax=None, aspect="auto", triangle=None, p_values=None, cell_border=True, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-热力图，适用于相关矩阵、混淆矩阵、参数扫描结果。
+热力图，适用于相关矩阵、混淆矩阵、参数扫描结果。v1.15.0 新增 `triangle="lower"|"upper"`、`p_values` 显著性星号与 `cell_border` 细格线。
 
 ```python
 corr = np.corrcoef(data.T)
 fig, ax = sp.plot_heatmap(corr, row_labels=feat_names, col_labels=feat_names,
-    cmap="RdBu_r", show_values=True, title="相关系数矩阵")
+    cmap="RdBu_r", triangle="lower", show_values=True, title="相关系数矩阵")
 ```
 
 ---
@@ -420,13 +420,13 @@ fig, ax = sp.plot_parallel(data, columns=["特征A", "特征B", "特征C", "特�
 ### plot_scatter_matrix
 
 ```python
-sp.plot_scatter_matrix(data, columns=None, color_by=None, diag="hist", alpha=0.5, s=10, venue=None, palette=None, lang=None)
+sp.plot_scatter_matrix(data, columns=None, color_by=None, diag="hist", upper="scatter", alpha=0.6, s=12, venue=None, palette=None, lang=None)
 ```
 
-散点矩阵，展示多特征两两关系。`diag`: `"hist"` / `"kde"` / `"none"`。
+散点矩阵，展示多特征两两关系。`diag`: `"hist"` / `"kde"` / `"none"`；`upper`: `"scatter"` / `"corr"` / `"blank"`（可选上三角展示相关系数）。
 
 ```python
-fig, axes = sp.plot_scatter_matrix(data, columns=["特征A", "特征B", "特征C"])
+fig, axes = sp.plot_scatter_matrix(data, columns=["特征A", "特征B", "特征C"], diag="kde", upper="corr")
 ```
 
 ---
@@ -619,13 +619,13 @@ sp.plot_volcano(log2fc, p_values, labels=None, xlabel="log2(Fold Change)",
                 ylabel="-log10(p)", title="", fc_threshold=1.0, p_threshold=0.05,
                 color_up="#D62728", color_down="#1F77B4", color_ns="#BBBBBB",
                 alpha=0.6, annotate_top=True, top_n=8, show_thresholds=True,
-                venue=None, palette=None, lang=None, **kwargs)
+                show_counts=False, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-组学差异分析：三分类着色 + 阈值线 + top-N 标注，p=0 自动处理。
+组学差异分析：三分类着色 + 阈值线 + top-N 避让标注（带清晰引导线），p=0 自动处理；`show_counts=True` 显示上下调统计计数。
 
 ```python
-fig, ax = sp.plot_volcano(log2fc, p_values, labels=gene_names)
+fig, ax = sp.plot_volcano(log2fc, p_values, labels=gene_names, show_counts=True)
 ```
 
 ### plot_calendar_heatmap（日历热图，v1.12.0 新增）
@@ -704,19 +704,73 @@ fig, ax = sp.plot_waffle(["训练", "验证", "测试"], np.array([70, 15, 15]))
 
 ---
 
+## 7.6 高信息密度分析图（v1.15.0 新增）
+
+### plot_pareto / pareto（帕累托图）
+
+```python
+sp.plot_pareto(categories, values, xlabel="", ylabel="数值 / 频数", cum_ylabel="累积占比 (%)",
+               title="", threshold=80.0, show_values=True, value_fmt=".0f",
+               line_color=None, venue=None, palette=None, lang=None, **kwargs)
+```
+
+按数值降序排列柱形并叠加累积百分比折线与 `threshold` 阈值线，适用于故障归因与长尾集中度分析。别名 `sp.pareto(...)`。
+
+### plot_paired / paired（前后配对斜率散点图）
+
+```python
+sp.plot_paired(before, after, labels=("干预前", "干预后"), xlabel="", ylabel="", title="",
+               show_box=True, show_mean=True, show_stats=True,
+               color_up="#2A9D8F", color_down="#E76F51", color_flat="#94A3B8",
+               line_alpha=0.45, jitter=0.03, venue=None, palette=None, lang=None, **kwargs)
+```
+
+展示配对样本的前后变化方向、箱线分布以及配对统计检验结果。别名 `sp.paired(...)`。
+
+### plot_fan / fan（概率预测扇形图）
+
+```python
+sp.plot_fan(x, center=None, *, bands=None, samples=None, intervals=(50, 80, 95),
+            history_x=None, history_y=None, xlabel="", ylabel="", title="",
+            center_label="预测中位数", history_label="历史观测", color=None,
+            history_color="#334155", venue=None, palette=None, lang=None)
+```
+
+绘制多层级置信区间预测扇形带，可无缝衔接历史观测曲线，支持直接传入 Monte Carlo 采样矩阵 `samples` 或预计算分位数带 `bands`。别名 `sp.fan(...)`。
+
+---
+
 ## 8. ML 扩展（`pip install sciplot-academic[ml]`）
 
 ### plot_pca
 
 ```python
-sp.plot_pca(data, labels=None, n_components=2, venue=None, palette=None, lang=None, **kwargs)
+sp.plot_pca(data, labels=None, n_components=2, show_ellipse=True, venue=None, palette=None, lang=None, **kwargs)
 ```
 
-PCA 降维可视化（2D）。`data` 为 `(n_samples, n_features)` 矩阵，`labels` 按类着色。
+PCA 降维可视化（2D）。`data` 为 `(n_samples, n_features)` 矩阵，`labels` 按类着色；`show_ellipse=True` 时绘制各类别置信椭圆。
 
 ```python
-fig, ax = sp.plot_pca(X, labels=y, venue="nature")
+fig, ax = sp.plot_pca(X, labels=y, venue="nature", show_ellipse=True)
 ```
+
+### plot_roc / roc（ROC / Precision-Recall 曲线，v1.15.0 新增）
+
+```python
+sp.plot_roc(y_true, scores, *, mode="roc", show_threshold=True, xlabel=None, ylabel=None,
+            title="", venue=None, palette=None, lang=None, **kwargs)
+```
+
+支持单模型分数数组或多模型字典 `{模型名: scores}`，自动计算并标注 AUC / AP，`mode="pr"` 可切换为 Precision-Recall 曲线。别名 `sp.roc(...)`。
+
+### plot_calibration / calibration（概率校准曲线，v1.15.0 新增）
+
+```python
+sp.plot_calibration(y_true, probs, *, n_bins=10, show_hist=True, xlabel="预测概率均值",
+                    ylabel="实测正例频率", title="", venue=None, palette=None, lang=None)
+```
+
+绘制可靠性曲线并自动计算标注 ECE（Expected Calibration Error），支持多模型字典与底部概率分布直方子图。别名 `sp.calibration(...)`。
 
 ### plot_confusion_matrix
 
@@ -1042,6 +1096,24 @@ sp.check_color_contrast(bg_color, fg_color, threshold=4.5) -> (passed, ratio)
 passed, ratio = sp.check_color_contrast("#FFF", "#000")
 ```
 
+### profile_data / recommend_charts（数据画像与图型智能推荐，v1.15.0 新增）
+
+```python
+sp.profile_data(data, *, columns=None, target=None, time_col=None, group_col=None) -> DataProfile
+sp.recommend_charts(data, *, goal="auto", top_k=4, columns=None, target=None, time_col=None, group_col=None) -> ChartRecommendationReport
+```
+
+自动解析表格（`DataFrame` / CSV / Parquet / JSON / 字典 / 数组），生成列类型与分布画像（`DataProfile`），并依据分析意图 `goal`（`"auto"` / `"comparison"` / `"distribution"` / `"relationship"` / `"timeseries"` / `"composition"` / `"multivariate"` / `"ml_eval"`）与数据特征返回高信息密度候选图型、推荐配色与可复制示例代码（`ChartRecommendationReport`）。
+
+### 视觉下限守卫与排版审校（v1.15.0 新增）
+
+```python
+sp.polish_axis(ax, *, categorical_axis=None, clean_spines=True, grid=None, grid_alpha=0.24, max_num_ticks=None, spine_color=None) -> Axes
+sp.audit_figure(fig, check_visual_guards=True) -> dict
+```
+
+另外提供 `sp.inspect_figure_guards(fig)`、`sp.style_patch_edges(...)`、`sp.truncate_tick_labels(...)`、`sp.pick_best_corner(...)` 与 `sp.smart_labels(...)`，用于图形排版自检与细节加固。`audit_figure(..., check_visual_guards=True)` 会在返回字典的 `"guard_warnings"` 中汇总潜藏的重叠、裁切与空白异常。
+
 ---
 
 ## 14. 配置系统
@@ -1236,7 +1308,10 @@ result.xlabel("共同X").add_panel_labels().save("fig")
 ## 工具函数
 
 ```python
-# 颜色工具
+# 颜色工具与高对比色板 (v1.15.0)
+sp.list_vivid_palettes()            # 查看 7 套高对比 vivid 色板
+sp.make_palette_cmap("coral-teal", kind="diverging")  # 生成连续/发散 colormap
+sp.VIVID_PALETTES                   # 高对比色板只读映射
 sp.hex_to_rgb("#FF0000")            # → (1.0, 0.0, 0.0)
 sp.rgb_to_hex(1.0, 0.0, 0.0)       # → "#ff0000"
 sp.lighten_color("#264653", 0.3)    # 变亮

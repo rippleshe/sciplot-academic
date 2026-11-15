@@ -110,7 +110,7 @@ def test_raincloud_save_png(tmp_path, raincloud_data, cleanup_figures):
     assert paths[0].exists() and paths[0].stat().st_size > 0
 
 
-def test_raincloud_dark_theme(raincloud_data, cleanup_figures):
+def test_raincloud_dark_theme(raincloud_data, cleanup_figures, reset_style):
     sp.setup_style("presentation", theme="dark")
     result = sp.plot_raincloud(raincloud_data)
     assert result.fig is not None
